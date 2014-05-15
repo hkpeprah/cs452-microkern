@@ -1,8 +1,8 @@
+<<<<<<< Updated upstream:include/task.h
 #ifndef __TASK_H__
 #define __TASK_H__
 #include <types.h>
 #include <mem.h>
-
 
 typedef enum {
     READY = 0,
