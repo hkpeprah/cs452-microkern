@@ -18,7 +18,8 @@ CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -I/u/wbcowan/cs
 ASFLAGS          = -mcpu=arm920t -mapcs-32
 # -mapcs: always generate a complete stack frame
 LDFLAGS          = -init main -Map $(builddir)/kern.map -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L/u/wbcowan/cs452/io/lib
-SOURCEFILES      = $(wildcard $(srcdir)/*.c)
+SOURCE           = $(wildcard $(srcdir)/*.c)
+SOURCEFILES      = $(SOURCE:.c=)
 TARGET           = $(builddir)/kern.elf
 
 .PHONY: all
@@ -34,9 +35,11 @@ debug: upload
 
 init:
 	mkdir -p build
+	@echo "Source files:"
+	@echo $(SOURCEFILES)
 
 clean:
-	-rm -f *.elf *.s *.o *.map $(builddir)/*
+	-rm -f $(builddir)/*
 
 test:
 	@for case in $(wildcard $(testdir)/*.c) ; do \
@@ -47,7 +50,7 @@ test:
 	@echo "All tests passed successfully."
 
 upload: all
-	-diff -s $(builddir)/kern.elf /u/cs452/tftp/ARM/hkpeprah/kern.elf
+	-diff -s $(builddir)/kern.elf /u/cs452/tftp/ARM/$(USER)/kern.elf
 	bin/cs452-upload.sh $(builddir)/kern.elf
 
 $(builddir)/%.o: $(builddir)/%.s
@@ -56,5 +59,5 @@ $(builddir)/%.o: $(builddir)/%.s
 $(builddir)/%.s: $(srcdir)/%.c
 	$(XCC) -S $(CFLAGS) $< -o $@
 
-target: $(addprefix $(builddir)/, $(addsuffix .o, $(SOURCEFILES)))
+target: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))
 	$(LD) $(LDFLAGS) -o $(TARGET) $^ -lbwio -lgcc
