@@ -1,7 +1,8 @@
-#ifndef PROC_H
-#define PROC_H
+#ifndef __TASK_H__
+#define __TASK_H__
+#include <types.h>
+#include <mem.h>
 
-#include "types.h"
 
 typedef enum {
     READY = 0,
@@ -11,16 +12,17 @@ typedef enum {
 } taskState_t;
 
 typedef struct {
-    taskState_t taskState;
+    taskState_t state;
     uint32_t tid;
     int parentTid;
     uint32_t priority;
     uint32_t sp;
 } task_t;
 
-/*
+
+task_t currentTask = NULL;
+
 task_t *schedule(task_t *currentTask, taskQueue_t *taskQueue);
 void contextSwitch(task_t *currentTask);
-*/
 
-#endif
+#endif /* __TASK_H__ */

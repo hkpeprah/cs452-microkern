@@ -58,7 +58,7 @@
 	#define RIEN_MASK	0x10	// receive int
 	#define TIEN_MASK	0x20	// transmit int
 	#define RTIEN_MASK	0x40	// receive timeout int
-	#define LBEN_MASK	0x80	// loopback 
+	#define LBEN_MASK	0x80	// loopback
 #define UART_FLAG_OFFSET	0x18	// low 8 bits
 	#define CTS_MASK	0x1
 	#define DCD_MASK	0x2
