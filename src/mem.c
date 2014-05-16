@@ -4,40 +4,45 @@
 #include <mem.h>
 #include <types.h>
 
+// we can probably play around with these values
+#define MEM_BLOCK_SIZE       0x10000
+#define BLOCK_COUNT          64
+#define TOP_OF_STACK         0x00220000
 
-void * memcpy(void * dst, const void * src, size_t num) {
-    size_t i;
-    char * source = (char*)src;
-    char * dest = (char*)dst;
+static MemBlock_t memBlocks[BLOCK_COUNT];
+static MemBlock_t *freeHead;
 
-    i = 0;
-    while ((*dest++ = *source++) && i++ < num);
+void initMem() {
+    uint32_t currentAddr = TOP_OF_STACK;
+    MemBlock_t *lastBlock = NULL;
+    int i;
 
-    return dst;
-}
+    // set each address pointer of the blocks, and link them to each other
+    for(i = 0; i < BLOCK_COUNT; ++i) {
+        currentAddr += MEM_BLOCK_SIZE;
 
+        memBlocks[i].addr = currentAddr;
+        memBlocks[i].next = lastBlock;
 
-
-void * getMem () {
-    return getMemory();
-}
-
-
-void * getMemory () {
-    MemBlock * blk;
-
-    if (Stack->fp > 0) {
-        blk = Stack->freed[Stack->fp--];
-        blk->sp = 0;
-    } else {
-        blk = &(Stack->blocks[Stack->id++]);
-        blk->sp = 0;
+        lastBlock = &memBlocks[i];
     }
 
-    return (void*)blk->addrspace;
+    freeHead = lastBlock;
 }
 
+MemBlock_t* getMem () {
+    if(freeHead == NULL) {
+        return NULL;
+    }
 
-void free(unsigned int i) {
-    Stack->freed[Stack->fp++] = &(Stack->blocks[i]);
+    MemBlock_t *block = freeHead;
+    freeHead = freeHead->next;
+
+    block->next = NULL;
+    return block;
+}
+
+void freeMem(MemBlock_t* block) {
+    block->next = freeHead;
+    freeHead = block;
 }

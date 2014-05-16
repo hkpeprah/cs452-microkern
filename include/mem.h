@@ -1,31 +1,14 @@
 #ifndef __MEM__
 #define __MEM__
 #include <types.h>
-#define MEM_BLOCK_SIZE       1024
-#define BLOCK_COUNT          24
 
+typedef struct MemBlock {
+    uint32_t addr;
+    struct MemBlock *next;
+} MemBlock_t;
 
-typedef struct {
-    unsigned int sp;
-    char * addrspace[MEM_BLOCK_SIZE];
-} MemBlock;
-
-
-typedef struct {
-    unsigned int id;
-    unsigned int fp;
-    MemBlock blocks[BLOCK_COUNT];
-    MemBlock * freed[BLOCK_COUNT];
-} Memory;
-
-
-/* global addrspace stack */
-static Memory __stack;
-static Memory * Stack = &__stack;
-
-void* memcpy(void*, const void*, size_t);
-void* getMem();
-void* getMemory();
-void free(unsigned int);
+void initMem();
+MemBlock_t* getMem();
+void freeMem(MemBlock_t* block);
 
 #endif /* __MEM__ */

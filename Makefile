@@ -8,7 +8,7 @@ test             = $(testdir)/a.out
 XCC              = gcc
 AS               = as
 LD               = ld
-CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -I/u/wbcowan/cs452/io/include -mcpu=arm920t -msoft-float
+CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -17,7 +17,7 @@ CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -I/u/wbcowan/cs
 # -nodefaultlibs: prevent linking standard libraries to remove memcpy errors
 ASFLAGS          = -mcpu=arm920t -mapcs-32
 # -mapcs: always generate a complete stack frame
-LDFLAGS          = -init main -Map $(builddir)/kern.map -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L/u/wbcowan/cs452/io/lib
+LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
 SOURCE           = $(wildcard $(srcdir)/*.c)
 SOURCEFILES      = $(SOURCE:.c=)
 TARGET           = $(builddir)/kern.elf
@@ -51,8 +51,9 @@ test:
 	@echo "All tests passed successfully."
 
 upload: all
+	USER=`whoami`
 	-diff -s $(builddir)/kern.elf /u/cs452/tftp/ARM/$(USER)/kern.elf
-	bin/cs452-upload.sh $(builddir)/kern.elf
+	bin/cs452-upload.sh $(builddir)/kern.elf $(USER)
 
 $(builddir)/%.o: $(builddir)/%.s
 	$(AS) $(ASFLAGS) $< -o $@
