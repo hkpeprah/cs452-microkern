@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <task.h>
 #define TASK_QUEUE_SIZE  16
 #define TASK_BANK_SIZE   32
@@ -7,6 +6,7 @@ static task_queue taskQueue[TASK_QUEUE_SIZE];
 static task_t taskBank[TASK_BANK_SIZE];
 static uint32_t bankPtr = 0;
 static uint32_t nextTid = 0;
+task_t *currentTask = NULL;
 
 
 void initTasks() {
@@ -27,7 +27,7 @@ task_t *createTaskD(int priority) {
     task_queue* queue = &(taskQueue[priority]);
 
     do {
-        if (taskBank[i].status == FREE) {
+        if (taskBank[i].state == FREE) {
             t = &(taskBank[i]);
             break;
         }
@@ -60,12 +60,12 @@ task_t *schedule() {
     /* grabs the next scheduled task on the priority queue descending
        returns task_t if next task exists otherwise NULL */
     int32_t i;
-    task_t t = NULL;
-    task_queue queue;
+    task_t *t = NULL;
+    task_queue *queue;
 
     i = (currentTask == NULL) ? TASK_QUEUE_SIZE : currentTask->priority;
     while (i >= 0) {
-        if (taskQueue[i] && taskQueue[i].head) break;
+        if (taskQueue[i].head) break;
         --i;
     }
 

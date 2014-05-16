@@ -9,6 +9,8 @@
 #define FEED              0x0C
 
 
+int atod(const char);
+int ctod(const char);
 int atoi(const char*, int*);
 int atoin(const char*, int*);
 int isspace(int);

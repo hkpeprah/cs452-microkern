@@ -3,6 +3,7 @@
 #include <types.h>
 #include <mem.h>
 
+struct __task_t;
 
 typedef enum {
     READY = 0,
@@ -12,13 +13,13 @@ typedef enum {
     NUM_STATES
 } taskState_t;
 
-typedef struct {
+typedef struct __task_t {
     taskState_t state;
     uint32_t tid;
     int parentTid;
     uint32_t priority;
     uint32_t sp;
-    task_t *next;
+    struct __task_t *next;
 } task_t;
 
 typedef struct {
@@ -26,7 +27,7 @@ typedef struct {
     task_t *tail;
 } task_queue;
 
-task_t currentTask = NULL;
+extern task_t *currentTask;
 
 
 void initTask();

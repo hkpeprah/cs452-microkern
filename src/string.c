@@ -13,6 +13,33 @@
 #define __LONG            6
 
 
+int atod(const char ch) {
+    /*
+     * returns the integer value of the digit
+     */
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    } else if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+	} else if (ch >= 'A' && ch <= 'F') {
+        return ch - 'A' + 10;
+    }
+	return -1;
+}
+
+
+int ctod(const char ch) {
+    /*
+     * unlike atod, only accepts numbers
+     * returns the integer value of the digit
+     */
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+    return -1;
+}
+
+
 int atoi(const char *source, int *status) {
     /*
      * parses a c-string and interprets the contents as integer
@@ -181,7 +208,7 @@ int scanformatted(const char *input, const char *format, va_list va) {
             base = 10;
             break;
         case 'c':
-            converstion_type = __CHAR;
+            conversion_type = __CHAR;
             break;
         case 'l':
             conversion_type = __LONG;
@@ -244,7 +271,7 @@ int sscanf(const char *src, const char *fmt, ...) {
     va_list va;
     int retval;
 
-    va_start(va, format);
+    va_start(va, fmt);
     retval = scanformatted(src, fmt, va);
     va_end(va);
 
