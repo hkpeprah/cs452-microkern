@@ -7,7 +7,12 @@
 
 
 int Create(int priority, void (*code)()) {
-    return 0;
+    task_t * descriptor;
+
+    descriptor = createTaskD(priority);
+    descriptor->parentTid = currentTask ? currentTask->tid : 0;
+
+    return descriptor->tid;
 }
 
 
@@ -24,12 +29,12 @@ int myParentTid() {
 void Pass() {
     task_t * t;
     /* context switch here */
-    contextSwitch(currentTask);
 }
 
 
 void Exit() {
     task_t * t;
-    /* context switch here */
-    contextSwitch(currentTask);
+    t = currentTask;
+    destroyTaskD(t);
+    /* context switch to kernel */
 }

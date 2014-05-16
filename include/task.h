@@ -20,6 +20,7 @@ typedef struct __task_t {
     uint32_t priority;
     uint32_t sp;
     struct __task_t *next;
+    MemBlock_t * addrspace;
 } task_t;
 
 typedef struct {
@@ -32,6 +33,7 @@ extern task_t *currentTask;
 
 void initTask();
 task_t *createTaskD(int priority);
+void destroyTaskD(task_t*);
 task_t *schedule();
 void contextSwitch(task_t*);
 

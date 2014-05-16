@@ -1,6 +1,4 @@
-#
-# Makefile for assignment 1 of CS452
-#
+# CS452 Microkernel Makefile
 builddir         = build
 srcdir           = src
 testdir          = tests
@@ -19,7 +17,7 @@ ASFLAGS          = -mcpu=arm920t -mapcs-32
 # -mapcs: always generate a complete stack frame
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
 SOURCE           = $(wildcard $(srcdir)/*.[cs])
-SOURCEFILES      = $(SOURCE:.c=)
+SOURCEFILES      = $(basename $(SOURCE))
 TARGET           = $(builddir)/kern.elf
 
 .PHONY: all
@@ -28,13 +26,14 @@ TARGET           = $(builddir)/kern.elf
 
 .SECONDARY:
 
-all: init clean target
+all: clean init target
 
 debug: CFLAGS += -D DEBUG
 debug: upload
 
 init:
 	mkdir -p build
+	cp -r $(srcdir)/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 

@@ -38,6 +38,7 @@ task_t *createTaskD(int priority) {
         t->state = READY;
         t->sp = 0;
         t->next = NULL;
+        t->addrspace = getMem();
         t->tid = nextTid++;
 
         /* add task to end of the queue */
@@ -53,6 +54,15 @@ task_t *createTaskD(int priority) {
     }
 
     return t;
+}
+
+
+void destroyTaskD(task_t *t) {
+    freeMem(t->addrspace);
+    t->state = FREE;
+    t->tid = 0;
+    t->sp = 0;
+    t->addrspace = NULL;
 }
 
 
