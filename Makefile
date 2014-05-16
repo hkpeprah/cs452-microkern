@@ -18,7 +18,7 @@ CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -
 ASFLAGS          = -mcpu=arm920t -mapcs-32
 # -mapcs: always generate a complete stack frame
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
-SOURCE           = $(wildcard $(srcdir)/*.c)
+SOURCE           = $(wildcard $(srcdir)/*.[cs])
 SOURCEFILES      = $(SOURCE:.c=)
 TARGET           = $(builddir)/kern.elf
 
