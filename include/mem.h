@@ -7,7 +7,7 @@
 
 typedef struct {
     unsigned int sp;
-    char * addrspace[MEM_BLOCK_SIZE];
+    char addrspace[MEM_BLOCK_SIZE];
 } MemBlock;
 
 
@@ -18,10 +18,6 @@ typedef struct {
     MemBlock * freed[BLOCK_COUNT];
 } Memory;
 
-
-/* global addrspace stack */
-static Memory __stack;
-static Memory * Stack = &__stack;
 
 void* memcpy(void*, const void*, size_t);
 void* getMem();

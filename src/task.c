@@ -1,100 +1,88 @@
 #include <stdio.h>
+#include <task.h>
+#define TASK_QUEUE_SIZE  16
+#define TASK_BANK_SIZE   32
 
-#include "task.h"
+static task_queue taskQueue[TASK_QUEUE_SIZE];
+static task_t taskBank[TASK_BANK_SIZE];
+static uint32_t bankPtr = 0;
+static uint32_t nextTid = 0;
 
-#define TASK_QUEUE_SIZE 24
 
-#define h_left(x) (x * 2 + 1)
-#define h_right(x) (x * 2 + 2)
-#define h_parent(x) ( (x - 1) / 2 )
+void initTasks() {
+    uint32_t i;
+    task_t * t;
 
-static task_t *taskQueue[TASK_QUEUE_SIZE] = {0};
-static int taskQueueSize = 0;
-
-static void h_swap(task_t **a, task_t **b) {
-    task_t *tmp = *a;
-    *a = *b;
-    *b = tmp;
+    for (i = 0; i < TASK_BANK_SIZE; ++i) {
+        t = &(taskBank[i]);
+        t->state = READY;
+        t->next = NULL;
+    } 
 }
 
-static task_t *h_peek() {
-    return taskQueue[0];
-}
 
-static task_t *h_pop() {
-    // save current top value
-    task_t *result = taskQueue[0];
-    // swap with the last value
-    h_swap(&taskQueue[0], &taskQueue[--taskQueueSize]);
+task_t *createTaskD(int priority) {
+    task_t *t = NULL;
+    uint32_t i = bankPtr;
+    task_queue* queue = &(taskQueue[priority]);
 
-    // push the last value down
-    int i = 0;
-    for(;;) {
-        // compute left/right children
-        int left = h_left(i), right = h_right(i);
-
-        if(left < taskQueueSize && taskQueue[left]->priority >= taskQueue[right]->priority) {
-            // left children exists and is >= than right
-
-            // current >= left -> current >= right, no point in swapping, return
-            if(taskQueue[i]->priority >= taskQueue[left]->priority) {
-                return result;
-            }
-
-            // otherwise, make the swap 
-            h_swap(&taskQueue[i], &taskQueue[left]);
-            i = left;
-
-        } else if(right < taskQueueSize) {
-            // right children exists and is > left
-
-            // current >= right -> current >= left, no point in swapping, return
-            if(taskQueue[i]->priority >= taskQueue[right]->priority) {
-                return result;
-            }
-
-            // otherwise make the swap
-            h_swap(&taskQueue[i], &taskQueue[right]);
-            i = right;
-
-        } else {
-            // both indices are outside of range, ie. no children
-            return result;
+    do {
+        if (taskBank[i].status == FREE) {
+            t = &(taskBank[i]);
+            break;
         }
-    }
-}
+    } while (++i != bankPtr);
 
-static void h_insert(task_t *task) {
-    taskQueue[taskQueueSize] = task;
+    if (t != NULL) {
+        bankPtr = (i + 1) % TASK_BANK_SIZE;
+        t->state = READY;
+        t->sp = 0;
+        t->next = NULL;
+        t->tid = nextTid++;
 
-    int i = taskQueueSize++;
-    for(;;) {
-        // is parent, nothing greater!
-        if(i == 0) {
-            return;
+        /* add task to end of the queue */
+        queue->head = queue->head ? queue->head : t;
+        t->next = queue->head;
+
+        if (queue->tail) {
+            /* if queue tail exists, its next is this task */
+            queue->tail->next = t;
         }
 
-        int parent = h_parent(i);
-
-        if(taskQueue[i]->priority > taskQueue[parent]->priority) {
-            // current has higher priority than parent, so swap
-            h_swap(&taskQueue[i], &taskQueue[parent]);
-            i = parent;
-        } else {
-            // parent has higher priority, return
-            return;
-        }
+        queue->tail = t;
     }
+
+    return t;
 }
 
 
-int main() {
-    task_t tasks[5];
+task_t *schedule() {
+    /* grabs the next scheduled task on the priority queue descending
+       returns task_t if next task exists otherwise NULL */
+    int32_t i;
+    task_t t = NULL;
+    task_queue queue;
 
-    int i;
-    for(i = 0; i < 5; ++i) {
-        tasks[i].tid = i;
-        tasks[i].priority = i;
-        taskQueue[i] = &tasks[i];
+    i = (currentTask == NULL) ? TASK_QUEUE_SIZE : currentTask->priority;
+    while (i >= 0) {
+        if (taskQueue[i] && taskQueue[i].head) break;
+        --i;
     }
+
+    if (i > -1) {
+        queue = &(taskQueue[i]);
+        t = queue->head;
+        queue->head = t->next;
+        queue->tail = (t == queue->tail) ? NULL : queue->tail;
+        t->next = NULL;
+        t->state = ACTIVE;
+    }
+
+    return t;
+}
+
+
+void contextSwitch(task_t *t) {
+    /* NOP Placeholder */
+    t = t;
 }

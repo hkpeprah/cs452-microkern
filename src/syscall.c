@@ -7,7 +7,7 @@
 
 
 int Create(int priority, void (*code)()) {
-
+    return 0;
 }
 
 

@@ -1,13 +1,14 @@
-<<<<<<< Updated upstream:include/task.h
 #ifndef __TASK_H__
 #define __TASK_H__
 #include <types.h>
 #include <mem.h>
 
+
 typedef enum {
     READY = 0,
     ACTIVE,
     ZOMBIE,
+    FREE,
     NUM_STATES
 } taskState_t;
 
@@ -17,12 +18,20 @@ typedef struct {
     int parentTid;
     uint32_t priority;
     uint32_t sp;
+    task_t *next;
 } task_t;
 
+typedef struct {
+    task_t *head;
+    task_t *tail;
+} task_queue;
 
 task_t currentTask = NULL;
 
-task_t *schedule(task_t *currentTask, taskQueue_t *taskQueue);
-void contextSwitch(task_t *currentTask);
+
+void initTask();
+task_t *createTaskD(int priority);
+task_t *schedule();
+void contextSwitch(task_t*);
 
 #endif /* __TASK_H__ */

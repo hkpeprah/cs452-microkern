@@ -4,6 +4,9 @@
 #include <mem.h>
 #include <types.h>
 
+static Memory __stack;
+static Memory * Stack = &__stack;
+
 
 void * memcpy(void * dst, const void * src, size_t num) {
     size_t i;
