@@ -2,15 +2,18 @@
  * mem.c - Memory functions
  */
 #include <mem.h>
+#include <types.h>
 
 
-void * memcpy(void * src, void * dst, size_t num) {
+void * memcpy(void * dst, const void * src, size_t num) {
     size_t i;
     char * source = (char*)src;
     char * dest = (char*)dst;
 
     i = 0;
-    while ((*source++ = *dest++) && i++ < num);
+    while ((*dest++ = *source++) && i++ < num);
+
+    return dst;
 }
 
 
@@ -23,11 +26,11 @@ void * getMem () {
 void * getMemory () {
     MemBlock * blk;
 
-    if (Memory.fp > 0) {
-        blk = Memory->freed[Memory->fp--];
+    if (Stack->fp > 0) {
+        blk = Stack->freed[Stack->fp--];
         blk->sp = 0;
     } else {
-        blk = &(Memory->blocks[Memory->id++]);
+        blk = &(Stack->blocks[Stack->id++]);
         blk->sp = 0;
     }
 
@@ -36,5 +39,5 @@ void * getMemory () {
 
 
 void free(unsigned int i) {
-    Meory->freed[Memory->fp++] = &(Memory->blocks[i]);
+    Stack->freed[Stack->fp++] = &(Stack->blocks[i]);
 }
