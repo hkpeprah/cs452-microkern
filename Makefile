@@ -43,8 +43,9 @@ clean:
 
 test:
 	@for case in $(wildcard $(testdir)/*.c) ; do \
-		$(XCC) -g $$case -o $(test) \
-		$(test) \
+		echo $$case ; \
+		$(XCC) -I./include -g $$case -o $(test) ; \
+		$(test) ; \
 	done
 	@-rm -rf $(test)
 	@echo "All tests passed successfully."
