@@ -28,7 +28,10 @@ TARGET           = assn1.elf
 
 .NOTPARALLEL:
 
-all: clean init target
+all:
+	$(MAKE) clean
+	$(MAKE) init
+	$(MAKE) target
 
 debug: CFLAGS += -D DEBUG
 debug: upload

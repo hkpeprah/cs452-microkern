@@ -26,7 +26,7 @@
 #define FPRIORITY     5
 
 
-static void otherTask() {
+void otherTask() {
     char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\n";
     printf(fmt, MyTid(), MyParentTid());
     Pass();
@@ -35,7 +35,9 @@ static void otherTask() {
 }
 
 
-static void firstTask() {
+void firstTask() {
+    bwprintf(IO, "HELLO WORLD");
+    /*
     int i;
     uint32_t tid;
     uint32_t priority;
@@ -51,6 +53,7 @@ static void firstTask() {
 
     puts("First: exiting\n");
     Exit();
+    */
 }
 
 
