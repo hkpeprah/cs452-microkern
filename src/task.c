@@ -35,9 +35,9 @@ task_t *createTaskD(int priority) {
     if (t != NULL) {
         bankPtr = (i + 1) % TASK_BANK_SIZE;
         t->state = READY;
-        t->sp = 0;
         t->next = NULL;
         t->addrspace = getMem();
+        t->sp = t->addrspace->addr;
         t->tid = nextTid++;
         addTask(t);
    }

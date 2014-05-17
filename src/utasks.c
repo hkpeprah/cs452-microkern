@@ -30,7 +30,7 @@
 
 
 static void otherTask() {
-    char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\n"; 
+    char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\n";
     bwprintf(IO, fmt, MyTid(), MyParentTid());
     Pass();
     bwprintf(IO, fmt, MyTid(), MyParentTid());
