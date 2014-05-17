@@ -18,7 +18,7 @@ ASFLAGS          = -mcpu=arm920t -mapcs-32
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
 SOURCE           = $(wildcard $(srcdir)/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
-TARGET           = $(builddir)/kern.elf
+TARGET           = assn1.elf
 
 .PHONY: all
 
@@ -51,8 +51,8 @@ test:
 
 upload: all
 	USER=`whoami`
-	-diff -s $(builddir)/kern.elf /u/cs452/tftp/ARM/$(USER)/kern.elf
-	bin/cs452-upload.sh $(builddir)/kern.elf $(USER)
+	-diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET)
+	bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
 
 $(builddir)/%.o: $(builddir)/%.s
 	$(AS) $(ASFLAGS) $< -o $@
@@ -61,4 +61,4 @@ $(builddir)/%.s: $(srcdir)/%.c
 	$(XCC) -S $(CFLAGS) $< -o $@
 
 target: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))
-	$(LD) $(LDFLAGS) -o $(TARGET) $^ -lbwio -lgcc
+	$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc

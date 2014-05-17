@@ -17,7 +17,11 @@ typedef enum {
 } system_calls;
 
 
-void syscall(unsigned int);
+int sys_create(int, void (*)(), uint32_t*);
+int sys_tid(bool, uint32_t*);
+void sys_pass();
+void sys_exit();
+void syscall(unsigned int, void*);
 int Create(int, void(*)());
 int MyTid();
 int MyParentTid();

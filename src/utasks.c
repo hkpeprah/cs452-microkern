@@ -26,7 +26,9 @@
 #include <task.h>
 #include <stdlib.h>
 #define FPRIORITY     5
+#ifndef IO
 #define IO            COM2
+#endif
 
 
 static void otherTask() {
@@ -42,6 +44,7 @@ static void firstTask() {
     int i;
     uint32_t tid;
     uint32_t priority;
+    task_t *currentTask = getCurrentTask();
 
     i = -3;
     priority = currentTask->priority;
@@ -56,8 +59,13 @@ static void firstTask() {
 }
 
 
-uint32_t runTasks() {
+task_t *assn1() {
+    int status;
     uint32_t tid;
-    tid = Create(FPRIORITY, &firstTask);
-    return tid;
+
+    status = sys_create(FPRIORITY, firstTask, &tid);
+    if (status == 0) {
+        return getLastTask();
+    }
+    return NULL;
 }

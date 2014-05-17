@@ -3,36 +3,32 @@
 #define TASK_BANK_SIZE   32
 
 static task_queue taskQueue[TASK_QUEUE_SIZE];
-static task_t taskBank[TASK_BANK_SIZE];
-static uint32_t bankPtr = 0;
 static uint32_t nextTid = 0;
-task_t *currentTask = NULL;
+static uint32_t bankPtr;
+static task_t *currentTask = NULL;
+static task_t taskBank[TASK_BANK_SIZE];
 
 
 void initTasks() {
     uint32_t i;
-    task_t *t;
-    task_queue *q;
 
     bankPtr = 0;
     nextTid = 0;
     currentTask = NULL;
 
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
-        t = &(taskBank[i]);
-        t->state = READY;
-        t->next = NULL;
+        taskBank[i].state = FREE;
+        taskBank[i].next = NULL;
     }
 
     for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
-        q = &(taskQueue[i]);
-        q->head = NULL;
-        q->tail = NULL;
+        taskQueue[i].head = NULL;
+        taskQueue[i].tail = NULL;
     }
 }
 
 
-task_t *createTaskD(int priority) {
+task_t *createTaskD(uint32_t priority) {
     task_t *t = NULL;
     uint32_t i = bankPtr;
 
@@ -46,7 +42,6 @@ task_t *createTaskD(int priority) {
 
     if (t != NULL) {
         bankPtr = i + 1;
-        t->state = READY;
         t->next = NULL;
         t->addrspace = getMem();
         t->sp = t->addrspace->addr;
@@ -59,14 +54,30 @@ task_t *createTaskD(int priority) {
 }
 
 
+task_t *getCurrentTask() {
+    return currentTask;
+}
+
+
+task_t *getLastTask() {
+    return &(taskBank[bankPtr - 1]);
+}
+
+
 void addTask(task_t *t) {
     task_queue *queue = &(taskQueue[t->priority]);
-    queue->head = queue->head ? queue->head : t;
-    t->next = queue->head;
+
+    if (!queue->head) {
+        queue->head = t;
+    }
+
     if (queue->tail) {
         /* if queue tail exists, its next is this task */
         queue->tail->next = t;
     }
+
+    t->next = NULL;
+    t->state = READY;
     queue->tail = t;
 }
 
@@ -88,18 +99,17 @@ task_t *schedule() {
     task_queue *queue;
 
     i = (currentTask == NULL) ? TASK_QUEUE_SIZE : currentTask->priority;
-    while (i >= 0) {
+    do {
         if (taskQueue[i].head) break;
-        --i;
-    }
+    } while (--i >= 0);
 
     if (i > -1) {
         queue = &(taskQueue[i]);
         t = queue->head;
         queue->head = t->next;
-        queue->tail = (t == queue->tail) ? NULL : queue->tail;
         t->next = NULL;
         t->state = ACTIVE;
+        if (t == queue->tail) queue->tail = NULL;
     }
 
     return t;

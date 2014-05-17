@@ -2,6 +2,7 @@
 #define __TASK_H__
 #include <types.h>
 #include <mem.h>
+#define REGS_SAVE    10
 
 struct __task_t;
 
@@ -28,11 +29,11 @@ typedef struct {
     task_t *tail;
 } task_queue;
 
-extern task_t *currentTask;
-
 
 void initTasks();
-task_t *createTaskD(int priority);
+task_t *createTaskD(uint32_t);
+task_t *getLastTask();
+task_t *getCurrentTask();
 void destroyTaskD(task_t*);
 void addTask(task_t*);
 task_t *schedule();

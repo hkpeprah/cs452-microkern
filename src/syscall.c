@@ -30,12 +30,18 @@ void Exit() {
 }
 
 
-static int sys_create(int priority, void (*code)(), int *retval) {
-    task_t * descriptor;
+int sys_create(int priority, void (*code)(), uint32_t *retval) {
+    task_t *descriptor;
+    unsigned int i;
+    task_t *current = getCurrentTask();
     descriptor = createTaskD(priority);
 
     if (descriptor != NULL) {
-        descriptor->parentTid = currentTask ? currentTask->tid : 0;
+        descriptor->parentTid = current ? current->tid : 0;
+        *(uint32_t*)descriptor->sp-- = (uint32_t)code;
+        for (i = 0; i < REGS_SAVE; ++i) {
+            *(uint32_t*)descriptor->sp-- = 0;
+        }
         *retval = descriptor->tid;
         return 0;
     }
@@ -43,14 +49,15 @@ static int sys_create(int priority, void (*code)(), int *retval) {
 }
 
 
-static int sys_tid(bool parent, int *retval) {
-    if (currentTask != NULL) {
+int sys_tid(bool parent, uint32_t *retval) {
+    task_t *current = getCurrentTask();
+    if (current != NULL) {
         switch(parent) {
         case 0:
-            *retval = currentTask->tid;
+            *retval = current->tid;
             break;
         case 1:
-            *retval = currentTask->parentTid;
+            *retval = current->parentTid;
             break;
         }
         return 0;
@@ -59,15 +66,20 @@ static int sys_tid(bool parent, int *retval) {
 }
 
 
-static void sys_pass() {
+void sys_pass() {
     task_t *t;
-    addTask(currentTask);
     t = schedule();
 }
 
 
-void syscall(unsigned int syscode) {
-    int retval;
+void sys_exit() {
+    task_t *t = getCurrentTask();
+    destroyTaskD(t);
+    t = NULL;
+}
+
+
+void syscall(unsigned int syscode, void *tf) {
     int errno;
 
     switch(syscode) {
@@ -75,16 +87,13 @@ void syscall(unsigned int syscode) {
         errno = 0;
         break;
     case SYS_CREATE:
-        errno = sys_create(0, NULL, &retval);
         break;
     case SYS_PASS:
         sys_pass();
         break;
     case SYS_PTID:
-        errno = sys_tid(1, &retval);
         break;
     case SYS_MYTID:
-        errno = sys_tid(0, &retval);
         break;
     case SYS_EXIT:
         break;

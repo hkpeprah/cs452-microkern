@@ -6,12 +6,19 @@
 #include <ts7200.h>
 #include <types.h>
 #include <vargs.h>
+#include <bwio.h>
 #define __INT             1
 #define __HEX             2
 #define __STRING          3
 #define __UINT            4
 #define __CHAR            5
 #define __LONG            6
+
+
+void initIO() {
+    bwsetspeed(IO, 115200);
+    bwsetfifo(IO, OFF);
+}
 
 
 int atod(const char ch) {

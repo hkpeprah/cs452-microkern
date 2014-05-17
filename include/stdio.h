@@ -5,6 +5,7 @@
 #define BUF_LEN      80
 #define IO           COM2
 
+
 typedef struct {
     uint32_t oFlags;
     uint32_t iFlags;
