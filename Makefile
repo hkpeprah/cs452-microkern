@@ -26,6 +26,8 @@ TARGET           = assn1.elf
 
 .SECONDARY:
 
+.NOTPARALLEL:
+
 all: clean init target
 
 debug: CFLAGS += -D DEBUG
