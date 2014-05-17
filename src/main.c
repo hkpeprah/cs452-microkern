@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <syscall.h>
 
+#define INIT_SPSR          0x13c0
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
 #define FIRST_PRIORITY     5
@@ -44,12 +45,10 @@ int main() {
 
     task = schedule();
 
-    /*
     // swi handler address -> 0x28
     swiHandlerAddr = (uint32_t*)SWI_HANDLER_ADDR;
     *swiHandlerAddr = (uint32_t)swi_handler;
     status = swi_exit(0, task->sp, 0);
-    */
 
     puts("Exiting...\n");
     return 0;

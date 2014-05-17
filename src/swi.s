@@ -1,32 +1,39 @@
     .global	swi_enter
 	.type	swi_enter, %function
 swi_call:
-    # save user-process information on stack, the sp to r0, then trigger interrupt
-    # TODO: cpsr?
+    # save keep SP, use r0 to push on to stack. also arg0 to kernel handler
     mov     r0, sp
-    stmfd   r0!, {r4-r12, sp, lr}
+    stmfd   r0!, {r1-r12, sp, lr}
     swi
 
     .global swi_handler
     .type   swi_handler, %function
 swi_handler:
+    # save the spsr of the user process on top of the user process stack
+    mrs     r2, spsr
+    stmfd   r0!, {r2}
+
     # r2 is an output param ptr to write trap frame (r1) to
-    # r0 is return value from call, which gives us the sp
+    # r0 is return value for this call, which gives us the sp
     ldmfd   sp!, {r2}
     str     r1, [r2, #+0]
 
     # restore kernel state, resume its execution
-    ldmfd   sp!, {r4-r12, pc}
+    ldmfd   sp!, {r3-r12, pc}
 
 	.global	swi_exit
 	.type	swi_exit, %function
 swi_exit:
     # store kernel state. r2 is an output param ptr to write trap frame to
     # called with (result, sp, &trap_frame)
-    stmfd   sp!, {r2, r4-r12, lr}
+    stmfd   sp!, {r2-r12, lr}
+
+    # restore cpsr
+    ldmfd   r1!, {r2}
+    msr     spsr, r2
 
     # restore user state, r1 is the user task sp
-    ldmfd   r1, {r4-r12, sp, pc}^
+    ldmfd   r1, {r1-r12, sp, pc}^
 
     .global get_cpsr
     .type   get_cpsr, %function
