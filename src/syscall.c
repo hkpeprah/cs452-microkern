@@ -31,18 +31,27 @@ void Exit() {
 
 
 int sys_create(int priority, void (*code)(), uint32_t *retval) {
-    task_t *descriptor;
+    task_t *task;
     unsigned int i;
+    uint32_t originalSP;
+    uint32_t *sp;
     task_t *current = getCurrentTask();
-    descriptor = createTaskD(priority);
+    task = createTaskD(priority);
 
-    if (descriptor != NULL) {
-        descriptor->parentTid = current ? current->tid : 0;
-        *(uint32_t*)descriptor->sp-- = (uint32_t)code;
+    if (task != NULL) {
+        task->parentTid = current ? current->tid : 0;
+
+        /* save the sp, lr and regs 1 - 9 */
+        sp = (uint32_t*)task->sp;
+        originalSP = task->sp;
+        *(--sp) = (uint32_t)code;
+        *(--sp) = originalSP;
         for (i = 0; i < REGS_SAVE; ++i) {
-            *(uint32_t*)descriptor->sp-- = 0;
+            *(--sp) = 0;
         }
-        *retval = descriptor->tid;
+
+        task->sp = (uint32_t)sp;
+        *retval = task->tid;
         return 0;
     }
     return OUT_OF_SPACE;

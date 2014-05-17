@@ -23,7 +23,6 @@
 #include <syscall.h>
 #include <utasks.h>
 #include <task.h>
-#define FPRIORITY     5
 
 
 void otherTask() {
@@ -54,16 +53,4 @@ void firstTask() {
     puts("First: exiting\n");
     Exit();
     */
-}
-
-
-task_t *assn1() {
-    int status;
-    uint32_t tid;
-
-    status = sys_create(FPRIORITY, firstTask, &tid);
-    if (status == 0) {
-        return getLastTask();
-    }
-    return NULL;
 }

@@ -1,65 +1,60 @@
-#include <bwio.h>
-#include "mem.h"
-#include "task.h"
-#include "utasks.h"
+#include <utasks.h>
+#include <task.h>
+#include <mem.h>
+#include <term.h>
+#include <stdio.h>
+#include <syscall.h>
 
-#define SWI_HANDLER_ADDR 0x28
+#define SWI_HANDLER_ADDR   0x28
+#define FOREVER            while(1)
+#define FIRST_PRIORITY     5
 
 extern int swi_enter(int sp, void* tf);
 extern int swi_handler();
 extern int swi_exit(int result, int sp, void** tf);
-
 extern int get_cpsr();
 extern int get_spsr();
 
-int main() {
-    bwsetspeed(COM1, 2400);
-    bwsetfifo( COM1, OFF );
-    bwsetfifo( COM2, OFF );
 
+static void boot() {
+    initIO();
     initMem();
     initTasks();
+    clear_screen();
+    initDebug();
+    puts("Windows ME booting up.");
+    newline();
+}
 
-    bwprintf(COM2, "cpsr: %x, spsr: %x", get_cpsr(), get_spsr());
 
-    bwprintf(COM2, "c0\n");
+int main() {
+    int status;
+    uint32_t tid;
+    task_t *task;
+    uint32_t *swiHandlerAddr;
 
+    boot();
+
+    /* create the first user task */
+    status = sys_create(FIRST_PRIORITY, firstTask, &tid);
+    if (status != 0) {
+        /* something went wrong creating the first user task */
+        return -1;
+    }
+
+    task = schedule();
+
+    /*
     // swi handler address -> 0x28
-    uint32_t *swiHandlerAddr = (uint32_t*) SWI_HANDLER_ADDR;
-    *swiHandlerAddr = (uint32_t) swi_handler;
+    swiHandlerAddr = (uint32_t*)SWI_HANDLER_ADDR;
+    *swiHandlerAddr = (uint32_t)swi_handler;
+    status = swi_exit(0, task->sp, 0);
+    */
 
-    bwprintf(COM2, "c1\n");
-
-    task_t *task = createTaskD(1);
-
-    bwprintf(COM2, "c2\n");
-
-    uint32_t originalSP = task->sp;
-    uint32_t *sp = (uint32_t*) task->sp;
-    *--sp = (uint32_t) firstTask;
-    *--sp = originalSP;
-
-    int i;
-    for(i = 0; i < 9; ++i) {
-        *--sp = 0;
-    }
-
-    bwprintf(COM2, "c3\n");
-
-    task->sp = (uint32_t) sp;
-
-    bwprintf(COM2, "task initialized, sp: %x\n", sp);
-    for(i = 0; i < 11; ++i) {
-        bwprintf(COM2, "    stack at ptr+%d: %x\n", i, sp[i]);
-    }
-    bwprintf(COM2, "task location: %x\n", firstTask);
-
-    int ret = swi_exit(0, task->sp, 0);
-
-    bwprintf(COM2, "back to stupid main, returned value: %x", ret);
-
+    puts("Exiting...\n");
     return 0;
 }
+
 
 void testMem() {
     initMem();

@@ -1,4 +1,5 @@
 #include <task.h>
+#include <term.h>
 #define TASK_QUEUE_SIZE  16
 #define TASK_BANK_SIZE   32
 
@@ -98,9 +99,17 @@ task_t *schedule() {
     task_t *t = NULL;
     task_queue *queue;
 
-    i = (currentTask == NULL) ? TASK_QUEUE_SIZE : currentTask->priority;
+    if (currentTask == NULL) {
+        i = TASK_QUEUE_SIZE - 1;
+    } else {
+        i = currentTask->priority;
+    }
+
     do {
-        if (taskQueue[i].head) break;
+        if (taskQueue[i].head != NULL) {
+            queue = &(taskQueue[i]);
+            break;
+        }
     } while (--i >= 0);
 
     if (i > -1) {

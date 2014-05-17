@@ -17,7 +17,9 @@
 
 void initIO() {
     bwsetspeed(IO, 115200);
+    bwsetspeed(COM1, 2400);
     bwsetfifo(IO, OFF);
+    bwsetfifo(COM1, OFF);
 }
 
 

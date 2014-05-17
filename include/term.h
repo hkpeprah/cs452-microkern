@@ -51,6 +51,6 @@
 #define BOTTOM_HALF              TERMINAL_HEIGHT / 2
 
 
-void debug (const char *);
+void debug(const char*);
 
 #endif /* __TERM__ */
