@@ -11,13 +11,24 @@ task_t *currentTask = NULL;
 
 void initTasks() {
     uint32_t i;
-    task_t * t;
+    task_t *t;
+    task_queue *q;
+
+    bankPtr = 0;
+    nextTid = 0;
+    currentTask = NULL;
 
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
         t = &(taskBank[i]);
         t->state = READY;
         t->next = NULL;
-    } 
+    }
+
+    for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
+        q = &(taskQueue[i]);
+        q->head = NULL;
+        q->tail = NULL;
+    }
 }
 
 
@@ -26,6 +37,7 @@ task_t *createTaskD(int priority) {
     uint32_t i = bankPtr;
 
     do {
+        i %= TASK_BANK_SIZE;
         if (taskBank[i].state == FREE) {
             t = &(taskBank[i]);
             break;
@@ -33,12 +45,13 @@ task_t *createTaskD(int priority) {
     } while (++i != bankPtr);
 
     if (t != NULL) {
-        bankPtr = (i + 1) % TASK_BANK_SIZE;
+        bankPtr = i + 1;
         t->state = READY;
         t->next = NULL;
         t->addrspace = getMem();
         t->sp = t->addrspace->addr;
         t->tid = nextTid++;
+        t->priority = priority;
         addTask(t);
    }
 

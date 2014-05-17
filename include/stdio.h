@@ -1,8 +1,9 @@
 #ifndef __STDIO__
 #define __STDIO__
 #include <types.h>
-
+#include <ts7200.h>
 #define BUF_LEN      80
+#define IO           COM2
 
 typedef struct {
     uint32_t oFlags;

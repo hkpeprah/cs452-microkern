@@ -31,7 +31,7 @@ typedef struct {
 extern task_t *currentTask;
 
 
-void initTask();
+void initTasks();
 task_t *createTaskD(int priority);
 void destroyTaskD(task_t*);
 void addTask(task_t*);
