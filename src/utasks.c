@@ -19,23 +19,18 @@
  *        - They print the same line a second time.
  *        - Finally they call Exit.
  */
-#include <bwio.h>
+#include <term.h>
 #include <syscall.h>
-#include <ts7200.h>
 #include <utasks.h>
 #include <task.h>
-#include <stdlib.h>
 #define FPRIORITY     5
-#ifndef IO
-#define IO            COM2
-#endif
 
 
 static void otherTask() {
     char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\n";
-    bwprintf(IO, fmt, MyTid(), MyParentTid());
+    printf(fmt, MyTid(), MyParentTid());
     Pass();
-    bwprintf(IO, fmt, MyTid(), MyParentTid());
+    printf(fmt, MyTid(), MyParentTid());
     Exit();
 }
 
@@ -50,11 +45,11 @@ static void firstTask() {
     priority = currentTask->priority;
     while (i < 4) {
         tid = Create(priority + i, &otherTask);
-        bwprintf(IO, "Created: %d\n", tid);
+        printf("Created: %d\n", tid);
         i += 2;
     }
 
-    bwprintf(IO, "First: exiting");
+    puts("First: exiting\n");
     Exit();
 }
 
