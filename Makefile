@@ -33,7 +33,7 @@ debug: upload
 
 init:
 	mkdir -p build
-	cp -r $(srcdir)/*.s $(builddir)/
+	@-cp -r $(srcdir)/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 

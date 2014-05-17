@@ -24,7 +24,6 @@ void initTasks() {
 task_t *createTaskD(int priority) {
     task_t *t = NULL;
     uint32_t i = bankPtr;
-    task_queue* queue = &(taskQueue[priority]);
 
     do {
         if (taskBank[i].state == FREE) {
@@ -40,20 +39,22 @@ task_t *createTaskD(int priority) {
         t->next = NULL;
         t->addrspace = getMem();
         t->tid = nextTid++;
-
-        /* add task to end of the queue */
-        queue->head = queue->head ? queue->head : t;
-        t->next = queue->head;
-
-        if (queue->tail) {
-            /* if queue tail exists, its next is this task */
-            queue->tail->next = t;
-        }
-
-        queue->tail = t;
-    }
+        addTask(t);
+   }
 
     return t;
+}
+
+
+void addTask(task_t *t) {
+    task_queue *queue = &(taskQueue[t->priority]);
+    queue->head = queue->head ? queue->head : t;
+    t->next = queue->head;
+    if (queue->tail) {
+        /* if queue tail exists, its next is this task */
+        queue->tail->next = t;
+    }
+    queue->tail = t;
 }
 
 

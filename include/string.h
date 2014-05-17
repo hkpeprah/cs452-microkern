@@ -9,12 +9,7 @@
 #define FEED              0x0C
 
 
-int atod(const char);
-int ctod(const char);
-int atoi(const char*, int*);
-int atoin(const char*, int*);
 int isspace(int);
-int sscanf(const char*, const char*, ...);
 size_t strlen(const char*);
 char * strcpy(char*, const char*);
 char * strncpy(char*, const char*, size_t);

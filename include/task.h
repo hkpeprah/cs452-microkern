@@ -34,6 +34,7 @@ extern task_t *currentTask;
 void initTask();
 task_t *createTaskD(int priority);
 void destroyTaskD(task_t*);
+void addTask(task_t*);
 task_t *schedule();
 void contextSwitch(task_t*);
 
