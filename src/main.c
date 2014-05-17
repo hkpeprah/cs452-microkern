@@ -3,6 +3,8 @@
 #include "task.h"
 #include "utasks.h"
 
+#define INIT_SPSR 0x13c0
+
 #define SWI_HANDLER_ADDR 0x28
 
 extern int swi_enter(int sp, void* tf);
@@ -40,16 +42,18 @@ int main() {
     *--sp = originalSP;
 
     int i;
-    for(i = 0; i < 9; ++i) {
+    for(i = 0; i < 12; ++i) {
         *--sp = 0;
     }
+
+    *--sp = INIT_SPSR;
 
     bwprintf(COM2, "c3\n");
 
     task->sp = (uint32_t) sp;
 
     bwprintf(COM2, "task initialized, sp: %x\n", sp);
-    for(i = 0; i < 11; ++i) {
+    for(i = 0; i < 15; ++i) {
         bwprintf(COM2, "    stack at ptr+%d: %x\n", i, sp[i]);
     }
     bwprintf(COM2, "task location: %x\n", firstTask);
