@@ -24,6 +24,9 @@
 #include <utasks.h>
 #include <task.h>
 
+extern int get_cpsr(int dummy);
+extern int get_sp(int dummy);
+extern int *push_reg();
 
 void otherTask() {
     char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\n";
@@ -35,8 +38,6 @@ void otherTask() {
 
 
 void firstTask() {
-    bwprintf(IO, "HELLO WORLD");
-    /*
     int i;
     uint32_t tid;
     uint32_t priority;
@@ -52,5 +53,4 @@ void firstTask() {
 
     puts("First: exiting\n");
     Exit();
-    */
 }

@@ -2,7 +2,6 @@
 #define __TASK_H__
 #include <types.h>
 #include <mem.h>
-#define REGS_SAVE    11
 
 struct __task_t;
 

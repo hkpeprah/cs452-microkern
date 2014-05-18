@@ -30,7 +30,7 @@ TARGET           = assn1.elf
 
 all: clean init target
 
-debug: CFLAGS += -D DEBUG
+debug: CFLAGS += -DDEBUG
 debug: upload
 
 init:

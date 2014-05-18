@@ -10,7 +10,6 @@ static task_t *currentTask = NULL;
 static task_t taskBank[TASK_BANK_SIZE];
 static int highestTaskPriority;
 
-
 void initTasks() {
     uint32_t i;
 
@@ -47,13 +46,12 @@ task_t *createTaskD(uint32_t priority) {
         bankPtr = i + 1;
 
         t->tid = nextTid++;
-        t->parentTid = currentTask == NULL ? -1 : currentTask->tid;
+        t->parentTid = (currentTask == NULL) ? -1 : currentTask->tid;
         t->priority = priority;
+        t->addrspace = getMem();
         t->sp = t->addrspace->addr;
         t->next = NULL;
-        t->addrspace = getMem();
         t->result = -1;
-
         addTask(t);
     }
 
@@ -108,14 +106,19 @@ void destroyTaskD() {
 
 
 task_t *schedule() {
+    if(highestTaskPriority < 0) {
+        return NULL;
+    }
+
     if(currentTask) {
-        if(currentTask->priority > highestTaskPriority) {
+        if(currentTask->priority >= highestTaskPriority) {
             // no highest task priority == empty queues, only current task available
             // current task has higher priority -> it should keep running
             return currentTask;
         }
 
         // add current task to queue
+        currentTask->state = READY;
         addTask(currentTask);
     }
 

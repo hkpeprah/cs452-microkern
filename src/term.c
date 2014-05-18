@@ -27,3 +27,17 @@ void debug (const char *str) {
         restore_cursor();
     #endif
 }
+
+void dumpRegisters() {
+#if DEBUG
+    int sp = (int)push_reg();
+
+    printf("task cpsr: %x\n", get_cpsr(0));
+    printf("task sp: %x\n", sp);
+
+    int i;
+    for(i = 0; i < 15; ++i) {
+        printf("reg +%d: %x\n", i, ((int*)sp)[i]);
+    }
+#endif
+}

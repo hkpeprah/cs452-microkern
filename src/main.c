@@ -14,8 +14,9 @@
 
 extern int swi_handler();
 extern int swi_exit(int result, int sp, void** tf);
-extern int get_cpsr();
-extern int get_spsr();
+extern int get_cpsr(int dummy);
+extern int get_spsr(int dummy);
+extern int get_sp(int dummy);
 
 
 static void initSWI() {
@@ -74,6 +75,10 @@ static void kernel_main() {
     for(;;) {
         task = schedule();
 
+        if(task == NULL) {
+            break;
+        }
+
         // context switch to user task here
         taskSP = swi_exit(task->result, task->sp, (void**) &args);
 
@@ -96,7 +101,7 @@ int main() {
         /* something went wrong creating the first user task */
         return -1;
     }
-
+    
     kernel_main();
 
     // should never reach here!
