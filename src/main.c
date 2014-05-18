@@ -106,16 +106,16 @@ static void kernel_main() {
 
     FOREVER {
         ch = getchar();
-        if (ch == BS && i > 0) {
+        if (ch == BS || ch == '\b') {
             /* remove a character from the line */
-            if (i < 80) {
-                buf[i--] = 0;
-            } else {
+            if (i > 0) {
+                if (i < 80) {
+                    buf[i] = 0;
+                }
                 i--;
+                backspace();
+                save_cursor();
             }
-
-            backspace();
-            save_cursor();
         } else if (ch == CR || ch == LF) {
             /* newline and check for user authentication */
             newline();
@@ -143,7 +143,7 @@ static void kernel_main() {
             save_cursor();
         } else {
             /* print character to the screen */
-            if (i < 80) {
+            if (i < 79) {
                 buf[i] = ch;
             }
 
