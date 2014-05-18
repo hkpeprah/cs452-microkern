@@ -26,12 +26,9 @@ TARGET           = assn1.elf
 
 .SECONDARY:
 
-.NOTPARALLEL:
+.NOTPARALLEL: all upload
 
-all:
-	$(MAKE) clean
-	$(MAKE) init
-	$(MAKE) target
+all: clean init target
 
 debug: CFLAGS += -D DEBUG
 debug: upload
