@@ -34,7 +34,6 @@ typedef struct {
 
 void initTasks();
 task_t *createTaskD(uint32_t);
-task_t *getLastTask();
 task_t *getCurrentTask();
 void destroyTaskD();
 void addTask(task_t*);

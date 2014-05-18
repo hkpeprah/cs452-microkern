@@ -4,10 +4,11 @@
 #define TASK_BANK_SIZE   32
 
 static task_queue taskQueue[TASK_QUEUE_SIZE];
-static uint32_t nextTid = 0;
+static uint32_t nextTid;
 static uint32_t bankPtr;
-static task_t *currentTask = NULL;
-static task_t taskBank[TASK_BANK_SIZE];
+static task_t *currentTask;
+static task_t __taskBank[TASK_BANK_SIZE];
+static task_t *taskBank;
 static int highestTaskPriority;
 
 
@@ -20,38 +21,35 @@ void initTasks() {
     highestTaskPriority = -1;
 
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
-        taskBank[i].state = FREE;
-        taskBank[i].next = NULL;
+        __taskBank[i].state = FREE;
+        if (i < TASK_BANK_SIZE - 1) {
+            __taskBank[i].next = &__taskBank[i + 1];
+        } else {
+            __taskBank[i].next = NULL;
+        }
     }
 
     for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
         taskQueue[i].head = NULL;
         taskQueue[i].tail = NULL;
     }
+
+    taskBank = &__taskBank[0];
 }
 
 
 task_t *createTaskD(uint32_t priority) {
     task_t *t = NULL;
-    uint32_t i = bankPtr;
 
-    do {
-        i %= TASK_BANK_SIZE;
-        if (taskBank[i].state == FREE) {
-            t = &(taskBank[i]);
-            break;
-        }
-    } while (++i != bankPtr);
-
-    if (t != NULL) {
-        bankPtr = i + 1;
-
+    if (taskBank != NULL) {
+        t = taskBank;
+        taskBank = t->next;
         t->tid = nextTid++;
         t->parentTid = currentTask == NULL ? -1 : currentTask->tid;
         t->priority = priority;
+        t->addrspace = getMem();
         t->sp = t->addrspace->addr;
         t->next = NULL;
-        t->addrspace = getMem();
         t->result = -1;
 
         addTask(t);
@@ -63,11 +61,6 @@ task_t *createTaskD(uint32_t priority) {
 
 task_t *getCurrentTask() {
     return currentTask;
-}
-
-
-task_t *getLastTask() {
-    return &(taskBank[bankPtr - 1]);
 }
 
 
@@ -99,9 +92,12 @@ void destroyTaskD() {
     currentTask->parentTid = -1;
     currentTask->priority = -1;
     currentTask->sp = 0;
-    currentTask->next = NULL;
     currentTask->addrspace = NULL;
     currentTask->result = 0;
+
+    /* add task back to bank */
+    currentTask->next = taskBank;
+    taskBank = currentTask;
 
     currentTask = NULL;
 }

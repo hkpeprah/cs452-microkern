@@ -3,7 +3,8 @@
 #include <types.h>
 #include <task.h>
 
-void otherTask();
 void firstTask();
+void otherTask();
+void testTask();
 
 #endif /* __UTASKS__ */

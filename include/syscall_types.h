@@ -19,4 +19,4 @@ typedef struct k_args {
     uint32_t a3;
 } k_args_t;
 
-#endif
+#endif /* __SYSCALL_DEFS__ */

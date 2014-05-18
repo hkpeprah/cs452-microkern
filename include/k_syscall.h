@@ -14,4 +14,4 @@ void sys_pass();
 void sys_exit();
 void syscall(unsigned int, void*);
 
-#endif
+#endif /* __K_SYSCALL__ */

@@ -6,6 +6,7 @@
 #include <syscall.h>
 #include <k_syscall.h>
 #include <syscall_types.h>
+#include <string.h>
 
 #define INIT_SPSR          0x13c0
 #define SWI_HANDLER_ADDR   0x28
@@ -23,6 +24,7 @@ static void initSWI() {
     *swiHandlerAddr = (uint32_t)swi_handler;
 }
 
+
 static void boot() {
     initIO();
     initMem();
@@ -34,12 +36,13 @@ static void boot() {
     newline();
 }
 
+
 static int handleRequest(k_args_t *args) {
     uint32_t result = 0;
     uint32_t errno = 0;
 
     switch(args->code) {
-        case SYS_EGG: // wat?
+        case SYS_EGG: // easter egg
             errno = 0;
             break;
         case SYS_CREATE:
@@ -66,13 +69,22 @@ static int handleRequest(k_args_t *args) {
     return errno;
 }
 
-static void kernel_main() {
-    task_t *task = NULL;
-    int taskSP;
-    k_args_t *args;
 
-    for(;;) {
+static void kernel_main() {
+    char ch;
+    char user[80];
+    char buf[80];
+    int taskSP;
+    int loggedIn;
+    unsigned int i;
+    k_args_t *args;
+    task_t *task = NULL;
+
+    FOREVER {
         task = schedule();
+
+        // nothing left to run
+        if (task == NULL) break;
 
         // context switch to user task here
         taskSP = swi_exit(task->result, task->sp, (void**) &args);
@@ -80,6 +92,52 @@ static void kernel_main() {
         // return from swi_exit -> user made a swi call
         task->sp = taskSP;
         task->result = handleRequest(args);
+    }
+
+    /* produce the login prompt */
+    puts("Login: ");
+    puts("User: ");
+    save_cursor();
+
+    i = 0;
+    loggedIn = 0;
+
+    FOREVER {
+        ch = getchar();
+        if (ch == BS && i > 0) {
+            /* remove a character from the line */
+            if (i < 80) buf[i] = 0;
+            i--;
+            backspace();
+        } else if (ch == CR || ch == LF) {
+            /* newline and check for user authentication */
+            newline();
+            if (loggedIn == 0) {
+                strcpy(user, buf);
+                loggedIn = 1;
+                puts("Password: ");
+            } else if (loggedIn == 1) {
+                if (login(user, buf)) {
+                    loggedIn = 2;
+                    printf("Login successful.  Welcome %s\r\n", user);
+                } else {
+                    puts("Login failed.\r\n");
+                    loggedIn = 0;
+                    puts("User: ");
+                }
+            } else if (strcmp(buf, "q") == 0) {
+                break;
+            } else {
+                puts("> ");
+            }
+            for (i = 0; i < 80; ++i) buf[i] = 0;
+            i = 0;
+            save_cursor();
+        } else {
+            /* print character to the screen */
+            if (i < 80) buf[i] = ch;
+            save_cursor();
+        }
     }
 }
 
@@ -99,7 +157,8 @@ int main() {
 
     kernel_main();
 
-    // should never reach here!
-    puts("Exiting...\n");
+    // should reach here after all work has been done
+    puts("Exiting...\r\n");
+    reset_scroll();
     return 0;
 }

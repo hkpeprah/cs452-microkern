@@ -26,7 +26,7 @@
 
 
 void otherTask() {
-    char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\n";
+    char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\r\n";
     printf(fmt, MyTid(), MyParentTid());
     Pass();
     printf(fmt, MyTid(), MyParentTid());
@@ -35,8 +35,6 @@ void otherTask() {
 
 
 void firstTask() {
-    bwprintf(IO, "HELLO WORLD");
-    /*
     int i;
     uint32_t tid;
     uint32_t priority;
@@ -46,11 +44,16 @@ void firstTask() {
     priority = currentTask->priority;
     while (i < 4) {
         tid = Create(priority + i, &otherTask);
-        printf("Created: %d\n", tid);
+        printf("Created: %d\r\n", tid);
         i += 2;
     }
 
-    puts("First: exiting\n");
+    puts("First: exiting\r\n");
     Exit();
-    */
+}
+
+
+void testTask() {
+    printf("Calling task with priority: %d", getCurrentTask()->priority);
+    newline();
 }

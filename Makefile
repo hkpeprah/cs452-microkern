@@ -28,13 +28,14 @@ TARGET           = assn1.elf
 
 .NOTPARALLEL: all upload
 
-all: clean init target
+all: init target
 
 debug: CFLAGS += -D DEBUG
 debug: upload
 
 init:
-	mkdir -p build
+	@-rm -f $(builddir)/*
+	@mkdir -p build
 	@-cp -r $(srcdir)/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
@@ -52,15 +53,16 @@ test:
 	@echo "All tests passed successfully."
 
 upload: all
-	USER=`whoami`
-	-diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET)
-	bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
+	@USER=`whoami`
+	@-diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET)
+	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
 
 $(builddir)/%.o: $(builddir)/%.s
-	$(AS) $(ASFLAGS) $< -o $@
+	@$(AS) $(ASFLAGS) $< -o $@
+	@echo "Compiled $@"
 
 $(builddir)/%.s: $(srcdir)/%.c
-	$(XCC) -S $(CFLAGS) $< -o $@
+	@$(XCC) -S $(CFLAGS) $< -o $@
 
 target: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))
 	$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc

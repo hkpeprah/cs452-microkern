@@ -7,4 +7,4 @@ int MyParentTid();
 void Pass();
 void Exit();
 
-#endif
+#endif /* __SYSCALL__ */
