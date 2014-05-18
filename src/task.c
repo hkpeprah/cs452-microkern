@@ -8,6 +8,7 @@ static uint32_t nextTid = 0;
 static uint32_t bankPtr;
 static task_t *currentTask = NULL;
 static task_t taskBank[TASK_BANK_SIZE];
+static int highestTaskPriority;
 
 
 void initTasks() {
@@ -16,6 +17,7 @@ void initTasks() {
     bankPtr = 0;
     nextTid = 0;
     currentTask = NULL;
+    highestTaskPriority = -1;
 
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
         taskBank[i].state = FREE;
@@ -43,13 +45,17 @@ task_t *createTaskD(uint32_t priority) {
 
     if (t != NULL) {
         bankPtr = i + 1;
+
+        t->tid = nextTid++;
+        t->parentTid = currentTask == NULL ? -1 : currentTask->tid;
+        t->priority = priority;
+        t->sp = t->addrspace->addr;
         t->next = NULL;
         t->addrspace = getMem();
-        t->sp = t->addrspace->addr;
-        t->tid = nextTid++;
-        t->priority = priority;
+        t->result = -1;
+
         addTask(t);
-   }
+    }
 
     return t;
 }
@@ -80,48 +86,61 @@ void addTask(task_t *t) {
     t->next = NULL;
     t->state = READY;
     queue->tail = t;
+
+    highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
 }
 
 
-void destroyTaskD(task_t *t) {
-    freeMem(t->addrspace);
-    t->state = FREE;
-    t->tid = 0;
-    t->sp = 0;
-    t->addrspace = NULL;
+void destroyTaskD() {
+    freeMem(currentTask->addrspace);
+
+    currentTask->state = FREE;
+    currentTask->tid = 0;
+    currentTask->parentTid = -1;
+    currentTask->priority = -1;
+    currentTask->sp = 0;
+    currentTask->next = NULL;
+    currentTask->addrspace = NULL;
+    currentTask->result = 0;
+
+    currentTask = NULL;
 }
 
 
 task_t *schedule() {
-    /* grabs the next scheduled task on the priority queue descending
-       returns task_t if next task exists otherwise NULL */
-    int32_t i;
-    task_t *t = NULL;
-    task_queue *queue;
-
-    if (currentTask == NULL) {
-        i = TASK_QUEUE_SIZE - 1;
-    } else {
-        i = currentTask->priority;
-    }
-
-    do {
-        if (taskQueue[i].head != NULL) {
-            queue = &(taskQueue[i]);
-            break;
+    if(currentTask) {
+        if(currentTask->priority > highestTaskPriority) {
+            // no highest task priority == empty queues, only current task available
+            // current task has higher priority -> it should keep running
+            return currentTask;
         }
-    } while (--i >= 0);
 
-    if (i > -1) {
-        queue = &(taskQueue[i]);
-        t = queue->head;
-        queue->head = t->next;
-        t->next = NULL;
-        t->state = ACTIVE;
-        if (t == queue->tail) queue->tail = NULL;
+        // add current task to queue
+        addTask(currentTask);
     }
 
-    return t;
+    // get queue with highest priority. this is guaranteed to not be empty
+    task_queue *queue = &taskQueue[highestTaskPriority];
+
+    // update the task queue
+    task_t *nextTask = queue->head;
+    queue->head = nextTask->next;
+
+    // current priority queue is empty, find next highest priority
+    if(nextTask == queue->tail) {
+        queue->tail = NULL;
+
+        do {
+            --highestTaskPriority;
+        } while(taskQueue[highestTaskPriority].head == NULL && highestTaskPriority >= 0);
+    }
+
+    // set as current
+    nextTask->next = NULL;
+    nextTask->state = ACTIVE;
+    currentTask = nextTask;
+
+    return currentTask;
 }
 
 

@@ -1,110 +1,44 @@
 /*
  * syscall.c - System call functions
  */
-#include <mem.h>
-#include <syscall.h>
-#include <task.h>
-#include <types.h>
 
+#include <syscall_types.h>
+
+// sp is a dummy input to pad r0, and is set in the asm function
+extern int swi_call(int sp, void *args);
 
 int MyTid() {
-    return 0;
+    k_args_t args;
+    args.code = SYS_MYTID;
+    return swi_call(0, &args);
 }
 
 
 int MyParentTid() {
-    return 0;
+    k_args_t args;
+    args.code = SYS_PTID;
+    return swi_call(0, &args);
 }
 
 
 int Create(int priority, void (*code) ()) {
-    return 0;
+    k_args_t args;
+    args.code = SYS_CREATE;
+    args.a0 = priority;
+    args.a1 = (uint32_t) code;
+    return swi_call(0, &args);
 }
 
 
 void Pass() {
+    k_args_t args;
+    args.code = SYS_PASS;
+    swi_call(0, &args);
 }
 
 
 void Exit() {
-}
-
-
-int sys_create(int priority, void (*code)(), uint32_t *retval) {
-    task_t *task;
-    unsigned int i;
-    uint32_t originalSP;
-    uint32_t *sp;
-    task_t *current = getCurrentTask();
-    task = createTaskD(priority);
-
-    if (task != NULL) {
-        task->parentTid = current ? current->tid : 0;
-
-        /* save the sp, lr and regs 1 - 9 */
-        sp = (uint32_t*)task->sp;
-        originalSP = task->sp;
-        *(--sp) = (uint32_t)code;
-        *(--sp) = originalSP;
-        for (i = 0; i < REGS_SAVE; ++i) {
-            *(--sp) = 0;
-        }
-
-        task->sp = (uint32_t)sp;
-        *retval = task->tid;
-        return 0;
-    }
-    return OUT_OF_SPACE;
-}
-
-
-int sys_tid(bool parent, uint32_t *retval) {
-    task_t *current = getCurrentTask();
-    if (current != NULL) {
-        switch(parent) {
-        case 0:
-            *retval = current->tid;
-            break;
-        case 1:
-            *retval = current->parentTid;
-            break;
-        }
-        return 0;
-    }
-    return TASK_DOES_NOT_EXIST;
-}
-
-
-void sys_pass() {
-    task_t *t;
-    t = schedule();
-}
-
-
-void sys_exit() {
-    task_t *t = getCurrentTask();
-    destroyTaskD(t);
-    t = NULL;
-}
-
-
-void syscall(unsigned int syscode, void *tf) {
-    int errno;
-
-    switch(syscode) {
-    case SYS_EGG:
-        errno = 0;
-        break;
-    case SYS_CREATE:
-        break;
-    case SYS_PASS:
-        sys_pass();
-        break;
-    case SYS_PTID:
-        break;
-    case SYS_MYTID:
-        break;
-    case SYS_EXIT:
-        break;
-    }
+    k_args_t args;
+    args.code = SYS_EXIT;
+    swi_call(0, &args);
 }

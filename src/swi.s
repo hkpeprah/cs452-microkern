@@ -1,5 +1,5 @@
-    .global	swi_enter
-	.type	swi_enter, %function
+    .global	swi_call
+	.type	swi_call, %function
 swi_call:
     # save keep SP, use r0 to push on to stack. also arg0 to kernel handler
     mov     r0, sp

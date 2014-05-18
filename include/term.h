@@ -50,7 +50,7 @@
 #define TOP_HALF                 0
 #define BOTTOM_HALF              TERMINAL_HEIGHT / 2
 
-
+void initDebug();
 void debug(const char*);
 
 #endif /* __TERM__ */
