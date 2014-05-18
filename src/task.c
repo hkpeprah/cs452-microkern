@@ -11,7 +11,6 @@ static task_t __taskBank[TASK_BANK_SIZE];
 static task_t *taskBank;
 static int highestTaskPriority;
 
-
 void initTasks() {
     uint32_t i;
 
@@ -45,13 +44,12 @@ task_t *createTaskD(uint32_t priority) {
         t = taskBank;
         taskBank = t->next;
         t->tid = nextTid++;
-        t->parentTid = currentTask == NULL ? -1 : currentTask->tid;
+        t->parentTid = (currentTask == NULL) ? -1 : currentTask->tid;
         t->priority = priority;
         t->addrspace = getMem();
         t->sp = t->addrspace->addr;
         t->next = NULL;
         t->result = -1;
-
         addTask(t);
     }
 
@@ -104,14 +102,16 @@ void destroyTaskD() {
 
 
 task_t *schedule() {
-    if(currentTask) {
-        if(currentTask->priority > highestTaskPriority) {
+    if (highestTaskPriority < 0) {
+        return NULL;
+    } else if (currentTask) {
+        if (currentTask->priority >= highestTaskPriority) {
             // no highest task priority == empty queues, only current task available
             // current task has higher priority -> it should keep running
             return currentTask;
         }
-
         // add current task to queue
+        currentTask->state = READY;
         addTask(currentTask);
     }
 
@@ -123,12 +123,12 @@ task_t *schedule() {
     queue->head = nextTask->next;
 
     // current priority queue is empty, find next highest priority
-    if(nextTask == queue->tail) {
+    if (nextTask == queue->tail) {
         queue->tail = NULL;
 
         do {
             --highestTaskPriority;
-        } while(taskQueue[highestTaskPriority].head == NULL && highestTaskPriority >= 0);
+        } while (taskQueue[highestTaskPriority].head == NULL && highestTaskPriority >= 0);
     }
 
     // set as current
@@ -137,10 +137,4 @@ task_t *schedule() {
     currentTask = nextTask;
 
     return currentTask;
-}
-
-
-void contextSwitch(task_t *t) {
-    /* NOP Placeholder */
-    t = t;
 }

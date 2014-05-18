@@ -15,7 +15,8 @@ size_t strlen(const char *str) {
 
 char *strcpy(char *dest, const char *src) {
     unsigned int i;
-    while ((dest[i] = src[i]) && i++);
+    i = 0;
+    while ((dest[i] = src[i])) i++;
     return dest;
 }
 

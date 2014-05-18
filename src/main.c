@@ -15,8 +15,9 @@
 
 extern int swi_handler();
 extern int swi_exit(int result, int sp, void** tf);
-extern int get_cpsr();
-extern int get_spsr();
+extern int get_cpsr(int dummy);
+extern int get_spsr(int dummy);
+extern int get_sp(int dummy);
 
 
 static void initSWI() {
@@ -95,20 +96,26 @@ static void kernel_main() {
     }
 
     /* produce the login prompt */
-    puts("Login: ");
+    puts("\r\n==============Login===============\r\n");
     puts("User: ");
     save_cursor();
 
-    i = 0;
     loggedIn = 0;
+    for (i = 0; i < 80; ++i) buf[i] = 0;
+    i = 0;
 
     FOREVER {
         ch = getchar();
         if (ch == BS && i > 0) {
             /* remove a character from the line */
-            if (i < 80) buf[i] = 0;
-            i--;
+            if (i < 80) {
+                buf[i--] = 0;
+            } else {
+                i--;
+            }
+
             backspace();
+            save_cursor();
         } else if (ch == CR || ch == LF) {
             /* newline and check for user authentication */
             newline();
@@ -119,7 +126,7 @@ static void kernel_main() {
             } else if (loggedIn == 1) {
                 if (login(user, buf)) {
                     loggedIn = 2;
-                    printf("Login successful.  Welcome %s\r\n", user);
+                    printf("Login successful.  Welcome %s\r\n> ", user);
                 } else {
                     puts("Login failed.\r\n");
                     loggedIn = 0;
@@ -130,12 +137,23 @@ static void kernel_main() {
             } else {
                 puts("> ");
             }
+
             for (i = 0; i < 80; ++i) buf[i] = 0;
             i = 0;
             save_cursor();
         } else {
             /* print character to the screen */
-            if (i < 80) buf[i] = ch;
+            if (i < 80) {
+                buf[i] = ch;
+            }
+
+            if (loggedIn == 1) {
+                putchar('*');
+            } else {
+                putchar(ch);
+            }
+
+            i++;
             save_cursor();
         }
     }
@@ -154,11 +172,11 @@ int main() {
         /* something went wrong creating the first user task */
         return -1;
     }
-
+    
     kernel_main();
 
     // should reach here after all work has been done
     puts("Exiting...\r\n");
-    reset_scroll();
+    erase_screen();
     return 0;
 }

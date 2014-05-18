@@ -8,10 +8,12 @@
 #define printf(format, ...)      bwprintf(IO, format, ## __VA_ARGS__)
 #define puts(str)                bwputstr(IO, str)
 #define getchar()                bwgetc(IO)
+#define putchar(ch)              bwputc(IO, ch)
 #else
 #define printf(format, ...)      sprintf(format, ## __VA_ARGS__)
 #define puts(str)                putstr(str)
 #define getchar()                getch()
+#define putchar(ch)              putch(ch)
 #endif
 
 /* ANSI color codes */
@@ -40,7 +42,7 @@
 #define reset_scroll()           puts("\033[;r")
 #define scroll_up(x)             printf("\033[%dS", x)
 #define scroll_down(x)           printf("\033[%dT", x)
-#define backspace()              puts("\033[D \033[D")
+#define backspace()              puts("\b \b")
 #define move_cur_up(x)           printf("\033[%dA", x)
 #define move_cur_down(x)         printf("\033[%dB", x)
 #define move_cur_left(x)         printf("\033[%dD", x)
@@ -53,7 +55,7 @@
 #define newline()                puts("\r\n")
 
 #define TERMINAL_WIDTH           120
-#define TERMINAL_HEIGHT          70
+#define TERMINAL_HEIGHT          63
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
 #define TOP_HALF                 0
@@ -63,5 +65,6 @@
 void initDebug();
 void debug(char*);
 int login(char*, char*);
+void dumpRegisters();
 
 #endif /* __TERM__ */

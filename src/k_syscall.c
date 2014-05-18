@@ -3,28 +3,28 @@
 #include <task.h>
 #include <types.h>
 
+#define INIT_SPSR   0x13c0
+#define REGS_SAVE   11
+
 int sys_create(int priority, void (*code)(), uint32_t *retval) {
     task_t *task;
     unsigned int i;
-    uint32_t originalSP;
     uint32_t *sp;
-    task_t *current = getCurrentTask();
+
     task = createTaskD(priority);
 
     if (task != NULL) {
-        task->parentTid = current ? current->tid : 0;
-
         /* save the sp, lr and regs 1 - 9 */
         sp = (uint32_t*)task->sp;
-        originalSP = task->sp;
         *(--sp) = (uint32_t)code;
-        *(--sp) = originalSP;
         for (i = 0; i < REGS_SAVE; ++i) {
             *(--sp) = 0;
         }
 
+        *(--sp) = INIT_SPSR;
         task->sp = (uint32_t)sp;
         *retval = task->tid;
+
         return 0;
     }
     return OUT_OF_SPACE;
@@ -51,11 +51,10 @@ int sys_pid(uint32_t *retval) {
 
 
 void sys_pass() {
+    /* do nothing */
 }
 
 
 void sys_exit() {
-    task_t *t = getCurrentTask();
-    destroyTaskD(t);
-    t = NULL;
+    destroyTaskD();
 }

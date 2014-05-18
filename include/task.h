@@ -2,7 +2,6 @@
 #define __TASK_H__
 #include <types.h>
 #include <mem.h>
-#define REGS_SAVE    11
 
 struct __task_t;
 
@@ -38,6 +37,5 @@ task_t *getCurrentTask();
 void destroyTaskD();
 void addTask(task_t*);
 task_t *schedule();
-void contextSwitch(task_t*);
 
 #endif /* __TASK_H__ */
