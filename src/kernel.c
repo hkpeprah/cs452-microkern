@@ -16,7 +16,7 @@ extern int get_cpsr(int dummy);
 extern int get_spsr(int dummy);
 extern int get_sp(int dummy);
 
-static int handleRequest(k_args_t *args) {
+static int handleRequest(Args_t *args) {
     uint32_t result = 0;
     uint32_t errno = 0;
 
@@ -69,8 +69,8 @@ void boot () {
 
 void kernel_main() {
     int taskSP;
-    k_args_t *args;
-    task_t *task = NULL;
+    Args_t *args;
+    Task_t *task = NULL;
 
 
     FOREVER {

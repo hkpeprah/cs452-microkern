@@ -16,7 +16,6 @@ static void prompt() {
     int loggedIn;
     unsigned int i;
 
-
     /* produce the login prompt */
     puts("\r\n==============Login===============\r\n");
     puts("User: ");
@@ -48,7 +47,7 @@ static void prompt() {
             } else if (loggedIn == 1) {
                 if (login(user, buf)) {
                     loggedIn = 2;
-                    printf("Login successful.  Welcome %s\r\n> ", user);
+                    printf("Login successful.  Welcome back %s.\r\nLast login: October 5th, 2011\r\n> ", user);
                 } else {
                     puts("Login failed.\r\n");
                     loggedIn = 0;

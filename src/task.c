@@ -3,12 +3,12 @@
 #define TASK_QUEUE_SIZE  16
 #define TASK_BANK_SIZE   32
 
-static task_queue taskQueue[TASK_QUEUE_SIZE];
+static TaskQueue_t taskQueue[TASK_QUEUE_SIZE];
 static uint32_t nextTid;
 static uint32_t bankPtr;
-static task_t *currentTask;
-static task_t __taskBank[TASK_BANK_SIZE];
-static task_t *taskBank;
+static Task_t *currentTask;
+static Task_t __taskBank[TASK_BANK_SIZE];
+static Task_t *taskBank;
 static int availableQueues;
 static int highestTaskPriority;
 
@@ -40,8 +40,8 @@ void initTasks() {
 }
 
 
-task_t *createTaskD(uint32_t priority) {
-    task_t *t = NULL;
+Task_t *createTaskD(uint32_t priority) {
+    Task_t *t = NULL;
 
     if (taskBank != NULL && priority < TASK_QUEUE_SIZE) {
         t = taskBank;
@@ -60,13 +60,13 @@ task_t *createTaskD(uint32_t priority) {
 }
 
 
-task_t *getCurrentTask() {
+Task_t *getCurrentTask() {
     return currentTask;
 }
 
 
-void addTask(task_t *t) {
-    task_queue *queue = &(taskQueue[t->priority]);
+void addTask(Task_t *t) {
+    TaskQueue_t *queue = &(taskQueue[t->priority]);
 
     if (!queue->head) {
         queue->head = t;
@@ -130,8 +130,7 @@ void findHighestTaskPriority() {
     debugf("New high: %d", high);
 }
 
-
-task_t *schedule() {
+Task_t *schedule() {
     if (highestTaskPriority < 0) {
         return currentTask;
     }
@@ -147,10 +146,10 @@ task_t *schedule() {
     }
 
     // get queue with highest priority. this is guaranteed to not be empty
-    task_queue *queue = &taskQueue[highestTaskPriority];
+    TaskQueue_t *queue = &taskQueue[highestTaskPriority];
 
     // update the task queue
-    task_t *nextTask = queue->head;
+    Task_t *nextTask = queue->head;
     queue->head = nextTask->next;
 
     // current priority queue is empty, find next highest priority
