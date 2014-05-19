@@ -22,7 +22,6 @@
 #include <term.h>
 #include <syscall.h>
 #include <utasks.h>
-#include <task.h>
 
 
 void otherTask() {
@@ -37,15 +36,10 @@ void otherTask() {
 void firstTask() {
     int i;
     uint32_t tid;
-    uint32_t priority;
-    task_t *currentTask = getCurrentTask();
 
-    i = -3;
-    priority = currentTask->priority;
-    while (i < 4) {
-        tid = Create(priority + i, &otherTask);
+    for (i = 2; i <= 8; i += 2) {
+        tid = Create(i, &otherTask);
         printf("Created: %d\r\n", tid);
-        i += 2;
     }
 
     puts("First: exiting\r\n");

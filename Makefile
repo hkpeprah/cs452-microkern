@@ -18,6 +18,7 @@ ASFLAGS          = -mcpu=arm920t -mapcs-32
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
 SOURCE           = $(wildcard $(srcdir)/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
+TESTFILES        = $(basename $(wildcard $(testdir)/*.[cs]))
 TARGET           = assn1.elf
 
 .PHONY: all
@@ -33,6 +34,16 @@ all: init target
 debug: CFLAGS += -DDEBUG
 debug: upload
 
+test: CFLAGS += -DDEBUG -DTEST
+test: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))
+	$(AS) $(ASFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
+	$(XCC) -S $(CFLAGS) $(builddir)/main.s -o $(builddir)/main.o
+	@echo "Compiling test $(TEST)"
+	$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc
+	@USER=`whoami`
+	@-diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET)
+	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
+
 init:
 	@-rm -f $(builddir)/*
 	@mkdir -p build
@@ -42,15 +53,6 @@ init:
 
 clean:
 	-rm -f $(builddir)/*
-
-test:
-	@for case in $(wildcard $(testdir)/*.c) ; do \
-		echo $$case ; \
-		$(XCC) -I./include -g $$case -o $(test) ; \
-		$(test) ; \
-	done
-	@-rm -rf $(test)
-	@echo "All tests passed successfully."
 
 upload: all
 	@USER=`whoami`

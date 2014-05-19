@@ -25,7 +25,7 @@ int Create(int priority, void (*code) ()) {
     k_args_t args;
     args.code = SYS_CREATE;
     args.a0 = priority;
-    args.a1 = (uint32_t) code;
+    args.a1 = (uint32_t)code;
     return swi_call(0, &args);
 }
 

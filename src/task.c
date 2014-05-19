@@ -43,7 +43,7 @@ void initTasks() {
 task_t *createTaskD(uint32_t priority) {
     task_t *t = NULL;
 
-    if (taskBank != NULL) {
+    if (taskBank != NULL && priority < TASK_QUEUE_SIZE) {
         t = taskBank;
         taskBank = t->next;
         t->tid = nextTid++;
