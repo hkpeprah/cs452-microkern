@@ -84,7 +84,7 @@ void addTask(task_t *t) {
     availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
 
-    debugf("Added task with priority %d, new availableQueues: %x, new highestTaskPriority: %d",
+    debugf("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
            t->priority, availableQueues, highestTaskPriority);
 }
 
@@ -137,7 +137,7 @@ task_t *schedule() {
     }
 
     if (currentTask) {
-        if (currentTask->priority >= highestTaskPriority) {
+        if (currentTask->priority > highestTaskPriority) {
             // no highest task priority == empty queues, only current task available
             // current task has higher priority -> it should keep running
             return currentTask;

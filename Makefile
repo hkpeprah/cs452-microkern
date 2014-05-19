@@ -18,7 +18,6 @@ ASFLAGS          = -mcpu=arm920t -mapcs-32
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
 SOURCE           = $(wildcard $(srcdir)/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
-TESTFILES        = $(basename $(wildcard $(testdir)/*.[cs]))
 TARGET           = assn1.elf
 
 .PHONY: all
@@ -27,7 +26,7 @@ TARGET           = assn1.elf
 
 .SECONDARY:
 
-.NOTPARALLEL: all upload
+.NOTPARALLEL: all upload test
 
 all: init target
 
@@ -35,11 +34,14 @@ debug: CFLAGS += -DDEBUG
 debug: upload
 
 test: CFLAGS += -DDEBUG -DTEST
-test: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))
-	$(AS) $(ASFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
-	$(XCC) -S $(CFLAGS) $(builddir)/main.s -o $(builddir)/main.o
-	@echo "Compiling test $(TEST)"
-	$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc
+test: init
+	$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
+	@$(MAKE) debug > /dev/null
+	rm $(builddir)/main.s $(builddir)/main.o
+	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
+	@$(AS) $(ASFLAGS) $(builddir)/main.s -o $(builddir)/main.o
+	@echo "Compiled test $(TEST) -> $(builddir)/main.o"
+	$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $(DEPENDENCIES) -lbwio -lgcc
 	@USER=`whoami`
 	@-diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET)
 	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)

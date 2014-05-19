@@ -41,13 +41,13 @@ int main() {
     for (i = 0; i < 8; ++i) {
         if (i < 4) {
             status = sys_create(priorities[i], task2, &tid);
-        } else if (i > 4) {
+        } else if (i >= 4) {
             status = sys_create(priorities[i], task1, &tid);
         }
 
         if (status != 0) {
             printf("Tests Failed: Failed on task %d, could not create tasks.\r\n", i);
-            exit(1);
+            return 1;
         }
     }
 
@@ -58,13 +58,13 @@ int main() {
         if (finishTimes[i] != expected[i]) {
             puts("Test scheduling failed.\r\nExpected:");
             for (i = 0; i < 8; ++i) printf(" %d", expected[i]);
+            newline();
             puts("Actual: ");
             for (i = 0; i < 8; ++i) printf(" %d", finishTimes[i]);
-            exit(1);
+            return 1;
         }
     }
 
-    puts("All tests passed successfully?");
-    newline();
+    puts("All tests passed successfully!");
     return 0;
 }
