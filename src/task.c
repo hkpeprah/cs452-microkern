@@ -9,6 +9,8 @@ static uint32_t bankPtr;
 static task_t *currentTask;
 static task_t __taskBank[TASK_BANK_SIZE];
 static task_t *taskBank;
+
+static int availableQueues;
 static int highestTaskPriority;
 
 void initTasks() {
@@ -17,6 +19,7 @@ void initTasks() {
     bankPtr = 0;
     nextTid = 0;
     currentTask = NULL;
+    availableQueues = 0;
     highestTaskPriority = -1;
 
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
@@ -78,7 +81,12 @@ void addTask(task_t *t) {
     t->state = READY;
     queue->tail = t;
 
+    availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
+
+#if DEBUG
+    printf("added task with priority %d, new availableQueues: %x, new highestTaskPriority: %d\n", t->priority, availableQueues, highestTaskPriority);
+#endif
 }
 
 
@@ -100,6 +108,36 @@ void destroyTaskD() {
     currentTask = NULL;
 }
 
+void findHighestTaskPriority() {
+    if(availableQueues == 0) {
+        highestTaskPriority = -1;
+        return;
+    }
+
+#if DEBUG
+    printf("availableQueues: 0x%x\n", availableQueues);
+#endif
+
+    int high, mid;
+
+    for(high = highestTaskPriority; ; high = mid) {
+
+        mid = high >> 1;
+
+        if((1 << mid) <= availableQueues) {
+            break;
+        }
+    }
+
+    while( !((1 << high) & availableQueues)) {
+        --high;
+    }
+
+    highestTaskPriority = high;
+#if DEBUG
+    printf("new high: %d\n", high);
+#endif
+}
 
 task_t *schedule() {
     if (highestTaskPriority < 0) {
@@ -127,10 +165,8 @@ task_t *schedule() {
     // current priority queue is empty, find next highest priority
     if (nextTask == queue->tail) {
         queue->tail = NULL;
-
-        do {
-            --highestTaskPriority;
-        } while (taskQueue[highestTaskPriority].head == NULL && highestTaskPriority >= 0);
+        availableQueues -= 1 << nextTask->priority;
+        findHighestTaskPriority();
     }
 
     // set as current
