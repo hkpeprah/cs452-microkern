@@ -15,6 +15,16 @@
 #define getchar()                getch()
 #define putchar(ch)              putch(ch)
 #endif
+#if DEBUG
+#define debugf(format, ...)      (move_to_debug(), printf("\r\n"), printf(format, ## __VA_ARGS__), restore_cursor())
+#define debug(str)               debugf("%s", str)
+#else
+#define debug(str)
+#define debugf(format, ...)
+#endif
+#define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
+#define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINA_HEIGHT), restore_cursor())
+
 
 /* ANSI color codes */
 #define CLEAR                    0
@@ -63,7 +73,6 @@
 
 
 void initDebug();
-void debug(char*);
 int login(char*, char*);
 void dumpRegisters();
 

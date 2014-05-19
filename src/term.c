@@ -23,18 +23,6 @@ void initDebug() {
 }
 
 
-void debug(char *str) {
-    #if DEBUG
-        save_cursor();
-        set_scroll(TOP_HALF, BOTTOM_HALF - 1);
-        move_cursor(0, BOTTOM_HALF - 1);
-        printf("\r\n%s", str);
-        set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT);
-        restore_cursor();
-    #endif
-}
-
-
 int login(char *user, char *pass) {
     debug("Processing user login.");
     if (!(strcmp(user, USER) || strcmp(pass, PASSWORD))) {
@@ -48,12 +36,10 @@ void dumpRegisters() {
     #if DEBUG
         int i;
         int sp = (int)push_reg();
-
-        printf("task cpsr: %x\n", get_cpsr(0));
-        printf("task sp: %x\n", sp);
-
-        for(i = 0; i < 15; ++i) {
-            printf("reg +%d: %x\n", i, ((int*)sp)[i]);
+        debugf("task cpsr: %x\n", get_cpsr(0));
+        debugf("task sp: %x\n", sp);
+        for (i = 0; i < 15; ++i) {
+            debugf("reg +%d: %x\n", i, ((int*)sp)[i]);
         }
     #endif
 }

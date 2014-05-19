@@ -9,9 +9,9 @@ static uint32_t bankPtr;
 static task_t *currentTask;
 static task_t __taskBank[TASK_BANK_SIZE];
 static task_t *taskBank;
-
 static int availableQueues;
 static int highestTaskPriority;
+
 
 void initTasks() {
     uint32_t i;
@@ -84,9 +84,8 @@ void addTask(task_t *t) {
     availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
 
-#if DEBUG
-    printf("added task with priority %d, new availableQueues: %x, new highestTaskPriority: %d\n", t->priority, availableQueues, highestTaskPriority);
-#endif
+    debugf("Added task with priority %d, new availableQueues: %x, new highestTaskPriority: %d",
+           t->priority, availableQueues, highestTaskPriority);
 }
 
 
@@ -100,44 +99,37 @@ void destroyTaskD() {
     currentTask->sp = 0;
     currentTask->addrspace = NULL;
     currentTask->result = 0;
-
-    /* add task back to bank */
-    currentTask->next = taskBank;
-    taskBank = currentTask;
-
+    currentTask->state = ZOMBIE;
     currentTask = NULL;
 }
 
+
 void findHighestTaskPriority() {
-    if(availableQueues == 0) {
+    int high, mid;
+
+    if (availableQueues == 0) {
         highestTaskPriority = -1;
         return;
     }
 
-#if DEBUG
-    printf("availableQueues: 0x%x\n", availableQueues);
-#endif
+    debugf("AvailableQueues: 0x%x", availableQueues);
 
-    int high, mid;
-
-    for(high = highestTaskPriority; ; high = mid) {
-
+    for (high = highestTaskPriority; ; high = mid) {
         mid = high >> 1;
 
-        if((1 << mid) <= availableQueues) {
+        if ((1 << mid) <= availableQueues) {
             break;
         }
     }
 
-    while( !((1 << high) & availableQueues)) {
+    while (!((1 << high) & availableQueues)) {
         --high;
     }
 
     highestTaskPriority = high;
-#if DEBUG
-    printf("new high: %d\n", high);
-#endif
+    debugf("New high: %d", high);
 }
+
 
 task_t *schedule() {
     if (highestTaskPriority < 0) {
@@ -151,7 +143,6 @@ task_t *schedule() {
             return currentTask;
         }
         // add current task to queue
-        currentTask->state = READY;
         addTask(currentTask);
     }
 
