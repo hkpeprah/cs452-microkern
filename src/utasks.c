@@ -38,7 +38,7 @@ void firstTask() {
     int i;
     uint32_t tid;
     uint32_t priority;
-    task_t *currentTask = getCurrentTask();
+    Task_t *currentTask = getCurrentTask();
 
     i = -3;
     priority = currentTask->priority;

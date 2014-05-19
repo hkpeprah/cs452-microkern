@@ -11,10 +11,10 @@ typedef enum {
     ZOMBIE,
     FREE,
     NUM_STATES
-} taskState_t;
+} TaskState_t;
 
 typedef struct __task_t {
-    taskState_t state;
+    TaskState_t state;
     uint32_t tid;
     int parentTid;
     int priority;
@@ -23,19 +23,19 @@ typedef struct __task_t {
     MemBlock_t * addrspace;
     // result of last request, TODO(max) - optimize this by using the stack
     uint32_t result;
-} task_t;
+} Task_t;
 
 typedef struct {
-    task_t *head;
-    task_t *tail;
-} task_queue;
+    Task_t *head;
+    Task_t *tail;
+} TaskQueue_t;
 
 
 void initTasks();
-task_t *createTaskD(uint32_t);
-task_t *getCurrentTask();
+Task_t *createTaskD(uint32_t);
+Task_t *getCurrentTask();
 void destroyTaskD();
-void addTask(task_t*);
-task_t *schedule();
+void addTask(Task_t*);
+Task_t *schedule();
 
 #endif /* __TASK_H__ */

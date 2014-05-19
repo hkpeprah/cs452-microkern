@@ -7,7 +7,7 @@
 #define REGS_SAVE   11
 
 int sys_create(int priority, void (*code)(), uint32_t *retval) {
-    task_t *task;
+    Task_t *task;
     unsigned int i;
     uint32_t *sp;
 
@@ -32,7 +32,7 @@ int sys_create(int priority, void (*code)(), uint32_t *retval) {
 
 
 int sys_tid(uint32_t *retval) {
-    task_t *current = getCurrentTask();
+    Task_t *current = getCurrentTask();
     if (current != NULL) {
         *retval = current->tid;
         return 0;
@@ -41,7 +41,7 @@ int sys_tid(uint32_t *retval) {
 }
 
 int sys_pid(uint32_t *retval) {
-    task_t *current = getCurrentTask();
+    Task_t *current = getCurrentTask();
     if(current != NULL) {
         *retval = current->parentTid;
         return 0;

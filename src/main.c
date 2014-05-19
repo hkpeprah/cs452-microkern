@@ -38,7 +38,7 @@ static void boot() {
 }
 
 
-static int handleRequest(k_args_t *args) {
+static int handleRequest(Args_t *args) {
     uint32_t result = 0;
     uint32_t errno = 0;
 
@@ -78,8 +78,8 @@ static void kernel_main() {
     int taskSP;
     int loggedIn;
     unsigned int i;
-    k_args_t *args;
-    task_t *task = NULL;
+    Args_t *args;
+    Task_t *task = NULL;
 
     FOREVER {
         task = schedule();

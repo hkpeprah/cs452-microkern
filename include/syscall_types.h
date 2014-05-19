@@ -11,12 +11,12 @@ typedef enum {
     SYS_EXIT
 } system_calls;
 
-typedef struct k_args {
+typedef struct args {
     system_calls code;
     uint32_t a0;
     uint32_t a1;
     uint32_t a2;
     uint32_t a3;
-} k_args_t;
+} Args_t;
 
 #endif /* __SYSCALL_DEFS__ */
