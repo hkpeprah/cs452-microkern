@@ -103,8 +103,10 @@ void destroyTaskD() {
 
 task_t *schedule() {
     if (highestTaskPriority < 0) {
-        return NULL;
-    } else if (currentTask) {
+        return currentTask;
+    }
+
+    if (currentTask) {
         if (currentTask->priority >= highestTaskPriority) {
             // no highest task priority == empty queues, only current task available
             // current task has higher priority -> it should keep running
