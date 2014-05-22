@@ -21,4 +21,10 @@
 *.x86_64
 *.hex
 
+# LaTeX temporary files
+*.aux
+*.log
+*.toc
+*.out
+
 build

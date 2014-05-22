@@ -1,0 +1,102 @@
+\documentclass[12pt]{article}
+\usepackage{enumerate, amsmath, fullpage, hyperref, amsfonts, titlesec, verbatim}
+\renewcommand*\contentsname{Table of Contents}
+\newlength\tindent
+\setlength{\tindent}{\parindent}
+\setlength{\parindent}{0pt}
+\renewcommand{\indent}{\hspace*{\tindent}}
+\begin{document}
+\pagenumbering{gobble}
+\begin{center}
+  {\bf\Large Kernel 1}\\
+  {\bf\large CS452 - Spring 2014}\\
+  Real-Time Programming\vspace{5cm}\\
+  {\bf Team }\\
+  Max Chen - mqchen\\
+  mqchen@uwaterloo.ca\\[1\baselineskip]
+  Ford Peprah - hkpeprah\\
+  ford.peprah@uwaterloo.ca\vspace{5cm}\\
+  Bill Cowan\\
+  University of Waterloo\\
+  {\bf Due Date:} Monday, $26^{th}$, May, $2014$
+\end{center}
+\newpage
+% Program Description: how to operate it, full pathname
+% Description fo structure of Kernel: algorithms, data structures, etc.
+% Location fo source code + MD5
+% Output produced by program and explanation of why it does
+\tableofcontents
+\newpage
+\section{Kernel Structure}
+\subsection{Memory Allocation}
+Memory allocations is created in a trivial manner.  As in accordance with maintaing the performance of a real time system, we make use of the stack to allocate memory, treating Memory as a linked list of addresses which represent a segment (or block) of the stack.  These segments make up the stacks of the tasks.  On allocation, the head of the linked list is returned and the next segment becomes the head, while on free, the block is added as the head of the Memory linked list.  Since Memory protection and segmentation are not required, memory was implemented in the simplest manner.
+\\[1\baselineskip]
+\subsection{Task Descriptor (TD)}
+Tasks represent a thread or unit of execution.  A task descriptor describes a single task and stores the following information:
+\begin{center}
+  \begin{tabular}{|l|l|}
+    \hline
+    {\bf Field} & {\bf Description} \\\hline
+    TaskStat\_t & the task state which is an enum in {READY, ACTIVE, ZOMBIE, FREE} \\\hline
+    tid & the task identifier (these aren't reusued) \\\hline
+    parentTid & tid of the parent task (task that created thsi one) \\\hline
+    priority & integer value indicating priority of task (larger number $\rightarrow$ higher priority) \\\hline
+    sp & the task's stack pointer \\\hline
+    next & next task in the task queue this task belongs to \\\hline
+    addrspace & pointer to the block of memory the task can use as it's stack \\\hline
+    result & result of a recent kernel system call \\\hline
+  \end{tabular}
+\end{center}
+The CPSR of the task is stored on the stack of the task alongside its registers.  Further optimizations can be made to the task descriptor by storing the result on the stack of the process, as well as removing the \texttt{addrspace} pointer if a task is not going to call \texttt{Exit()}, but reaches the \texttt{ZOMBIE} state as a result of accomplishing what it was tasked to do and having no more instructions to run.\\
+
+To create the task descriptors, since we do not make use of the heap, we have to allocate our task descriptors from a bank that already exists on the stack.  To this end, we have an array of $32$ task descriptors (an amount that will be tweaked depending on how much is needed in the future), that can be used to create new tasks.  These tasks start as blank with their state marked as \texttt{FREE} denoting that they can be used to allocate new tasks.  When a task is \texttt{READY}, it is stored in the \texttt{taskQueue} corresponding to its priority, of which priorities can range from $0 - 15$.  To get constant performance when creating a new task descriptor, in the \texttt{initTasks} function, they are assigned to the \texttt{taskBank} as a linked list, each task descriptor pointing to the next free task descriptor in the list.  When we wish to create a new task, we grab the task descriptor at the head of the bank as it will always be free to use.  We then assign it a priority, task id, parent tid (if the parent exists), an address space to use by calling \texttt{getMem()} which returns a segment of memory for the task to use as its stack, and the task pointer which points to the bottom of the address space.  The task is then added to the end of its respective queue.  On deletion, we mark the state of the task as \texttt{ZOMBIE} and free its address space; for now we make use of the \texttt{ZOMBIE} state and do not add the task descriptor back to the head of the bank to adhere with assignment specifications, but in the future to allow for immediate garbage collection that would not hinder the performance of the system, the task would be added as a free task to the head of the bank.
+\\[1\baselineskip]
+\subsection{Task Queues}
+Queues for tasks are implemented with two pointers; one pointer to the head of the queue and another pointer to the end of the queue.  We use the tail pointer to enable constant time addition of a new task to the queue by simply having the tail task pointer to the added task as it's \texttt{next} field.  The \texttt{head} pointer enables us to get the next task in the queue that is to be run and pop it off the queue.  Queues are created from an array of queues on the stack, and each queue's index in the array corresponds to the priority of the tasks that are stored in that queue.
+\\[1\baselineskip]
+\subsection{Scheduling}
+On a \texttt{schedule()} call, the following sequence of events takes place:
+\begin{enumerate}
+  \item If the queues are empty, or there are no tasks of higher priority, return the current task (i.e. the last task that was running).
+  \item If the current task is null, the kernel has no more tasks to run, exit.
+  \item Otherwise, add the current task to the end of the priority queue.
+  \item Get the next task descriptor from the priority queue.
+  \item Move that task into the \texttt{ACTIVE} state and return it.
+\end{enumerate}
+This sort of round-robin scheduling means that each task in the queue has an equal opportunity at being run and means that if a task passes and it is the only task in the queue, it will simply be run again.  There are $16$ priorities ($0 - 15$) for tasks, with $15$ being the highest priority a task can have.  Each priority has its own queue of task descriptors that are implemented as a linked list and tracked by
+\begin{enumerate}
+  \item \texttt{highestPriorityQueue} - integer, the highest priority queue that is not empty
+  \item \texttt{availableQueues} - integer, bit field for the queues, $1$ = non-empty, $0$ = empty
+\end{enumerate}
+These two variables are updated each time a call is made to \texttt{addTask} to add a new/existing task descriptor to the end of a queue, which occurs either during creation or scheduling.\\
+
+Tracking the queue state allows for a constant time retrieval of the next task to run.  When a \texttt{schedule()} call results in the last task being removed from the queue of its priority, then the corresponding bit in \texttt{availableQueues} is set to $0$, and \texttt{highestTaskPriority} is updated to the next highest task priority by doing a pseudo-linear search of the bits in \texttt{availableQueues} to find the first occurence of a $1$ bit.  A binary search is run, with the search space between the last \texttt{highestTaskPriority} and $0$.  However, this binary search is inconclusive, in that it will only move the high index towards 0, and will break when doing so will make the high index lower than the next highest priority. Essentially, we want to find the first n such that n > next highest priority, but n/2 <= next highest priority. From here, a linear search is done counting down from n until the first non-zero bit of \texttt{availableQueues} is found. \\
+
+This was done to give an optimization in the worst case (last priority was very high, and the next highest priority is low). A full binary search is not done since given the size of the search space, there doesn’t seem to be much to be gained from doing so. Optimization seems premature at this time, so there was not much effort spent on it.
+\\[1\baselineskip]
+\subsection{Software Interrupt (SWI)}
+\subsubsection{swi\_call}
+For each system call, the calling task creates a struct of type \texttt{Arg\_t} on its own stack, then calls the assembly function \texttt{int swi\_call(int sp, void *args)} to initiate SWI. The function passes a dummy value $0$ into the sp parameter, and the address of the \texttt{Arg\_t struct} it created as the second parameter.  In \texttt{swi\_call}, the user task registers {r2-r12, lr} are pushed onto its stack. Then the SP is copied into r0, and the \texttt{swi} instruction is triggered to switch to supervisor mode.
+\\[1\baselineskip]
+\subsubsection{swi\_handler}
+This assembly function is the kernel SWI handler, and is the address stored in 0x28 to be jumped to for \texttt{swi}. The function first saves the SPSR onto the top of the user stack (r0) then pops the top of the kernel stack into r2 (this is an output parameter, \texttt{Arg\_t**}, supplied by the kernel) and saves r1 (\texttt{Arg\_t*}) into its address. Finally, the kernel state is restored by moving {r3-r12, pc} into the registers.
+\\[1\baselineskip]
+\subsubsection{Request Handling}
+The \texttt{Arg\_t} structure gives the code for which request is required, as well as the arguments necessary. Kernel functions are called based on a switch statement around the argument code, and the result is stored into the TD’s result field.
+\\[1\baselineskip]
+\subsubsection{swi\_exit}
+This assembly function returns from the kernel SWI handler into the user code, as well as the return point back into the kernel from a new SWI call. The function has the signature:
+\begin{center}
+  \begin{verbatim}
+    int swi_exit(int result, int sp, void** tf);
+  \end{verbatim}
+\end{center}
+This takes advantage of the fact that r0 is used as the return parameter. When calling into the kernel, the SP is set to r0, which becomes the return value of this function. When returning to a user task, the result is passed as the first parameter so it resides in r0, and when we return to the user mode it already has its result.
+The user SP is passed as r1 so the kernel can restore the user state by switching to SYS mode.
+r2 is an output parameter for \texttt{Arg\_t*} that is saved as a part of the kernel state {r2-r12, lr} so that \texttt{swi\_handler} can write the user arguments to it.
+The function restores the user state and SPSR from the user stack, then MOVS to switch to user space. The next instruction is always going to be mov pc, lr (user space), so a constant label is used to branch to this instruction, and returns to where the user called \texttt{swi\_call}.
+\\[2\baselineskip]
+
+\section{MD5 Hashes}
+\section{Program Output}
+\end{document}
