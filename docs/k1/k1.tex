@@ -122,4 +122,5 @@ Task $1$ is created with priority $2$, task $2$ with priority $4$, task $3$ with
 \subsection{Context Switch, Processor State}
 Looking at the generated user task .s files, most of them did not utilize that many registers. To be sure of the correctness of our context switch, we created our own tests that uses additional registers aggressively and interchanged them with context switching. We turned on gcc optimization, then found a small function which used a good number of registers - in our case, we picked \texttt{atoi}. The function was copied into the body of a task, with \texttt{Pass()} calls added into parts of its execution. After inspecting the assembly code, we verified that registers were used on either side of the \texttt{Pass()} call without being stored into memory. Multiple instances of the task was created with different values to convert to integer, then the result of the inline \texttt{atoi} were verifed against the hard-coded expected results.
 \section{MD5 Hashes}
+\verbatiminput{md5}
 \end{document}

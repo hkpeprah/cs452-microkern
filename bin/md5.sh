@@ -9,7 +9,7 @@ function abspath() {
 }
 
 function checksums() {
-    local files=`find ${1} -type f | egrep "(Makefile|\.(cpp|h|c|sh|ld|elf)$)" | grep -v grep | grep -v "${1}/tests/*"`
+    local files=`find ${1} -type f | egrep "(Makefile|\.(cpp|h|c|sh|ld|elf|a)$)" | grep -v grep | grep -v "${1}/tests/*"`
     $md5sum $files
 }
 
@@ -19,7 +19,6 @@ elif [[ "$unamestr" == 'FreeBSD' || "$unamestr" == 'Darwin' ]]; then
     md5sum='md5'
 fi
 
-checksums "${DIR}"
 if [ ${#} -gt 0 ]; then
     path=`realpath ${1}`
     checksums ${path}

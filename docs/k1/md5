@@ -1,0 +1,37 @@
+1efb2e496393dc5465abf0480940928d  /u7/mqchen/cs452/cs452-microkern/src/orex.ld
+0f60a59fdd1e9a6cb4ec4aa01acc54ad  /u7/mqchen/cs452/cs452-microkern/src/mem.c
+b59c60300d76a7443e5e4260f70a8232  /u7/mqchen/cs452/cs452-microkern/src/stdio.c
+4a4a162d7de498e89ab976f72601e7ae  /u7/mqchen/cs452/cs452-microkern/src/string.c
+070b92bb919655be671153cf336ac75d  /u7/mqchen/cs452/cs452-microkern/src/syscall.c
+1b9af90c069360f5eed30ea3f6c8b80d  /u7/mqchen/cs452/cs452-microkern/src/task.c
+719958ebaa876c06e82df6cb8e0cefd8  /u7/mqchen/cs452/cs452-microkern/src/term.c
+9825389de9563fc632538c111d41e973  /u7/mqchen/cs452/cs452-microkern/src/utasks.c
+394f7ed086c4465cc86fcf573d40a011  /u7/mqchen/cs452/cs452-microkern/src/main.c
+5e4ef8a626c50e440f460ac0e76d9289  /u7/mqchen/cs452/cs452-microkern/src/stdlib.c
+dc8da36f9c8167f47d71894bbca47655  /u7/mqchen/cs452/cs452-microkern/src/k_syscall.c
+59bc24234c49f9c247bb97e4b125959c  /u7/mqchen/cs452/cs452-microkern/src/kernel.c
+
+0e521943c728ffaabac44d3485ca4a1e  /u7/mqchen/cs452/cs452-microkern/include/types.h
+742e69b52b3f4cda1898363ef1246fb0  /u7/mqchen/cs452/cs452-microkern/include/ts7200.h
+40e6f5862869392d9733ea2d6defbb68  /u7/mqchen/cs452/cs452-microkern/include/bwio.h
+d898edf77661ac9a98e2a0c6b9d9b9a6  /u7/mqchen/cs452/cs452-microkern/include/vargs.h
+045d5b074001cbda021d83b6a76a0a84  /u7/mqchen/cs452/cs452-microkern/include/mem.h
+19fbec18bdcd2bf2169e51577153fbcf  /u7/mqchen/cs452/cs452-microkern/include/string.h
+a2b4f767be509e16fae1d8bb671cae87  /u7/mqchen/cs452/cs452-microkern/include/syscall.h
+2868c18b136cc0dd88307aa3dafe59ea  /u7/mqchen/cs452/cs452-microkern/include/task.h
+0d4f70ea95299ed99ce1169d4d19fdda  /u7/mqchen/cs452/cs452-microkern/include/stdio.h
+19694c1d15b796e9f5ced7df853524c5  /u7/mqchen/cs452/cs452-microkern/include/stdlib.h
+16a3912586e2c05d0d219c124a3565b1  /u7/mqchen/cs452/cs452-microkern/include/term.h
+45219fc297d19330b76e5fc1b80e7727  /u7/mqchen/cs452/cs452-microkern/include/utasks.h
+85461ecf5ec811924ee3035eadb8dfec  /u7/mqchen/cs452/cs452-microkern/include/k_syscall.h
+afad1686254c89fe51cce7ce4fa1b3da  /u7/mqchen/cs452/cs452-microkern/include/syscall_types.h
+87c6cd6bf280cb0a927e6c15a2ab8db6  /u7/mqchen/cs452/cs452-microkern/include/kernel.h
+
+befff66a349448e4e08aab2f7abbaa51  /u7/mqchen/cs452/cs452-microkern/tests/tasks1.c
+
+2111d426d0eafde7010394f25a13aab3  /u7/mqchen/cs452/cs452-microkern/Makefile
+
+8402c682ff31b15549689baa00ea45b6  /u7/mqchen/cs452/cs452-microkern/lib/libbwio.a
+
+8afa04fd4ff12bc483271286d52dfa00  /u7/mqchen/cs452/cs452-microkern/bin/cs452-upload.sh
+923048dea1528d355b4bd2889d7cf1be  /u7/mqchen/cs452/cs452-microkern/bin/md5.sh
