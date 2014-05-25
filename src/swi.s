@@ -1,14 +1,26 @@
-    .global	swi_call
-	.type	swi_call, %function
+    .global swi_call
+    .type   swi_call, %function
 swi_call:
-    # save keep SP, use r0 to push on to stack. also arg0 to kernel handler
-    stmfd   sp!, {r2-r12, lr}
-    mov     r0, sp
     swi
 
     .global swi_handler
     .type   swi_handler, %function
 swi_handler:
+
+    # go to system mode
+    mrs     r0, cpsr
+    orr     r0, r0, #0x1F
+    msr     cpsr_c, r0
+
+    # store user state, move sp to r0
+    mov     r0, sp
+    stmfd   r0!, {r2-r12, lr}
+
+    # go to svc mode
+    mrs     r2, cpsr
+    bic     r2, r2, #0x1F
+    orr     r2, r2, #0x13
+    msr     cpsr_c, r2
 
     # save the spsr of the user process on top of the user process stack
     mrs     r2, spsr
@@ -33,10 +45,6 @@ swi_exit:
     ldmfd   r1!, {r2}
     msr     spsr, r2
 
-    # restore user state, r1 is the user task sp
-    # this command doesn't actually work... loads into sp_svc instead of sp. bleh
-    #    ldmfd   r1, {r1-r12, sp, pc}^
-
     # go to system mode
     mrs     r2, cpsr
     orr     r2, r2, #0x1F
@@ -44,21 +52,8 @@ swi_exit:
 
     # restore user state
     mov     sp, r1
-    ldmfd   sp!, {r2-r12, lr}
+    ldmfd   sp!, {r2-r12, pc}^
 
-    # go to svc mode
-    mrs     r1, cpsr
-    bic     r1, r1, #0x1F
-    orr     r1, r1, #0x13
-    msr     cpsr_c, r1
-
-    # go to user mode. we branch to that first because
-    # we don't have the usermode LR at this point
-    ldr     lr, =rte
-    movs    pc, lr
-
-rte:
-    mov     pc, lr
 
     .global get_cpsr
     .type   get_cpsr, %function
