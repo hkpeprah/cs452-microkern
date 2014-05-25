@@ -9,7 +9,7 @@
 #include <kernel.h>
 #include <syscall.h>
 
-#define NUM_TASKS  12
+#define NUM_TASKS  15
 
 static int finishTimes[NUM_TASKS];
 static int finishIndex;
@@ -36,10 +36,41 @@ void task3() {
     uint32_t tid;
     tid = MyTid();
     if (tid < NUM_TASKS - 1) {
-        Create(1, &task3);
+        Create(2, &task3);
         Pass();
     }
     finishTimes[finishIndex++] = tid;
+    Exit();
+}
+
+
+void task4() {
+    int digit;
+    uint32_t tid;
+    unsigned int index;
+    char *source;
+    char *src[] = {"23304", "48889", "23312"};
+    int res[] = {23304, 48889, 23312};
+    unsigned int base = 10, num = 0, i = 0;
+
+    tid = MyTid();
+    index = tid % 9;
+    source = src[index];
+
+    while (source[i]) {
+        Pass();
+        digit = atod(source[i]);
+        if (digit > base || digit < 0) {
+            break;
+        }
+        num = num * base + digit;
+        ++i;
+    }
+
+    if (num == res[index]) {
+        finishTimes[finishIndex++] = tid;
+    }
+
     Exit();
 }
 
@@ -48,23 +79,23 @@ int main() {
     int status;
     void (*code)();
     unsigned int i;
-    unsigned int len;
     uint32_t tid;
-    int priorities[] = {2, 1, 15, 6, 7, 1, 1, 3, 1};
-    int expected[] = {2, 4, 3, 7, 0, 5, 6, 1, 8, 9, 11, 10};
+    int priorities[] = {4, 3, 15, 6, 7, 3, 3, 5, 2, 1, 1, 1};
+    int expected[] = {2, 4, 3, 7, 0, 5, 6, 1, 8, 12, 14, 13, 9, 10, 11};
 
     finishIndex = 0;
-    len = 9;
     boot();
 
     /* test for task creation */
-    for (i = 0; i < len; ++i) {
+    for (i = 0; i < 12; ++i) {
         if (i < 4) {
             code = task2;
-        } else if (i >= 4 && i < len - 1) {
+        } else if (i >= 4 && i < 8) {
             code = task1;
-        } else {
+        } else if (i == 8) {
             code = task3;
+        } else {
+            code = task4;
         }
 
         status = sys_create(priorities[i], code, &tid);

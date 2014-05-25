@@ -1,0 +1,39 @@
+CS452 Kernel 1 Assignment
+=========================
+
+
+Authors
+=======
+Max Chen: mqchen
+Ford Peprah: hkpeprah
+
+
+Unix Group
+==========
+...
+
+
+Running the Program
+===================
+To run the application, you need to load it into the RedBoot terminal.  First, the application must be uploaded to the FTP server.  To do this, run `make upload` from the source directory (/../../), which will upload a copy of the assignment to your directory on the FTP server at `/u/cs452/tftp/ARM/YOUR_USERNAME/assn1.elf`.  To then run the application, move to the Redboot terminal and enter:
+
+    load -b 0x00218000 -h 10.15.167.4 "ARM/YOUR_USERNAME/assn1.elf
+
+You should then be greeted by "Windows ME Booting Up", followed by the execution of the user tasks, and finally a login prompt.  Alternatively, you can copy the generated elf files from the path at: /../../
+
+
+Terminal Prompt
+===============
+After the initial user tasks have been run in the setup process, you may log in.  After logging in, you will be presented with a prompt allowing you to enter commands.  The current supported commands are:
+| ======================================================================================================================= |
+| Command | Description                                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------- |
+|    q    | Quit the application.                                                                                         |
+| ======================================================================================================================= |
+
+
+Credentials
+===========
+Non-root credentials exist for testing purposes, and can be entered at the login prompt to login:
+    username: jobs
+    password: steves

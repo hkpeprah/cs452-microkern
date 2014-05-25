@@ -27,4 +27,9 @@
 *.toc
 *.out
 
+# Doxygen output
+html/
+latex/
+
+# Temporary Directories
 build
