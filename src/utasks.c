@@ -25,7 +25,7 @@
 
 
 void otherTask() {
-    char fmt[] = "My Task Id: %d, My Parent's Task ID: %d\r\n";
+    char fmt[] = "My Task Id: %d, My Parent's Task Id: %d\r\n";
     printf(fmt, MyTid(), MyParentTid());
     Pass();
     printf(fmt, MyTid(), MyParentTid());
@@ -42,7 +42,7 @@ void firstTask() {
         printf("Created: %d\r\n", tid);
     }
 
-    puts("First: exiting\r\n");
+    puts("First: Exiting\r\n");
     Exit();
 }
 

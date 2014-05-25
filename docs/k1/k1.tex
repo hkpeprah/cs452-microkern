@@ -98,6 +98,25 @@ The function restores the SPSR from the user stack, then restores the user state
 \\[2\baselineskip]
 
 \section{Program Output}
+The program outputs the following from the user tasks, which is later followed by the login prompt:
+\begin{verbatim}
+Created: 1
+Created: 2
+My Task Id: 3, My Parent's Task Id: 0
+My Task Id: 3, My Parent's Task Id: 0
+Created: 3
+My Task Id: 4, My Parent's Task Id: 0
+My Task Id: 4, My Parent's Task Id: 0
+Created: 4
+First: Exiting
+My Task Id: 2, My Parent's Task Id: 0
+My Task Id: 2, My Parent's Task Id: 0
+My Task Id: 1, My Parent's Task Id: 0
+My Task Id: 1, My Parent's Task Id: 0
+\end{verbatim}
+Task $1$ is created with priority $2$, task $2$ with priority $4$, task $3$ with priority $6$, and task $4$ with priority $8$.  The first task is created by the kernel, has a priority of $5$, a task id of $0$, and creates tasks $1$ to $4$.  Now, since the first user task has a priority of $5$, after creating task $1$, \textmd{schedule()} will schedule task $0$ again because it's priority is $5$ which is greater than $2$.  Task $0$ will then print out having created $1$ and will proceed to create task $2$, where the same thing happens again as task $2$ has a priority less than task $0$.  When task $0$ then resumes again, it creates task $3$, which has priority $6 > 5$, so on \textmd{schedule()}, task $3$ is run instead.  Since there are no other tasks with priority $6$, the \textmd{Pass()} that occurs in task $3$'s code will resume control to task $3$ again, and it will exit having printed two times it's task id and it's parent task's id.  On its exit, \texmd{schedule()} schedules task $0$ again as it has the highest priority of any tasks, which upon resuming it prints out having created task $3$, and then creates task $4$, where the same thing occurs as it did with task $3$ as task $4$ has priority $8$ and is the only task with such a priority (greater than any other priorities).  On return from task $4$, task $0$ is resumed and prints itself exiting before exiting as it has no more tasks to create.  Task $2$ and task $1$ then run sequentially, task $2$ printing out twice followed by task $1$ as task $2$ has the highest priority of any tasks currently created and no task with the same priority as it. \\[2\baselineskip]
+
+
 \section{Additional Testing}
 \subsection{Task Creation, Priority and Scheduling}
 \subsection{Context Switch, Processor State}

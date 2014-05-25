@@ -62,8 +62,6 @@ void boot () {
     initSWI();
     clear_screen();
     initDebug();
-    puts("Windows ME booting up.");
-    newline();
 }
 
 

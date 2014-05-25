@@ -19,7 +19,7 @@ To run the application, you need to load it into the RedBoot terminal.  First, t
 
     load -b 0x00218000 -h 10.15.167.4 "ARM/YOUR_USERNAME/assn1.elf
 
-You should then be greeted by "Windows ME Booting Up", followed by the execution of the user tasks, and finally a login prompt.  Alternatively, you can copy the generated elf files from the path at: /../../
+The execution of the user tasks begins and output is rendered to the screen.  Finally, a login prompt is displayed.  Alternatively, you can copy the generated elf files from the path at: /../../
 
 
 Terminal Prompt
