@@ -1,12 +1,15 @@
 \documentclass[12pt]{article}
-\usepackage{enumerate, amsmath, fullpage, hyperref, amsfonts, titlesec, verbatim}
+\usepackage{enumerate, amsmath, fullpage, hyperref, amsfonts, titlesec, listings}
 \renewcommand*\contentsname{Table of Contents}
 \newlength\tindent
 \setlength{\tindent}{\parindent}
 \setlength{\parindent}{0pt}
 \renewcommand{\indent}{\hspace*{\tindent}}
+\lstset{
+   breaklines=true,
+   basicstyle=\scriptsize\rmfamily}
 \begin{document}
-\pagenumbering{gobble}
+\thispagestyle{empty}
 \begin{center}
   {\bf\Large Kernel 1}\\
   {\bf\large CS452 - Spring 2014}\\
@@ -25,6 +28,7 @@
 % Description fo structure of Kernel: algorithms, data structures, etc.
 % Location fo source code + MD5
 % Output produced by program and explanation of why it does
+\thispagestyle{empty}
 \tableofcontents
 \newpage
 \section{Kernel Structure}
@@ -70,7 +74,7 @@ This sort of round-robin scheduling means that each task in the queue has an equ
 \end{enumerate}
 These two variables are updated each time a call is made to \texttt{addTask} to add a new/existing task descriptor to the end of a queue, which occurs either during creation or scheduling.\\
 
-Tracking the queue state allows for a constant time retrieval of the next task to run.  When a \texttt{schedule()} call results in the last task being removed from the queue of its priority, then the corresponding bit in \texttt{availableQueues} is set to $0$, and \texttt{highestTaskPriority} is updated to the next highest task priority by doing a pseudo-linear search of the bits in \texttt{availableQueues} to find the first occurence of a $1$ bit.  A binary search is run, with the search space between the last \texttt{highestTaskPriority} and $0$.  However, this binary search is inconclusive, in that it will only move the high index towards 0, and will break when doing so will make the high index lower than the next highest priority. Essentially, we want to find the first n such that n > next highest priority, but n/2 <= next highest priority. From here, a linear search is done counting down from n until the first non-zero bit of \texttt{availableQueues} is found. \\
+Tracking the queue state allows for a constant time retrieval of the next task to run.  When a \texttt{schedule()} call results in the last task being removed from the queue of its priority, then the corresponding bit in \texttt{availableQueues} is set to $0$, and \texttt{highestTaskPriority} is updated to the next highest task priority by doing a pseudo-linear search of the bits in \texttt{availableQueues} to find the first occurence of a $1$ bit.  A binary search is run, with the search space between the last \texttt{highestTaskPriority} and $0$.  However, this binary search is inconclusive, in that it will only move the high index towards 0, and will break when doing so will make the high index lower than the next highest priority. Essentially, we want to find the first n such that n $>$ next highest priority, but n/2 $<=$ next highest priority. From here, a linear search is done counting down from n until the first non-zero bit of \texttt{availableQueues} is found. \\
 
 This was done to give an optimization in the worst case (last priority was very high, and the next highest priority is low). A full binary search is not done since given the size of the search space, there doesn’t seem to be much to be gained from doing so. Optimization seems premature at this time, so there was not much effort spent on it.
 \\[1\baselineskip]
@@ -99,22 +103,24 @@ The function restores the SPSR from the user stack, then restores the user state
 
 \section{Program Output}
 The program outputs the following from the user tasks, which is later followed by the login prompt:
-\begin{verbatim}
-Created: 1
-Created: 2
-My Task Id: 3, My Parent's Task Id: 0
-My Task Id: 3, My Parent's Task Id: 0
-Created: 3
-My Task Id: 4, My Parent's Task Id: 0
-My Task Id: 4, My Parent's Task Id: 0
-Created: 4
-First: Exiting
-My Task Id: 2, My Parent's Task Id: 0
-My Task Id: 2, My Parent's Task Id: 0
-My Task Id: 1, My Parent's Task Id: 0
-My Task Id: 1, My Parent's Task Id: 0
-\end{verbatim}
-Task $1$ is created with priority $2$, task $2$ with priority $4$, task $3$ with priority $6$, and task $4$ with priority $8$.  The first task is created by the kernel, has a priority of $5$, a task id of $0$, and creates tasks $1$ to $4$.  Now, since the first user task has a priority of $5$, after creating task $1$, \textmd{schedule()} will schedule task $0$ again because it's priority is $5$ which is greater than $2$.  Task $0$ will then print out having created $1$ and will proceed to create task $2$, where the same thing happens again as task $2$ has a priority less than task $0$.  When task $0$ then resumes again, it creates task $3$, which has priority $6 > 5$, so on \textmd{schedule()}, task $3$ is run instead.  Since there are no other tasks with priority $6$, the \textmd{Pass()} that occurs in task $3$'s code will resume control to task $3$ again, and it will exit having printed two times it's task id and it's parent task's id.  On its exit, \texmd{schedule()} schedules task $0$ again as it has the highest priority of any tasks, which upon resuming it prints out having created task $3$, and then creates task $4$, where the same thing occurs as it did with task $3$ as task $4$ has priority $8$ and is the only task with such a priority (greater than any other priorities).  On return from task $4$, task $0$ is resumed and prints itself exiting before exiting as it has no more tasks to create.  Task $2$ and task $1$ then run sequentially, task $2$ printing out twice followed by task $1$ as task $2$ has the highest priority of any tasks currently created and no task with the same priority as it. \\[2\baselineskip]
+\begin{center}
+  \begin{verbatim}
+    Created: 1
+    Created: 2
+    My Task Id: 3, My Parent's Task Id: 0
+    My Task Id: 3, My Parent's Task Id: 0
+    Created: 3
+    My Task Id: 4, My Parent's Task Id: 0
+    My Task Id: 4, My Parent's Task Id: 0
+    Created: 4
+    First: Exiting
+    My Task Id: 2, My Parent's Task Id: 0
+    My Task Id: 2, My Parent's Task Id: 0
+    My Task Id: 1, My Parent's Task Id: 0
+    My Task Id: 1, My Parent's Task Id: 0
+  \end{verbatim}
+\end{center}
+Task $1$ is created with priority $2$, task $2$ with priority $4$, task $3$ with priority $6$, and task $4$ with priority $8$.  The first task is created by the kernel, has a priority of $5$, a task id of $0$, and creates tasks $1$ to $4$.  Now, since the first user task has a priority of $5$, after creating task $1$, \textmd{schedule()} will schedule task $0$ again because it's priority is $5$ which is greater than $2$.  Task $0$ will then print out having created $1$ and will proceed to create task $2$, where the same thing happens again as task $2$ has a priority less than task $0$.  When task $0$ then resumes again, it creates task $3$, which has priority $6 > 5$, so on \textmd{schedule()}, task $3$ is run instead.  Since there are no other tasks with priority $6$, the \textmd{Pass()} that occurs in task $3$'s code will resume control to task $3$ again, and it will exit having printed two times it's task id and it's parent task's id.  On its exit, \textmd{schedule()} schedules task $0$ again as it has the highest priority of any tasks, which upon resuming it prints out having created task $3$, and then creates task $4$, where the same thing occurs as it did with task $3$ as task $4$ has priority $8$ and is the only task with such a priority (greater than any other priorities).  On return from task $4$, task $0$ is resumed and prints itself exiting before exiting as it has no more tasks to create.  Task $2$ and task $1$ then run sequentially, task $2$ printing out twice followed by task $1$ as task $2$ has the highest priority of any tasks currently created and no task with the same priority as it. \\[2\baselineskip]
 
 
 \section{Additional Testing}
@@ -123,6 +129,8 @@ To ensure that our scheduling was working correctly, we needed to create several
 \\[1\baselineskip]
 \subsection{Context Switch, Processor State}
 Looking at the generated user task .s files, most of them did not utilize that many registers. To be sure of the correctness of our context switch, we created our own tests that uses additional registers aggressively and interchanged them with context switching. We turned on gcc optimization, then found a small function which used a good number of registers - in our case, we picked \texttt{atoi}. The function was copied into the body of a task, with \texttt{Pass()} calls added into parts of its execution. After inspecting the assembly code, we verified that registers were used on either side of the \texttt{Pass()} call without being stored into memory. Multiple instances of the task was created with different values to convert to integer, then the result of the inline \texttt{atoi} were verifed against the hard-coded expected results.
+\\[2\baselineskip]
+
 \section{MD5 Hashes}
-\verbatiminput{md5}
+\lstinputlisting{md5}
 \end{document}
