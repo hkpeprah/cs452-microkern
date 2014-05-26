@@ -56,6 +56,16 @@ After the initial user tasks have been run in the setup process, you may log in.
 | ======================================================================================================================= |
 
 
+Directory Layout
+================
+These are the directories that are of interest:
+
+include     All .h files for the project live here
+lib         The provided libbwio.a from A0, used for debug/output since we do not have interrupt-based I/O yet
+src         Source code (.c/.s)
+build       Output artifacts from make, everything is compiled into this folder
+tests       Tests we wrote and ran on our kernel code
+
 Credentials
 ===========
 Non-root credentials exist for testing purposes, and can be entered at the login prompt to login:
