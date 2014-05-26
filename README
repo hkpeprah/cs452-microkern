@@ -19,7 +19,7 @@ To operate the program, you first need to get a copy of the code.  To do this, l
 
     git clone file:////u8/hkpeprah/cs452-microkern -b kernel1 .
                                 or
-    git clone file:////u8/mqchen/cs452/cs452-microkern -b kernel1 .
+    git clone file:////u7/mqchen/cs452/cs452-microkern -b kernel1 .
 
 You should now have a working instance of our code in your current directory.  To make the application and upload it to your CS452 folder on the FTP server, run
 
