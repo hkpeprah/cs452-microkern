@@ -30,3 +30,39 @@ unsigned int hash_rotation(char *str) {
 
     return result;
 }
+
+
+void init_ht(HashTable *table) {
+    uint32_t i = 0;
+    for (i = 0; i < table->size; ++i) {
+        table->assigned[i] = 0;
+    }
+}
+
+
+unsigned int insert_ht(HashTable *table, char *key, int val) {
+    uint32_t hash;
+
+    hash = hash_djb2(key);
+    hash %= table->size;
+
+    if (!table->assigned[hash]) {
+        table->assigned[hash] = 1;
+        table->data[hash] = val;
+        return 1;
+    }
+
+    return 0;
+}
+
+
+int lookup_ht(HashTable *table, char *key) {
+    uint32_t hash;
+
+    hash = hash_djb2(key) % table->size;
+    if (hash < table->size && table->assigned[hash]) {
+        return table->data[hash];
+    }
+
+    return 0;
+}
