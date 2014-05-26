@@ -21,5 +21,5 @@ Run `make TEST="testfilename"`
 **Debugging**:  
 Run `make debug`  
 
-**TODO**:  
-* Documentation
+**Documentation**:  
+Run `doxygen Doxyfile`
