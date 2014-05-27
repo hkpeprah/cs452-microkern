@@ -20,18 +20,6 @@ unsigned int hash_djb2(char *str) {
 }
 
 
-unsigned int hash_rotation(char *str) {
-    int result = 0x55555555;
-
-    while (*input) {
-        result ^= *input++;
-        result = rol(result, 5);
-    }
-
-    return result;
-}
-
-
 void init_ht(HashTable *table) {
     uint32_t i = 0;
     for (i = 0; i < table->size; ++i) {
@@ -40,12 +28,18 @@ void init_ht(HashTable *table) {
 }
 
 
+void resize_ht(HashTable *table, uint32_t new_size, int32_t *data, uint32_t *assigned) {
+    table->size = new_size;
+    table->data = data;
+    table->assigned = assigned;
+    init_ht(table);
+}
+
+
 unsigned int insert_ht(HashTable *table, char *key, int val) {
     uint32_t hash;
 
-    hash = hash_djb2(key);
-    hash %= table->size;
-
+    hash = hash_djb2(key) % table->size;
     if (!table->assigned[hash]) {
         table->assigned[hash] = 1;
         table->data[hash] = val;

@@ -2,7 +2,7 @@
 #define __HASH__
 #include <stdlib.h>
 
-#define H_LEN  48
+#define H_LEN  64
 
 
 typedef struct {
@@ -13,9 +13,9 @@ typedef struct {
 
 
 void init_ht(HashTable*);
+void resize_ht(HashTable*, uint32_t, int32_t*, uint32_t*);
 unsigned int insert_ht(HashTable*, char*, int);
 int lookup_ht(HashTable*, char*);
 unsigned int hash_djb2(char*);
-unsigned int hash_rotation(char*);
 
 #endif /* __HASH__ */

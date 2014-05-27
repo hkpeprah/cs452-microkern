@@ -62,7 +62,13 @@ long random() {
 }
 
 
-long h_random() {
+long random_range(unsigned int lower_bound, unsigned int upper_bound) {
+    long rand;
 
-    return 0;
+    rand = random();
+    if (rand < lower_bound) {
+        rand += lower_bound;
+    }
+
+    return rand;
 }
