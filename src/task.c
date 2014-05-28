@@ -2,12 +2,15 @@
 #include <term.h>
 #define TASK_QUEUE_SIZE  16
 #define TASK_BANK_SIZE   32
+#define MESSAGE_QUEUE_SIZE 64
 
 static TaskQueue_t taskQueue[TASK_QUEUE_SIZE];
 static uint32_t nextTid;
 static uint32_t bankPtr;
 static Task_t *currentTask;
 static Task_t __taskBank[TASK_BANK_SIZE];
+static Envelope_t __envelopes[MESSAGE_QUEUE_SIZE] = {{0}};
+static Envelope_t *availableEnvelopes;
 static Task_t *taskBank;
 static int availableQueues;
 static int highestTaskPriority;
@@ -29,6 +32,9 @@ void initTasks() {
         } else {
             __taskBank[i].next = NULL;
         }
+
+        __taskBank[i].inboxHead = NULL;
+        __taskBank[i].inboxTail = NULL;
     }
 
     for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
@@ -37,6 +43,31 @@ void initTasks() {
     }
 
     taskBank = &__taskBank[0];
+
+    // link together message queue blocks
+    Envelope_t *lastBlock = NULL;
+
+    for(i = 0; i < MESSAGE_QUEUE_SIZE; ++i) {
+        __envelopes[i].next = lastBlock;
+        lastBlock = &__envelopes[i];
+    }
+
+    availableEnvelopes = lastBlock;
+}
+
+Envelope_t *getEnvelope() {
+    if(availableEnvelopes == NULL) {
+        return NULL;
+    }
+
+    Envelope_t *envelope = availableEnvelopes;
+    availableEnvelopes = availableEnvelopes->next;
+    return envelope;
+}
+
+void releaseEnvelope(Envelope_t *envelope) {
+    envelope->next = availableEnvelopes;
+    availableEnvelopes = envelope;
 }
 
 
@@ -59,6 +90,15 @@ Task_t *createTaskD(uint32_t priority) {
     return t;
 }
 
+Task_t *getTaskByTid(uint32_t tid) {
+    Task_t *task = &taskBank[tid % TASK_BANK_SIZE];
+
+    if(task->state == FREE || task->tid != tid) {
+        return NULL;
+    }
+
+    return task;
+}
 
 Task_t *getCurrentTask() {
     return currentTask;
@@ -135,12 +175,14 @@ Task_t *schedule() {
         return currentTask;
     }
 
-    if (currentTask) {
+    // only when current task exists and is ACTIVE (ie. it didn't just get blocked)
+    if (currentTask && currentTask->state == ACTIVE) {
         if (currentTask->priority > highestTaskPriority) {
             // no highest task priority == empty queues, only current task available
             // current task has higher priority -> it should keep running
             return currentTask;
         }
+
         // add current task to queue
         addTask(currentTask);
     }
