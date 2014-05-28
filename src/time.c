@@ -22,9 +22,9 @@ void resetClock(Timer timer, uint32_t speed) {
     timer.hours = 0;
     timer.count = 0;
     timer.speed = speed;
-    timer.clk = (uint32_t*)TIMER_VALUE;
-    timer.base = (uint32_t*)TIMER_BASE;
-    timer.control = (uint32_t*)TIMER_CONTROL;
+    timer.clk = (uint32_t)TIMER_VALUE;
+    timer.base = (uint32_t)TIMER_BASE;
+    timer.control = (uint32_t)TIMER_CONTROL;
 
     switch(speed) {
     case 50800:
@@ -35,7 +35,7 @@ void resetClock(Timer timer, uint32_t speed) {
 
     *timer.base = 0xFFFFFFFF;
     timer.count = 0xFFFFFFFF;
-    // debugf("Timer created successfully.\r\nTime at Initialization: %d", getTimerValue());
+    debugf("Timer created.");
 }
 
 
@@ -68,5 +68,5 @@ double currentTime() {
 
 uint32_t getTimerValue() {
     Timer t = Clock;
-    return *((uint32_t*)t.clk);
+    return *(t.clk);
 }

@@ -70,7 +70,7 @@ long random_range(unsigned int lower_bound, unsigned int upper_bound) {
 
     rand = random() % upper_bound;
     if (rand < lower_bound) {
-        rand = (lower_bound - rand) + lower_bound;
+        rand = ((lower_bound - rand) % (upper_bound - lower_bound)) + lower_bound;
     }
     return rand;
 }

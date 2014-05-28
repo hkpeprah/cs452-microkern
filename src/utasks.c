@@ -49,9 +49,6 @@ void firstTask() {
     }
 
     /* should always reach here */
-    printf("First exiting...");
-    newline();
-
     Exit();
 }
 
@@ -182,6 +179,7 @@ void client() {
     GameRequest request;
     GameResult result;
     int choices[] = {ROCK, PAPER, SCISSORS};
+    char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
 
     name[5] = '\0';
     for (i = 0; i < 5; ++i) {
@@ -195,34 +193,17 @@ void client() {
     while (status == TIE) {
         request.type = PLAY;
         request.d0 = choices[random() % 3];
-
-        switch(request.d0) {
-            case ROCK:
-                printf("%d throwing rock\r\n", tid);
-                break;
-            case PAPER:
-                printf("%d throwing paper\r\n", tid);
-                break;
-            case SCISSORS:
-                printf("%d throwing scissors\r\n", tid);
-                break;
-        }
-
+        printf("Player %s(Task %d) throwing %s\r\n", name, tid, choice_names[request.d0]);
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            printf("Client: Error in send: %d got %d, sending to: %d", tid, errno, server);
+            debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, server);
             newline();
         }
         status = result.status;
     }
 
-    if (status == WIN) {
-        printf("%d won!\r\n", tid);
-    } else {
-        printf("%d lost!\r\n", tid);
-    }
-
     /* should always reach here */
+    printf("Player %s(Task %d) %s.\r\n", name, tid, (status == WIN ? "won" : "lost"));
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     Exit();
@@ -240,7 +221,7 @@ int RegisterAs(char *name) {
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
 
     if (errno < 0) {
-        printf("RegisterAs: Error in send: %d got %d, sending to: %d", MyTid(), errno, server);
+        debugf("RegisterAs: Error in send: %d got %d, sending to: %d", MyTid(), errno, server);
         newline();
     }
 
@@ -257,7 +238,7 @@ int WhoIs(char *name) {
     lookup.type = WHOIS;
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
     if (errno < 0) {
-        printf("WhoIs: Error in send: %d got %d, sending to: %d", MyTid(), errno, nameserver_tid);
+        debugf("WhoIs: Error in send: %d got %d, sending to: %d", MyTid(), errno, nameserver_tid);
         newline();
     }
 
