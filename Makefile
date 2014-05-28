@@ -18,7 +18,7 @@ ASFLAGS          = -mcpu=arm920t -mapcs-32
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
 SOURCE           = $(wildcard $(srcdir)/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
-TARGET           = assn1.elf
+TARGET           = assn2.elf
 
 .PHONY: all
 
