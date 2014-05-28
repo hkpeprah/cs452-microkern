@@ -77,7 +77,7 @@ void boot () {
     initSWI();
     clear_screen();
     initClock();
-    seed(getTimerValue());          /* seed random number generator */
+    seed(43539805);                /* seed random number generator */
     debug("Successfully booted");
 }
 
