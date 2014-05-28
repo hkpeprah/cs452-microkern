@@ -15,6 +15,7 @@ typedef struct {
 void init_ht(HashTable*);
 unsigned int insert_ht(HashTable*, char*, int);
 int lookup_ht(HashTable*, char*);
+void delete_ht(HashTable*, char*);
 unsigned int hash_djb2(char*);
 
 #endif /* __HASH__ */

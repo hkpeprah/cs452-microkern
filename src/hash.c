@@ -53,3 +53,11 @@ int lookup_ht(HashTable *table, char *key) {
 
     return 0;
 }
+
+
+void delete_ht(HashTable *table, char *key) {
+    unsigned int hash;
+
+    hash = hash_djb2(key) % table->size;
+    table->assigned[hash] = 0;
+}

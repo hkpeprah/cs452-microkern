@@ -39,9 +39,16 @@ void testTask() {
 
 
 void firstTask() {
-    
+    unsigned int i;
 
+    Create(15, nameServer);    /* create the NameServer */
+    Create(14, server);        /* create the Server */
+    for (i = 0; i < 2; ++i) {
+        Create(1, client);     /* lowest possible priority because why not */
+    }
 
+    /* should always reach here */
+    Exit();
 }
 
 
@@ -50,11 +57,11 @@ void nameServer() {
     int error;
     int callee;
     Lookup lookup;
-    int msglen;
     HashTable __clients;
     HashTable *clients;
 
     init_ht((clients = &__clients));
+    nameserver_tid = MyTid();
 
     /* loop forever processing requests from clients */
     while (Receive(&callee, &lookup, sizeof(lookup))) {
@@ -67,7 +74,7 @@ void nameServer() {
         default:
             debugf("NameServer: Unknown request made: %d", lookup.type);
         }
-        Reply(callee, &lookup, sizeof(lookup));
+        error = Reply(callee, &lookup, sizeof(lookup));
     }
 
     /* should never reach here */
@@ -79,6 +86,7 @@ void server() {
     /* server plays the game of Rock-Paper-Scissors */
     int callee;
     int error;
+    int diff;
     int player1;
     int player2;
     Lookup lookup;
@@ -95,15 +103,18 @@ void server() {
     while(Receive(&callee, &req, sizeof(req))) {
         switch(req.type) {
         case QUIT:
-            if (player2 == req.d0) {
+            /* remove the respective player from the game */
+            if (player2 == callee) {
                 player2 = -1;
-            } else if (player1 == req.d1) {
+            } else if (player1 == callee) {
                 player1 = -1;
             }
+            res.status = 1;
+            Reply(callee, &res, sizeof(res));
             break;
         case SIGNUP:
+            /* register only if there are currently not to people playing */
             if (player1 < 0 || player2 < 0) {
-                /* register only if there are currently not to people playing */
                 lookup.name = (char*)req.d0;
                 lookup.tid = (int)req.d1;
                 error = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
@@ -113,11 +124,50 @@ void server() {
                     player2 = lookup.tid;
                 }
             }
+            res.status = 1;
+            Reply(callee, &res, sizeof(res));
             break;
         case PLAY:
+            /* if received both choices, play them and reply in turn */
+            if (callee == player1) {
+                p1_choice = req.d0;
+            } else if (callee == player2) {
+                p2_choice = req.d0;
+            }
+
+            if (p1_choice > 0 && p2_choice > 0) {
+                /* compare the hands that were dealt */
+                diff = p1_choice - p2_choice;
+                switch(diff) {
+                case 0:
+                    p1_choice = TIE;
+                    p2_choice = TIE;
+                    break;
+                case 1:
+                case -2:
+                    p1_choice = WIN;
+                    p2_choice = LOSE;
+                    break;
+                case 2:
+                case -1:
+                    p1_choice = LOSE;
+                    p2_choice = WIN;
+                    break;
+                }
+
+                /* reply to the two players */
+                res.status = p1_choice;
+                Reply(player1, &res, sizeof(res));
+                res.status = p2_choice;
+                Reply(player2, &res, sizeof(res));
+
+                p1_choice = -1;
+                p2_choice = -1;
+            }
             break;
+        default:
+            debugf("Server: Unknown request type: %d", req.type);
         }
-        /* send a response back to the callee */
     }
 
     /* should never reach here */
@@ -156,7 +206,6 @@ void client() {
 
     /* should always reach here */
     request.type = QUIT;
-    request.d0 = MyTid();
     error = Send(server, &request, sizeof(request), &result, sizeof(result));
     Exit();
 }
@@ -171,7 +220,6 @@ int RegisterAs(char *name, int tid) {
 
     request.type = SIGNUP;
     request.d0 = (int)name;
-    request.d1 = tid;
 
     server = WhoIs("server");
     error = Send(server, &request, sizeof(request), &result, sizeof(result));

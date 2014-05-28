@@ -95,7 +95,7 @@ int main() {
     }
     
     kernel_main();
-    prompt();
+    // prompt();
 
     // should reach here after all work has been done
     puts("Exiting...\r\n");
