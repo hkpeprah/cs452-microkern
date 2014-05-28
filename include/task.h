@@ -42,7 +42,7 @@ typedef struct __envelope_t {
     void *msg;
     int msglen;
     void *reply;
-    int *replylen;
+    int replylen;
     Task_t *sender;
     struct __envelope_t *next;
 } Envelope_t;

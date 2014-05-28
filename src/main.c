@@ -6,7 +6,7 @@
 #include <kernel.h>
 
 #define FOREVER            for (;;)
-#define FIRST_PRIORITY     5
+#define FIRST_PRIORITY     14
 
 
 static void prompt() {
@@ -99,6 +99,6 @@ int main() {
 
     // should reach here after all work has been done
     puts("Exiting...\r\n");
-    erase_screen();
+    // erase_screen();
     return 0;
 }

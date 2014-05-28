@@ -57,11 +57,17 @@ int Send(int tid, void *msg, int msglen, void *reply, int replylen) {
 
 int Receive(int *tid, void *msg, int msglen) {
     Args_t args;
+    int result;
     args.code = SYS_RECV;
     args.a0 = (uint32_t)tid;
     args.a1 = (uint32_t)msg;
     args.a2 = msglen;
-    return swi_call(0, &args);
+
+    result = 0;
+    while (result != msglen) {
+        result = swi_call(0, &args);
+    }
+    return result;
 }
 
 

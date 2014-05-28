@@ -51,17 +51,17 @@ int sys_pid(uint32_t *retval) {
     return TASK_DOES_NOT_EXIST;
 }
 
-int sys_send(int tid, void *msg, int msglen, void *reply, int *replylen) {
+int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
     Task_t *currentTask = getCurrentTask();
     Task_t *target = getTaskByTid(tid);
 
-    if(target == NULL) {
+    if (target == NULL) {
         return TASK_DOES_NOT_EXIST;
     }
 
     Envelope_t *envelope = getEnvelope();
 
-    if(envelope == NULL) {
+    if (envelope == NULL) {
         return NO_MORE_ENVELOPES;
     }
 
@@ -79,16 +79,16 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int *replylen) {
     currentTask->state = RECV_BL;
 
     // add envelope to receiver's queue
-    if(target->inboxHead == NULL) {
+    if (target->inboxHead == NULL) {
         target->inboxHead = envelope;
-    } else if(target->inboxTail != NULL) {
+    } else if (target->inboxTail != NULL) {
         target->inboxTail->next = envelope;
     }
 
     target->inboxTail = envelope;
 
     // unblock receiver if they are blocked
-    if(target->state == SEND_BL) {
+    if (target->state == SEND_BL) {
         addTask(target);
     }
 
@@ -100,7 +100,7 @@ int sys_recv(int *tid, void *msg, int msglen) {
     Envelope_t *envelope = currentTask->inboxHead;
 
     // no messages available, block & return error
-    if(envelope == NULL) {
+    if (envelope == NULL) {
         currentTask->state = SEND_BL;
         return NO_AVAILABLE_MESSAGES;
     }
@@ -108,12 +108,12 @@ int sys_recv(int *tid, void *msg, int msglen) {
     // otherwise, pop head
     currentTask->inboxHead = envelope->next;
 
-    if(currentTask->inboxHead == NULL) {
+    if (currentTask->inboxHead == NULL) {
         currentTask->inboxTail = NULL;
     }
 
     // mainly used for debug... mismatched message len = oh no bad stuff
-    if(envelope->msglen != msglen) {
+    if (envelope->msglen != msglen) {
         return MISMATCHED_MESSAGE_LEN;
     }
 
@@ -136,8 +136,10 @@ int sys_reply(int tid, void *reply, int replylen) {
         return TASK_NOT_EXPECTING_MSG;
     }
 
+    if (envelope->replylen != replylen) {
+        return MISMATCHED_MESSAGE_LEN;
+    }
     memcpy(envelope->reply, reply, replylen);
-    *(envelope->replylen) = replylen;
 
     addTask(target);
     releaseEnvelope(envelope);

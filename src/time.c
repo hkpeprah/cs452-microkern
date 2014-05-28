@@ -2,7 +2,7 @@
  * time.c - hardwware time / timing functions
  */
 #include <time.h>
-
+#include <term.h>
 
 static Timer Clock;
 
@@ -26,7 +26,6 @@ void resetClock(Timer timer, uint32_t speed) {
     timer.base = (uint32_t*)TIMER_BASE;
     timer.control = (uint32_t*)TIMER_CONTROL;
 
-    *timer.base = 0xFFFFFFFF;
     switch(speed) {
     case 50800:
         *timer.control = ENABLE_CLOCK | 0x00000008;
@@ -36,6 +35,7 @@ void resetClock(Timer timer, uint32_t speed) {
 
     *timer.base = 0xFFFFFFFF;
     timer.count = 0xFFFFFFFF;
+    // debugf("Timer created successfully.\r\nTime at Initialization: %d", getTimerValue());
 }
 
 
@@ -68,5 +68,5 @@ double currentTime() {
 
 uint32_t getTimerValue() {
     Timer t = Clock;
-    return *(t.clk);
+    return *((uint32_t*)t.clk);
 }

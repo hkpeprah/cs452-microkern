@@ -41,13 +41,30 @@ void testTask() {
 void firstTask() {
     unsigned int i;
 
-    Create(15, nameServer);    /* create the NameServer */
-    Create(14, server);        /* create the Server */
+    printf("Creating name server");
+    newline();
+    Create(12, nameServer);    /* create the NameServer */
+    printf("Created name server");
+    newline();
+    printf("Creating server");
+    newline();
+    Create(11, server);        /* create the Server */
+    printf("Created server");
+    newline();
+
+    printf("Creating clients");
+    newline();
+
     for (i = 0; i < 2; ++i) {
         Create(1, client);     /* lowest possible priority because why not */
     }
+    printf("Created clients");
+    newline();
 
     /* should always reach here */
+    printf("First exiting...");
+    newline();
+
     Exit();
 }
 
@@ -63,8 +80,13 @@ void nameServer() {
     init_ht((clients = &__clients));
     nameserver_tid = MyTid();
 
+    printf("Nameserver entered");
+    newline();
+
     /* loop forever processing requests from clients */
     while (Receive(&callee, &lookup, sizeof(lookup))) {
+        printf("Nameserver received call from %d", callee);
+        newline();
         switch(lookup.type) {
         case SIGNUP:
             insert_ht(clients, lookup.name, lookup.tid);
@@ -99,6 +121,9 @@ void server() {
     p1_choice = -1;
     p2_choice = -1;
     lookup.type = SIGNUP;
+
+    printf("Server entered");
+    newline();
 
     while(Receive(&callee, &req, sizeof(req))) {
         switch(req.type) {
@@ -142,16 +167,22 @@ void server() {
                 case 0:
                     p1_choice = TIE;
                     p2_choice = TIE;
+                    puts("TIE");
+                    newline();
                     break;
                 case 1:
                 case -2:
                     p1_choice = WIN;
                     p2_choice = LOSE;
+                    puts("Player 1 Wins!");
+                    newline();
                     break;
                 case 2:
                 case -1:
                     p1_choice = LOSE;
                     p2_choice = WIN;
+                    puts("Player 2 Wins!");
+                    newline();
                     break;
                 }
 
@@ -186,12 +217,15 @@ void client() {
     GameResult result;
     int choices[] = {ROCK, PAPER, SCISSORS};
 
-    name[5] = 0;
+    name[5] = '\0';
     for (i = 0; i < 5; ++i) {
-        name[i] = (char)random_range(65, 91);  /* generates a random name */
+        name[i] = (char)random_range(65, 90);  /* generates a random name */
     }
 
     /* register and play the game */
+    printf("Client %s:%d registering.", name, MyTid());
+    newline();
+
     server = RegisterAs(name, MyTid());
     status = TIE;
     while (status == TIE) {
@@ -199,7 +233,8 @@ void client() {
         request.d0 = choices[random() % 3];
         error = Send(server, &request, sizeof(request), &result, sizeof(result));
         if (error < 0) {
-            debugf("Client: Error in send: %d got %d", MyTid(), error);
+            printf("Client: Error in send: %d got %d", MyTid(), error);
+            newline();
         }
         status = result.status;
     }
@@ -224,7 +259,8 @@ int RegisterAs(char *name, int tid) {
     server = WhoIs("server");
     error = Send(server, &request, sizeof(request), &result, sizeof(result));
     if (error < 0) {
-        debugf("RegisterAs: Error in send: %d got %d", MyTid(), error);
+        printf("RegisterAs: Error in send: %d got %d", MyTid(), error);
+        newline();
     }
 
     return server;

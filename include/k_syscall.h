@@ -14,7 +14,7 @@
 int sys_create(int, void (*)(), uint32_t*);
 int sys_tid(uint32_t*);
 int sys_pid(uint32_t*);
-int sys_send(int tid, void *msg, int msglen, void *reply, int *replylen);
+int sys_send(int tid, void *msg, int msglen, void *reply, int replylen);
 int sys_recv(int *tid, void *msg, int msglen);
 int sys_reply(int tid, void *reply, int replylen);
 void sys_pass();

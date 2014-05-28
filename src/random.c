@@ -3,6 +3,7 @@
  * description: uses the mersenne twister algorithm
  */
 #include <random.h>
+#include <term.h>
 
 #define SIZE  624
 
@@ -16,6 +17,8 @@ void seed(unsigned int s) {
     unsigned int i;
     unsigned int c;
     long *mt;
+
+    debugf("Seeding: %d", s);
 
     SEED = s;
     index = 0;
@@ -65,10 +68,9 @@ long random() {
 long random_range(unsigned int lower_bound, unsigned int upper_bound) {
     long rand;
 
-    rand = random();
+    rand = random() % upper_bound;
     if (rand < lower_bound) {
-        rand += lower_bound;
+        rand = (lower_bound - rand) + lower_bound;
     }
-
     return rand;
 }

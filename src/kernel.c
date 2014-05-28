@@ -35,6 +35,15 @@ static int handleRequest(Args_t *args) {
         case SYS_PTID:
             errno = sys_pid(&result);
             break;
+        case SYS_SEND:
+            errno = sys_send(args->a0, (void*)args->a1, args->a2, (void*)args->a3, args->a4);
+            break;
+        case SYS_RECV:
+            errno = sys_recv((int*)args->a0, (void*)args->a1, args->a2);
+            break;
+        case SYS_REPL:
+            errno = sys_reply(args->a0, (void*)args->a1, args->a2);
+            break;
         case SYS_PASS:
             sys_pass();
             break;
@@ -61,14 +70,15 @@ static void initSWI() {
 
 void boot () {
     /* sequence of boot operations */
-    initClock();
     initIO();
     initMem();
     initTasks();
     initSWI();
     clear_screen();
     initDebug();
-    random(getTimerValue());   /* seed random generator */
+    initClock();
+    seed(9234252);                /* seed random generator */
+    debug("Successfully booted");
 }
 
 
