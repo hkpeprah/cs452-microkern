@@ -41,25 +41,12 @@ void testTask() {
 void firstTask() {
     unsigned int i;
 
-    printf("Creating name server");
-    newline();
     Create(12, nameServer);    /* create the NameServer */
-    printf("Created name server");
-    newline();
-    printf("Creating server");
-    newline();
     Create(11, server);        /* create the Server */
-    printf("Created server");
-    newline();
-
-    printf("Creating clients");
-    newline();
 
     for (i = 0; i < 2; ++i) {
         Create(1, client);     /* lowest possible priority because why not */
     }
-    printf("Created clients");
-    newline();
 
     /* should always reach here */
     printf("First exiting...");
@@ -71,7 +58,7 @@ void firstTask() {
 
 void nameServer() {
     /* NameServer performs lookups and inserts.  It should never exit. */
-    int error;
+    int errno;
     int callee;
     Lookup lookup;
     HashTable __clients;
@@ -80,23 +67,18 @@ void nameServer() {
     init_ht((clients = &__clients));
     nameserver_tid = MyTid();
 
-    printf("Nameserver entered");
-    newline();
-
     /* loop forever processing requests from clients */
     while (Receive(&callee, &lookup, sizeof(lookup))) {
-        printf("Nameserver received call from %d", callee);
-        newline();
         switch(lookup.type) {
-        case SIGNUP:
-            insert_ht(clients, lookup.name, lookup.tid);
-        case WHOIS:
-            lookup.tid = lookup_ht(clients, lookup.name);
-            break;
-        default:
-            debugf("NameServer: Unknown request made: %d", lookup.type);
+            case SIGNUP:
+                insert_ht(clients, lookup.name, lookup.tid);
+            case WHOIS:
+                lookup.tid = lookup_ht(clients, lookup.name);
+                break;
+            default:
+                debugf("NameServer: Unknown request made: %d", lookup.type);
         }
-        error = Reply(callee, &lookup, sizeof(lookup));
+        errno = Reply(callee, &lookup, sizeof(lookup));
     }
 
     /* should never reach here */
@@ -107,11 +89,10 @@ void nameServer() {
 void server() {
     /* server plays the game of Rock-Paper-Scissors */
     int callee;
-    int error;
+    int errno;
     int diff;
     int player1;
     int player2;
-    Lookup lookup;
     GameResult res;
     GameRequest req;
     int p1_choice, p2_choice;
@@ -120,84 +101,68 @@ void server() {
     player2 = -1;
     p1_choice = -1;
     p2_choice = -1;
-    lookup.type = SIGNUP;
 
-    printf("Server entered");
-    newline();
+    RegisterAs("server");
 
     while(Receive(&callee, &req, sizeof(req))) {
         switch(req.type) {
-        case QUIT:
-            /* remove the respective player from the game */
-            if (player2 == callee) {
-                player2 = -1;
-            } else if (player1 == callee) {
-                player1 = -1;
-            }
-            res.status = 1;
-            Reply(callee, &res, sizeof(res));
-            break;
-        case SIGNUP:
-            /* register only if there are currently not to people playing */
-            if (player1 < 0 || player2 < 0) {
-                lookup.name = (char*)req.d0;
-                lookup.tid = (int)req.d1;
-                error = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
+            case QUIT:
+                /* remove the respective player from the game */
+                if (player2 == callee) {
+                    player2 = -1;
+                } else if (player1 == callee) {
+                    player1 = -1;
+                }
+                res.status = 1;
+                errno = Reply(callee, &res, sizeof(res));
+                break;
+            case PLAY:
+                /* if received both choices, play them and reply in turn */
                 if (player1 < 0) {
-                    player1 = lookup.tid;
-                } else {
-                    player2 = lookup.tid;
-                }
-            }
-            res.status = 1;
-            Reply(callee, &res, sizeof(res));
-            break;
-        case PLAY:
-            /* if received both choices, play them and reply in turn */
-            if (callee == player1) {
-                p1_choice = req.d0;
-            } else if (callee == player2) {
-                p2_choice = req.d0;
-            }
-
-            if (p1_choice > 0 && p2_choice > 0) {
-                /* compare the hands that were dealt */
-                diff = p1_choice - p2_choice;
-                switch(diff) {
-                case 0:
-                    p1_choice = TIE;
-                    p2_choice = TIE;
-                    puts("TIE");
-                    newline();
-                    break;
-                case 1:
-                case -2:
-                    p1_choice = WIN;
-                    p2_choice = LOSE;
-                    puts("Player 1 Wins!");
-                    newline();
-                    break;
-                case 2:
-                case -1:
-                    p1_choice = LOSE;
-                    p2_choice = WIN;
-                    puts("Player 2 Wins!");
-                    newline();
-                    break;
+                    player1 = callee;
+                } else if (player2 < 0) {
+                    player2 = callee;
                 }
 
-                /* reply to the two players */
-                res.status = p1_choice;
-                Reply(player1, &res, sizeof(res));
-                res.status = p2_choice;
-                Reply(player2, &res, sizeof(res));
+                if (callee == player1) {
+                    p1_choice = req.d0;
+                } else if (callee == player2) {
+                    p2_choice = req.d0;
+                }
 
-                p1_choice = -1;
-                p2_choice = -1;
-            }
-            break;
-        default:
-            debugf("Server: Unknown request type: %d", req.type);
+                if (p1_choice > 0 && p2_choice > 0) {
+                    /* compare the hands that were dealt */
+                    diff = p1_choice - p2_choice;
+                    switch(diff) {
+                        case 0:
+                            p1_choice = TIE;
+                            p2_choice = TIE;
+                            puts("TIE");
+                            newline();
+                            break;
+                        case 1:
+                        case -2:
+                            p1_choice = WIN;
+                            p2_choice = LOSE;
+                            break;
+                        case 2:
+                        case -1:
+                            p1_choice = LOSE;
+                            p2_choice = WIN;
+                            break;
+                    }
+
+                    /* reply to the two players */
+                    res.status = p1_choice;
+                    errno = Reply(player1, &res, sizeof(res));
+                    res.status = p2_choice;
+                    errno = Reply(player2, &res, sizeof(res));
+                    p1_choice = -1;
+                    p2_choice = -1;
+                }
+                break;
+            default:
+                debugf("Server: Unknown request type: %d", req.type);
         }
     }
 
@@ -209,9 +174,10 @@ void server() {
 void client() {
     /* Client plays a game of Rock-Paper-Scissors. */
     unsigned int i;
-    int error;
+    int errno;
     int status;
-    int server;
+    int rps_server;
+    int tid;
     char name[6];
     GameRequest request;
     GameResult result;
@@ -222,61 +188,77 @@ void client() {
         name[i] = (char)random_range(65, 90);  /* generates a random name */
     }
 
-    /* register and play the game */
-    printf("Client %s:%d registering.", name, MyTid());
-    newline();
-
-    server = RegisterAs(name, MyTid());
+    errno = RegisterAs(name);
     status = TIE;
+    rps_server = WhoIs("server");
+    tid = MyTid();
     while (status == TIE) {
         request.type = PLAY;
         request.d0 = choices[random() % 3];
-        error = Send(server, &request, sizeof(request), &result, sizeof(result));
-        if (error < 0) {
-            printf("Client: Error in send: %d got %d", MyTid(), error);
+
+        switch(request.d0) {
+            case ROCK:
+                printf("%d throwing rock\r\n", tid);
+                break;
+            case PAPER:
+                printf("%d throwing paper\r\n", tid);
+                break;
+            case SCISSORS:
+                printf("%d throwing scissors\r\n", tid);
+                break;
+        }
+
+        errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+        if (errno < 0) {
+            printf("Client: Error in send: %d got %d, sending to: %d", tid, errno, server);
             newline();
         }
         status = result.status;
     }
 
+    if (status == WIN) {
+        printf("%d won!\r\n", tid);
+    } else {
+        printf("%d lost!\r\n", tid);
+    }
+
     /* should always reach here */
     request.type = QUIT;
-    error = Send(server, &request, sizeof(request), &result, sizeof(result));
+    errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     Exit();
 }
 
 
-int RegisterAs(char *name, int tid) {
+int RegisterAs(char *name) {
     /* sends a request to the server to register */
-    int error;
-    int server;
-    GameRequest request;
-    GameResult result;
+    int errno;
+    Lookup lookup;
 
-    request.type = SIGNUP;
-    request.d0 = (int)name;
+    lookup.type = SIGNUP;
+    lookup.name = name;
+    lookup.tid = MyTid();
+    errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
 
-    server = WhoIs("server");
-    error = Send(server, &request, sizeof(request), &result, sizeof(result));
-    if (error < 0) {
-        printf("RegisterAs: Error in send: %d got %d", MyTid(), error);
+    if (errno < 0) {
+        printf("RegisterAs: Error in send: %d got %d, sending to: %d", MyTid(), errno, server);
         newline();
     }
 
-    return server;
+    return errno;
 }
 
 
 int WhoIs(char *name) {
     /* sends a request to the server to lookup user */
-    int error;
+    int errno;
     Lookup lookup;
 
     lookup.name = name;
     lookup.type = WHOIS;
-    error = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
-    if (error < 0) {
-        debugf("WhoIs: Error in send: %d got %d", MyTid(), error);
+    errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
+    if (errno < 0) {
+        printf("WhoIs: Error in send: %d got %d, sending to: %d", MyTid(), errno, nameserver_tid);
+        newline();
     }
 
     return lookup.tid;

@@ -2,6 +2,7 @@
  * syscall.c - System call functions
  */
 #include <syscall_types.h>
+#include <term.h>
 
 // sp is a dummy input to pad r0, and is set in the asm function
 extern int swi_call(int sp, void *args);

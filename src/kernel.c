@@ -71,11 +71,11 @@ static void initSWI() {
 void boot () {
     /* sequence of boot operations */
     initIO();
+    initDebug();
     initMem();
     initTasks();
     initSWI();
     clear_screen();
-    initDebug();
     initClock();
     seed(9234252);                /* seed random generator */
     debug("Successfully booted");

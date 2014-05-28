@@ -38,7 +38,7 @@ void firstTask();
 void nameServer();
 void server();
 void client();
-int RegisterAs(char*, int);
+int RegisterAs(char*);
 int WhoIs(char*);
 
 #endif /* __UTASKS__ */

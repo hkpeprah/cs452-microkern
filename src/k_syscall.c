@@ -3,6 +3,7 @@
 #include <task.h>
 #include <types.h>
 #include <stdlib.h>
+#include <term.h>
 
 #define INIT_SPSR   0x13c0
 #define REGS_SAVE   11
@@ -107,6 +108,7 @@ int sys_recv(int *tid, void *msg, int msglen) {
 
     // otherwise, pop head
     currentTask->inboxHead = envelope->next;
+    envelope->next = NULL;
 
     if (currentTask->inboxHead == NULL) {
         currentTask->inboxTail = NULL;
@@ -118,6 +120,7 @@ int sys_recv(int *tid, void *msg, int msglen) {
     }
 
     memcpy(msg, envelope->msg, msglen);
+    *tid = envelope->sender->tid;
     envelope->sender->state = REPL_BL;
 
     return envelope->msglen;
@@ -126,13 +129,13 @@ int sys_recv(int *tid, void *msg, int msglen) {
 int sys_reply(int tid, void *reply, int replylen) {
     Task_t *target = getTaskByTid(tid);
 
-    if(target == NULL) {
+    if (target == NULL) {
         return TASK_DOES_NOT_EXIST;
     }
 
     Envelope_t *envelope = target->outbox;
 
-    if(envelope == NULL || target->state != REPL_BL) {
+    if (envelope == NULL || target->state != REPL_BL) {
         return TASK_NOT_EXPECTING_MSG;
     }
 

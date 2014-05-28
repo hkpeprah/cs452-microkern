@@ -56,12 +56,13 @@ void initTasks() {
 }
 
 Envelope_t *getEnvelope() {
-    if(availableEnvelopes == NULL) {
+    if (availableEnvelopes == NULL) {
         return NULL;
     }
 
     Envelope_t *envelope = availableEnvelopes;
     availableEnvelopes = availableEnvelopes->next;
+    envelope->next = NULL;
     return envelope;
 }
 
@@ -91,9 +92,9 @@ Task_t *createTaskD(uint32_t priority) {
 }
 
 Task_t *getTaskByTid(uint32_t tid) {
-    Task_t *task = &taskBank[tid % TASK_BANK_SIZE];
+    Task_t *task = &__taskBank[tid % TASK_BANK_SIZE];
 
-    if(task->state == FREE || task->tid != tid) {
+    if (task->state == FREE || task->tid != tid) {
         return NULL;
     }
 
