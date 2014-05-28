@@ -12,7 +12,7 @@ void initClock() {
 }
 
 
-void resetClock(Timer t, uint32_t speed) {
+void resetClock(Timer timer, uint32_t speed) {
     /*
      * resets the specified clock.
      */
@@ -50,7 +50,7 @@ bool tick(Timer t) {
             t.t_seconds = 0;
             if (++t.seconds == 60) {
                 t.seconds = 0;
-                ++t_minutes;
+                ++t.minutes;
             }
         }
         return 1;
@@ -60,11 +60,13 @@ bool tick(Timer t) {
 }
 
 
-double currentTime(Timer t) {
+double currentTime() {
+    Timer t = Clock;
     return t.seconds + (t.minutes * 60) + (t.t_seconds / 10);
 }
 
 
-uint32_t getTimerValue(Timer t) {
+uint32_t getTimerValue() {
+    Timer t = Clock;
     return *(t.clk);
 }

@@ -1,5 +1,5 @@
-#ifndef __TIME__
-#define __TIME__
+#ifndef __TIME_H__
+#define __TIME_H__
 #include <stdlib.h>
 
 #define TIMER_BASE     0x80810080
@@ -26,7 +26,7 @@ typedef struct {
 void initClock();
 void resetClock(Timer, uint32_t);
 bool tick(Timer);
-double currentTime(Timer);
-uint32_t getTimerValue(Timer);
+double currentTime();
+uint32_t getTimerValue();
 
-#endif /* __TIME__ */
+#endif /* __TIME_H__ */

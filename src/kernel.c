@@ -41,6 +41,8 @@ static int handleRequest(Args_t *args) {
         case SYS_EXIT:
             sys_exit();
             break;
+        default:
+            break;
     }
 
     if (errno == 0) {

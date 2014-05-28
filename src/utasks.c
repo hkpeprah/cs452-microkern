@@ -25,6 +25,8 @@
 #include <term.h>
 #include <syscall.h>
 #include <utasks.h>
+#include <hash.h>
+#include <random.h>
 
 
 static int nameserver_tid;
@@ -80,7 +82,7 @@ void server() {
     int player1;
     int player2;
     Lookup lookup;
-    GameResults res;
+    GameResult res;
     GameRequest req;
     int p1_choice, p2_choice;
 
@@ -190,7 +192,7 @@ int WhoIs(char *name) {
     lookup.type = WHOIS;
     error = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
     if (error < 0) {
-        debubf("WhoIs: Error in send: %d got %d", MyTid(), error);
+        debugf("WhoIs: Error in send: %d got %d", MyTid(), error);
     }
 
     return lookup.tid;
