@@ -2,8 +2,8 @@
 #define __TYPES_H__
 
 #define NULL             0
-#define true             1
 #define false            0
+#define true             1
 #define MAXSINT          0x7FFFFFFF
 #define MINSINT          0x80000000
 #define MAXUINT          0xFFFFFFFF

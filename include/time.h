@@ -24,8 +24,8 @@ typedef struct {
 
 
 void initClock();
-void resetClock(Timer, uint32_t);
-bool tick(Timer);
+void resetClock(Timer*, uint32_t);
+bool tick(Timer*);
 double currentTime();
 uint32_t getTimerValue();
 
