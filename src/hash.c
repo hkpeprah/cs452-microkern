@@ -21,23 +21,16 @@ unsigned int hash_djb2(char *str) {
 
 
 void init_ht(HashTable *table) {
-    uint32_t i = 0;
+    unsigned int i;
+    table->size = H_LEN;
     for (i = 0; i < table->size; ++i) {
         table->assigned[i] = 0;
     }
 }
 
 
-void resize_ht(HashTable *table, uint32_t new_size, int32_t *data, uint32_t *assigned) {
-    table->size = new_size;
-    table->data = data;
-    table->assigned = assigned;
-    init_ht(table);
-}
-
-
 unsigned int insert_ht(HashTable *table, char *key, int val) {
-    uint32_t hash;
+    unsigned int hash;
 
     hash = hash_djb2(key) % table->size;
     if (!table->assigned[hash]) {
@@ -51,7 +44,7 @@ unsigned int insert_ht(HashTable *table, char *key, int val) {
 
 
 int lookup_ht(HashTable *table, char *key) {
-    uint32_t hash;
+    unsigned int hash;
 
     hash = hash_djb2(key) % table->size;
     if (hash < table->size && table->assigned[hash]) {

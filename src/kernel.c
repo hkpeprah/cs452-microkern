@@ -4,6 +4,8 @@
 #include <k_syscall.h>
 #include <syscall.h>
 #include <term.h>
+#include <time.h>
+#include <random.h>
 
 #define INIT_SPSR          0x13c0
 #define SWI_HANDLER_ADDR   0x28
@@ -56,12 +58,15 @@ static void initSWI() {
 
 
 void boot () {
+    /* sequence of boot operations */
+    initClock();
     initIO();
     initMem();
     initTasks();
     initSWI();
     clear_screen();
     initDebug();
+    random(getTimerValue());   /* seed random generator */
 }
 
 

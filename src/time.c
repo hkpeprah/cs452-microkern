@@ -7,6 +7,11 @@
 static Timer Clock;
 
 
+void initClock() {
+    resetClock(Clock, 50800);
+}
+
+
 void resetClock(Timer t, uint32_t speed) {
     /*
      * resets the specified clock.

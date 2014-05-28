@@ -23,6 +23,7 @@ typedef struct {
 } Timer;
 
 
+void initClock();
 void resetClock(Timer, uint32_t);
 bool tick(Timer);
 double currentTime(Timer);

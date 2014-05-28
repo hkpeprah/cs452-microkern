@@ -8,7 +8,10 @@ typedef enum {
     SYS_EGG,
     SYS_CREATE,
     SYS_PASS,
-    SYS_EXIT
+    SYS_EXIT,
+    SYS_SEND,
+    SYS_RECV,
+    SYS_REPL
 } system_calls;
 
 typedef struct args {
@@ -17,6 +20,8 @@ typedef struct args {
     uint32_t a1;
     uint32_t a2;
     uint32_t a3;
+    uint32_t a4;
+    uint32_t a5;
 } Args_t;
 
 #endif /* __SYSCALL_DEFS__ */

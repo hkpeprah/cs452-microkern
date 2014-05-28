@@ -1,7 +1,6 @@
 /*
  * syscall.c - System call functions
  */
-
 #include <syscall_types.h>
 
 // sp is a dummy input to pad r0, and is set in the asm function
@@ -41,4 +40,36 @@ void Exit() {
     Args_t args;
     args.code = SYS_EXIT;
     swi_call(0, &args);
+}
+
+
+int Send(int tid, void *msg, int msglen, void *reply, int replylen) {
+    Args_t args;
+    args.code = SYS_SEND;
+    args.a0 = tid;
+    args.a1 = (uint32_t)msg;
+    args.a2 = msglen;
+    args.a3 = (uint32_t)reply;
+    args.a4 = replylen;
+    return swi_call(0, &args);
+}
+
+
+int Receive(int *tid, void *msg, int msglen) {
+    Args_t args;
+    args.code = SYS_RECV;
+    args.a0 = (uint32_t)tid;
+    args.a1 = (uint32_t)msg;
+    args.a2 = msglen;
+    return swi_call(0, &args);
+}
+
+
+int Reply(int tid, void *reply, int replylen) {
+    Args_t args;
+    args.code = SYS_REPL;
+    args.a0 = tid;
+    args.a1 = (uint32_t)reply;
+    args.a2 = replylen;
+    return swi_call(0, &args);
 }
