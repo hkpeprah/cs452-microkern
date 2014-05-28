@@ -29,6 +29,14 @@ void init_ht(HashTable *table) {
 }
 
 
+unsigned int exists_ht(HashTable *table, char *key) {
+    unsigned int hash;
+
+    hash = hash_djb2(key) % table->size;
+    return table->assigned[hash];
+}
+
+
 unsigned int insert_ht(HashTable *table, char *key, int val) {
     unsigned int hash;
 
@@ -44,6 +52,7 @@ unsigned int insert_ht(HashTable *table, char *key, int val) {
 
 
 int lookup_ht(HashTable *table, char *key) {
+    /* looks up value in hash table, returns -1 if not found */
     unsigned int hash;
 
     hash = hash_djb2(key) % table->size;

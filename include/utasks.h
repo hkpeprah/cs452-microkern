@@ -13,18 +13,25 @@
 #define SCISSORS  7
 #define PLAY      8
 #define QUIT      9
+#define REGISTER  10
+
+struct __gameMessage;
 
 
-typedef struct {
-    int status;
-} GameResult;
-
-
-typedef struct {
+typedef struct __gameMessage {
     int type;
     int d0;
     int d1;
-} GameRequest;
+    char *name;
+    unsigned int tid;
+    struct __gameMessage *next;
+} GameMessage;
+
+
+typedef struct {
+    GameMessage *head;
+    GameMessage *tail;
+} GameMessageQueue;
 
 
 typedef struct {

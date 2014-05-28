@@ -93,7 +93,7 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
         addTask(target);
     }
 
-    return 0;
+    return msglen;
 }
 
 int sys_recv(int *tid, void *msg, int msglen) {

@@ -28,6 +28,9 @@
 #include <hash.h>
 #include <random.h>
 
+#define NUM_CLIENTS  10
+#define RPS_SERVER   "RPS_SERVER"
+
 
 static int nameserver_tid;
 
@@ -39,13 +42,15 @@ void testTask() {
 
 
 void firstTask() {
-    unsigned int i;
+    unsigned int tid, i, priority;
 
-    Create(12, nameServer);    /* create the NameServer */
-    Create(11, server);        /* create the Server */
+    tid = Create(12, nameServer);    /* create the NameServer */
+    nameserver_tid = tid;
+    tid = Create(11, server);        /* create the Server */
 
-    for (i = 0; i < 2; ++i) {
-        Create(1, client);     /* lowest possible priority because why not */
+    for (i = 0; i < NUM_CLIENTS; ++i) {
+        priority = random() % 10;
+        tid = Create(priority, client);     /* lowest possible priority because why not */
     }
 
     /* should always reach here */
@@ -62,15 +67,18 @@ void nameServer() {
     HashTable *clients;
 
     init_ht((clients = &__clients));
-    nameserver_tid = MyTid();
 
     /* loop forever processing requests from clients */
     while (Receive(&callee, &lookup, sizeof(lookup))) {
         switch(lookup.type) {
-            case SIGNUP:
+            case REGISTER:
                 insert_ht(clients, lookup.name, lookup.tid);
             case WHOIS:
-                lookup.tid = lookup_ht(clients, lookup.name);
+                if (exists_ht(clients, lookup.name)) {
+                    lookup.tid = lookup_ht(clients, lookup.name);
+                } else {
+                    lookup.tid = TASK_DOES_NOT_EXIST;
+                }
                 break;
             default:
                 debugf("NameServer: Unknown request made: %d", lookup.type);
@@ -85,46 +93,98 @@ void nameServer() {
 
 void server() {
     /* server plays the game of Rock-Paper-Scissors */
-    int callee;
-    int errno;
-    int diff;
-    int player1;
-    int player2;
-    GameResult res;
-    GameRequest req;
+    int callee, errno, diff;
+    int player1, player2;
+    char *p1_name, *p2_name;
+    unsigned int i;
+    GameMessage res, req;
+    GameMessage __free_queue[64];
+    GameMessage *free_queue, *tmp;
+    GameMessageQueue signup_queue;
     int p1_choice, p2_choice;
 
     player1 = -1;
     player2 = -1;
     p1_choice = -1;
     p2_choice = -1;
+    p1_name = NULL;
+    p2_name = NULL;
+    signup_queue.head = NULL;
+    signup_queue.tail = NULL;
 
-    RegisterAs("server");
+    /* create a free queue of messages that can be used */
+    for (i = 0; i < 64; ++i) {
+        __free_queue[i].next = (i == 0) ? NULL : free_queue;
+        free_queue = &__free_queue[i];
+    }
+
+    /* register with the name server */
+    RegisterAs(RPS_SERVER);
 
     while(Receive(&callee, &req, sizeof(req))) {
         switch(req.type) {
             case QUIT:
                 /* remove the respective player from the game */
-                if (player2 == callee) {
-                    player2 = -1;
-                } else if (player1 == callee) {
-                    player1 = -1;
+                if (player2 == callee || player1 == callee) {
+                    if (callee == player2) {
+                        player2 = -1;
+                    } else {
+                        player1 = -1;
+                    }
+
+                    res.type = QUIT;
+                    errno = Reply(callee, &res, sizeof(res));
+
+                    /* pop from the queue if one exists and reply */
+                    if (signup_queue.head != NULL) {
+                        tmp = signup_queue.head;
+                        signup_queue.head = tmp->next;
+
+                        if (player1 < 0) {
+                            player1 = tmp->tid;
+                        } else {
+                            player2 = tmp->tid;
+                        }
+
+                        res.type = tmp->type;
+                        errno = Reply(tmp->tid, &res, sizeof(res));
+                    }
                 }
-                res.status = 1;
-                errno = Reply(callee, &res, sizeof(res));
+                break;
+            case SIGNUP:
+                /* add a player to the game only if there aren't two players */
+                if (player1 < 0 || player2 < 0) {
+                    if (player1 < 0) {
+                        player1 = callee;
+                    } else if (player2 < 0) {
+                        player2 = callee;
+                    }
+                    res.type = PLAY;
+                    errno = Reply(callee, &res, sizeof(res));
+                } else {
+                    /* two players are signed up, just add the player to the queue */
+                    tmp = free_queue;
+                    free_queue = free_queue->next;
+                    tmp->next = NULL;
+                    tmp->tid = callee;
+                    tmp->type = SIGNUP;
+                    if (signup_queue.head == NULL) {
+                        signup_queue.head = tmp;
+                        signup_queue.tail = tmp;
+                    } else {
+                        signup_queue.tail->next = tmp;
+                        signup_queue.tail = tmp;
+                    }
+                }
                 break;
             case PLAY:
                 /* if received both choices, play them and reply in turn */
-                if (player1 < 0) {
-                    player1 = callee;
-                } else if (player2 < 0) {
-                    player2 = callee;
-                }
-
                 if (callee == player1) {
                     p1_choice = req.d0;
+                    p1_name = req.name;
                 } else if (callee == player2) {
                     p2_choice = req.d0;
+                    p2_name = req.name;
                 }
 
                 if (p1_choice > 0 && p2_choice > 0) {
@@ -134,28 +194,37 @@ void server() {
                         case 0:
                             p1_choice = TIE;
                             p2_choice = TIE;
-                            puts("TIE");
+                            puts("Round was a TIE");
                             newline();
                             break;
                         case 1:
                         case -2:
                             p1_choice = WIN;
                             p2_choice = LOSE;
+                            printf("%s won the round\r\n", p1_name);
                             break;
                         case 2:
                         case -1:
                             p1_choice = LOSE;
                             p2_choice = WIN;
+                            printf("%s won the round\r\n", p2_name);
                             break;
                     }
 
                     /* reply to the two players */
-                    res.status = p1_choice;
+                    res.type = p1_choice;
                     errno = Reply(player1, &res, sizeof(res));
-                    res.status = p2_choice;
+                    res.type = p2_choice;
                     errno = Reply(player2, &res, sizeof(res));
                     p1_choice = -1;
                     p2_choice = -1;
+
+                    /* wait for input to confirm the round */
+                    printf("Press any key to continue: \r\n");
+                    getchar();
+                    newline();
+                } else {
+                    /* player that is not in the current game is attempting to play */
                 }
                 break;
             default:
@@ -176,8 +245,7 @@ void client() {
     int rps_server;
     int tid;
     char name[6];
-    GameRequest request;
-    GameResult result;
+    GameMessage request, result;
     int choices[] = {ROCK, PAPER, SCISSORS};
     char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
 
@@ -186,24 +254,31 @@ void client() {
         name[i] = (char)random_range(65, 90);  /* generates a random name */
     }
 
+    /* register with the name server */
     errno = RegisterAs(name);
+    rps_server = WhoIs(RPS_SERVER);
     status = TIE;
-    rps_server = WhoIs("server");
     tid = MyTid();
-    while (status == TIE) {
+
+    /* signup to play the game */
+    request.type = SIGNUP;
+    errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+
+    while (errno >= 0 && status == TIE) {
+        /* as long as there is a tie, make another play */
         request.type = PLAY;
         request.d0 = choices[random() % 3];
+        request.name = name;
         printf("Player %s(Task %d) throwing %s\r\n", name, tid, choice_names[request.d0 % ROCK]);
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
             debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, server);
             newline();
         }
-        status = result.status;
+        status = result.type;
     }
 
     /* should always reach here */
-    printf("Player %s(Task %d) %s.\r\n", name, tid, (status == WIN ? "won" : "lost"));
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     Exit();
@@ -215,7 +290,7 @@ int RegisterAs(char *name) {
     int errno;
     Lookup lookup;
 
-    lookup.type = SIGNUP;
+    lookup.type = REGISTER;
     lookup.name = name;
     lookup.tid = MyTid();
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
