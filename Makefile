@@ -6,7 +6,7 @@ test             = $(testdir)/a.out
 XCC              = gcc
 AS               = as
 LD               = ld
-CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O2
+CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -32,6 +32,9 @@ all: init target
 
 debug: CFLAGS += -DDEBUG
 debug: upload
+
+profile: CFLAGS += -DPROFILE
+profile: upload
 
 test: CFLAGS += -DDEBUG -DTEST
 test: init

@@ -93,7 +93,7 @@ void kernel_main() {
 
         // nothing left to run
         if (task == NULL) break;
-        debugf("Got Task with TID: %d", task->tid);
+        debugf("Got Task with TID: %d, stack: 0x%x", task->tid, task->sp);
 
         // context switch to user task here
         taskSP = swi_exit(task->result, task->sp, UNION_CAST(&args, void**));
