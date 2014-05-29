@@ -35,7 +35,7 @@ void testTask() {
 void firstTask() {
     unsigned int tid, i, priority;
 
-    tid = Create(12, NameServer);    /* create the NameServer */
+    tid = Create(15, NameServer);    /* create the NameServer */
     nameserver_tid = tid;
     tid = Create(11, Server);        /* create the Server */
 

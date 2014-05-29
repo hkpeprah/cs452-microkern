@@ -26,7 +26,7 @@ TARGET           = assn2.elf
 
 .SECONDARY:
 
-.NOTPARALLEL: all upload test debug
+.NOTPARALLEL: all upload test debug profile
 
 all: init target
 
@@ -47,13 +47,13 @@ test: init
 	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
 
 init:
-	@-rm -f $(builddir)/*
+	@-rm -rf $(builddir)/*
 	@-cp -r $(srcdir)/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 
 clean:
-	-rm -f $(builddir)/*
+	-rm -rf $(builddir)/*
 
 upload: all
 	@USER=`whoami`

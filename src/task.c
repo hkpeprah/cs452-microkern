@@ -75,7 +75,8 @@ void releaseEnvelope(Envelope_t *envelope) {
 Task_t *createTaskD(uint32_t priority) {
     Task_t *t = NULL;
 
-    if (taskBank != NULL && priority < TASK_QUEUE_SIZE) {
+    priority = priority >= TASK_QUEUE_SIZE ? TASK_QUEUE_SIZE - 1 : priority;
+    if (taskBank != NULL) {
         t = taskBank;
         taskBank = t->next;
         t->tid = nextTid++;

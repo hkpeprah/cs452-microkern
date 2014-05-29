@@ -6,7 +6,7 @@
 #include <kernel.h>
 
 #define FOREVER            for (;;)
-#define FIRST_PRIORITY     14
+#define FIRST_PRIORITY     15
 
 
 static void prompt() {
