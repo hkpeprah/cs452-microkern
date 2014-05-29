@@ -26,14 +26,14 @@ TARGET           = assn2.elf
 
 .SECONDARY:
 
-.NOTPARALLEL: all upload test debug profile
+.NOTPARALLEL: all upload test debug profile clean init
 
 all: init target
 
 debug: CFLAGS += -DDEBUG
 debug: upload
 
-profile: CFLAGS += -DPROFILE
+profile: CFLAGS += -DPROFILE $(PROFILING)
 profile: upload
 
 test: CFLAGS += -DDEBUG -DTEST
@@ -50,6 +50,8 @@ test: init
 	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
 
 init:
+	@echo "CFLAGS:"
+	@echo $(CFLAGS)
 	@-rm -rf $(builddir)/*
 	@-cp -r $(srcdir)/*.s $(builddir)/
 	@echo "Source files:"

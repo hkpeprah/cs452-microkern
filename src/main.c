@@ -89,12 +89,13 @@ int main() {
     boot();
 
     /* create the first user task */
-#if PROFILE
-    initPerf();
-    status = sys_create(FIRST_PRIORITY, perfGenesisTask, &tid);
-#else
-    status = sys_create(FIRST_PRIORITY, firstTask, &tid);
-#endif
+    #if PROFILE
+        initPerf();
+        status = sys_create(FIRST_PRIORITY, perfGenesisTask, &tid);
+    #else
+        status = sys_create(FIRST_PRIORITY, firstTask, &tid);
+    #endif
+
     if (status != 0) {
         /* something went wrong creating the first user task */
         return -1;
