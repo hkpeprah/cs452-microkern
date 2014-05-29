@@ -146,6 +146,7 @@ int sys_reply(int tid, void *reply, int replylen) {
 
     addTask(target);
     releaseEnvelope(envelope);
+    target->outbox = NULL;
     return replylen;
 }
 
