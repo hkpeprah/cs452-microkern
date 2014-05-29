@@ -4,6 +4,8 @@
 #define REGISTER  0
 #define WHOIS     1
 
+extern int nameserver_tid;
+
 
 typedef struct {
     int type;

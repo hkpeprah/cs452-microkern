@@ -26,9 +26,6 @@
 #define RPS_SERVER   "RPS_SERVER"
 
 
-static int nameserver_tid;
-
-
 void testTask() {
     printf("Calling task with priority: %d", getCurrentTask()->priority);
     newline();

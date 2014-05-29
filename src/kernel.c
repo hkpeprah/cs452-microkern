@@ -96,7 +96,7 @@ void kernel_main() {
         debugf("Got Task with TID: %d", task->tid);
 
         // context switch to user task here
-        taskSP = swi_exit(task->result, task->sp, (void**)&args);
+        taskSP = swi_exit(task->result, task->sp, UNION_CAST(&args, void**));
 
         // return from swi_exit -> user made a swi call
         task->sp = taskSP;

@@ -11,7 +11,7 @@
 #include <term.h>
 
 
-static int nameserver_tid;
+int nameserver_tid = 0;
 
 
 int RegisterAs(char *name) {
