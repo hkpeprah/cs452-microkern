@@ -36,7 +36,7 @@
 To run the program, one must have read/write access to the source code, as well as the ability to make and run the program.  Before attempting to run the pogram ensure that the following three conditions are met:
 \begin{itemize}
   \item You are currently logged in as one of \texttt{cs452}, \texttt{mqchen}, or \texttt{hkpeprah}.
-  \item You have a directory in which to store the source code, e.g. \texttt{~/cs452\_microkern\_mqchen\_hkpeprah}.
+  \item You have a directory in which to store the source code, \\ e.g. \texttt{\~/cs452\_microkern\_mqchen\_hkpeprah}.
   \item You have a folder on the FTP srever with your username, e.g. \texttt{/u/cs452/tftp/ARM/cs452}.
 \end{itemize}
 First, you must get a copy of the code.  To to this, log into one of the aforementioned accounts and change directories to the directory you created above (using \texttt{cd}), then run one of
@@ -47,7 +47,7 @@ First, you must get a copy of the code.  To to this, log into one of the aforeme
     git clone file:////u7/mqchen/cs452/cs452-microkern -b kernel2 .
   \end{verbatim}
 \end{center}
-You will now have a working instance of our kernel2 source code in your current directory.  To make the application and upload it to the FTP server at the location listed above (\texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME}), run \texttt{make upload}.
+\vspace{-0.5cm}You will now have a working instance of our kernel2 source code in your current directory.  To make the application and upload it to the FTP server at the location listed above (\texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME}), run \texttt{make upload}.
 \\[1\baselineskip]
 
 \subsection{Running the Program}
@@ -62,28 +62,33 @@ To run the application, go to the RedBoot terminal and run the command
 The application should now begin by running through the game tasks before reaching a prompt.  The generated files will be located in \texttt{DIR/build} where \texttt{DIR} is the directory you created in the earlier steps.  To access and download an existing version of the code, those can be found at \texttt{/u/cs452/tftp/ARM/mqchen/assn2.elf} and \texttt{/u/cs452/tftp/ARM/hkpeprah/assn2.elf}.
 \\[2\baselineskip]
 
-\section{Kernel Structure**}
+\section{Kernel Structure}
 \subsection{System Calls}
 \section{Game Tasks}
 \subsection{Priorities}
-\begin{tabular}{|l|l|l}
-  \hline
-  Task Name & Task ID & Priority \\\hline
-  FirstTask       & $0$  & $15$ \\\hline
-  NameServer      & $1$  & $15$ \\\hline
-  Server          & $2$  & $11$ \\\hline
-  Client (OCDDX)  & $3$  & $6$ \\\hline
-  Client (BITTG)  & $4$  & $7$ \\\hline
-  Client (RNFKS)  & $5$  & $4$ \\\hline
-  Client (YCWTD)  & $6$  & $0$ \\\hline
-  Client (FWGJH)  & $7$  & $6$ \\\hline
-  Client (UQSTV)  & $8$  & $2$ \\\hline
-  Client (YCJLC)  & $9$  & $0$ \\\hline
-  Client (HGMSK)  & $10$ & $5$ \\\hline
-  Client (MSEYY)  & $11$ & $7$ \\\hline
-  Client (GEPMY)  & $12$ & $5$ \\\hline
-\end{tabular}
+\begin{center}
+  \begin{tabular}{|l|l|l|}
+    \hline
+    Task Name & Task ID & Priority \\\hline
+    FirstTask       & $0$  & $15$ \\\hline
+    NameServer      & $1$  & $15$ \\\hline
+    Server          & $2$  & $11$ \\\hline
+    Client (OCDDX)  & $3$  & $6$ \\\hline
+    Client (BITTG)  & $4$  & $7$ \\\hline
+    Client (RNFKS)  & $5$  & $4$ \\\hline
+    Client (YCWTD)  & $6$  & $0$ \\\hline
+    Client (FWGJH)  & $7$  & $6$ \\\hline
+    Client (UQSTV)  & $8$  & $2$ \\\hline
+    Client (YCJLC)  & $9$  & $0$ \\\hline
+    Client (HGMSK)  & $10$ & $5$ \\\hline
+    Client (MSEYY)  & $11$ & $7$ \\\hline
+    Client (GEPMY)  & $12$ & $5$ \\\hline
+  \end{tabular}
+  \\
+\end{center}
+The priority for the FirstTask (the task that bootraps the NameServer, Server, and Clients/Players) was chosen to be $15$ because $15$ is the highest possible priority supported by our kernel, thus allowing the task to proceed without yielding to another task, self the NameServer which blocks on \texttt{Receive}, to allow it to create all the tasks as soon as possible before exiting.  The priority of the NameServer was chosen to be $15$ to ensure that the NameServer was created and did any of the necessary setup work before any other task that would need it was to be run.  This ensure that any task calling \texttt{RegisterAs} or \texttt{WhoIs} would succeed, as the NameServer \texttt{RCV_BLK}s (Receive Blocks) as the last step in its setup.  So before any task needs the NameServer, it is already setup and waiting to be sent messages.  The priorities of the Server and the Clients are unimportant with respect to one another, as any client with a higher priority than the server would just block waiting for the server to respond to it; the priorities were essentially random to allow for diversity in the result.  The only important factor was to ensure that the priorities were less than the NameServer to ensure that the NameServer was ready before they would need it.  There were two different approaches to do this; have the first task send a message to the nameserver, blocking and allowing the nameserver to setup and respond before creating the remaining tasks, or have the other tasks lower priority so that the NameServer was the next task scheduled after the first task exited; we chose the latter approach.
 \\[1\baselineskip]
+
 \subsection{Game Task Output}
 The output from the GameTask is as follows:
 \begin{verbatim}
@@ -132,7 +137,7 @@ The implementation of \texttt{random} using a set seed, so the results from the 
 
 \section{Performance Measurements}
 \subsection{Results}
-\begin{tabular}{|c|c|c|c||c|}
+\begin{tabular}{|c|c|c|c|l|}
   \hline
   {\bf Message Length} & {\bf Caches} & {\bf Send Before Receive*} & {\bf Optimization } & {\bf Microseconds} \\\hline
   $4$ bytes & off & yes & off & $343.8453713$ \\\hline
@@ -152,6 +157,7 @@ The implementation of \texttt{random} using a set seed, so the results from the 
   $4$ bytes & on & no & on & $14.24211597$ \\\hline
   $64$ bytes & on & no & on & $16.27670397$ \\\hline
 \end{tabular}
+{\tiny {\bf *} - Assignment says ``Send Before Reply'', however, replies are non-blocking and don't depend on a send to occur.}
 \\[1\baselineskip]
 \subsection{Explanation}
 Something something...

@@ -45,5 +45,6 @@ typedef struct {
 void firstTask();
 void Server();
 void Client();
+void Player();
 
 #endif /* __UTASKS__ */

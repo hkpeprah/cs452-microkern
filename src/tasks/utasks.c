@@ -21,6 +21,7 @@
 #include <syscall.h>
 #include <utasks.h>
 #include <random.h>
+#include <shell.h>
 
 #define NUM_CLIENTS  10
 #define RPS_SERVER   "RPS_SERVER"
@@ -40,10 +41,12 @@ void firstTask() {
     tid = Create(11, Server);        /* create the Server */
 
     for (i = 0; i < NUM_CLIENTS; ++i) {
-        priority = random() % 10;
+        priority = random_range(1, 10);
         tid = Create(priority, Client);
         printf("Created Task %d with Priority: %d\r\n", tid, priority);
     }
+
+    tid = Create(0, Shell);         /* create the terminal shell */
 
     /* should always reach here */
     Exit();
@@ -238,5 +241,72 @@ void Client() {
     /* should always reach here */
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+    UnRegister(name);
+    Exit();
+}
+
+
+void Player() {
+    int tid;
+    int errno;
+    int status;
+    char ch;
+    int rps_server;
+    char name[] = "Player";
+    GameMessage request, result;
+    char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
+
+    /* register with the name server */
+    errno = RegisterAs(name);
+    rps_server = WhoIs(RPS_SERVER);
+    status = TIE;
+    tid = MyTid();
+    ch = 4;
+
+    /* signup to play the game */
+    request.type = SIGNUP;
+    errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+
+    while (errno >= 0 && status == TIE) {
+        while (ch > SCISSORS) {
+            /* loop until a valid input is given */
+            printf("Make your play: ");
+            ch = getchar();
+            printf("%c\r\n", ch);
+            save_cursor();
+            switch (ch) {
+                case 82:
+                case 114:
+                    ch = ROCK;
+                    break;
+                case 80:
+                case 112:
+                    ch = PAPER;
+                    break;
+                case 83:
+                case 115:
+                    ch = SCISSORS;
+                    break;
+                default:
+                    ch = 4;
+                    printf("Invalid input.  Choose one of R, P, S\r\n");
+                    save_cursor();
+            }
+        }
+        request.type = PLAY;
+        request.d0 = (int)ch;
+        request.name = name;
+        printf("You(Task %d) throwed %s\r\n", tid, choice_names[(int)ch]);
+        errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+        if (errno < 0) {
+            debugf("Player: Error in send: %d got %d, sending to: %d\r\n", tid, errno, server);
+        }
+        status = result.type;
+    }
+
+    /* should always reach here */
+    request.type = QUIT;
+    errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+    UnRegister(name);
     Exit();
 }

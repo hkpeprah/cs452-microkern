@@ -25,7 +25,7 @@ int RegisterAs(char *name) {
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
 
     if (errno < 0) {
-        debugf("RegisterAs: Error in send: %d got %d, sending to: %d\r\n", MyTid(), errno, server);
+        debugf("RegisterAs: Error in send: %d got %d, sending to: %d\r\n", MyTid(), errno, nameserver_tid);
     }
 
     return errno;
@@ -48,6 +48,24 @@ int WhoIs(char *name) {
 }
 
 
+int UnRegister(char *name) {
+    /* sends a request to the server to unregster */
+    int errno;
+    Lookup lookup;
+
+    lookup.name = name;
+    lookup.type = DELETE;
+    errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
+
+    if (errno < 0) {
+        debugf("UnRegister: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, nameserver_tid);
+        return 1;
+    }
+
+    return 0;
+}
+
+
 void NameServer() {
     /* NameServer performs lookups and inserts.  It should never exit. */
     int errno;
@@ -63,7 +81,7 @@ void NameServer() {
     while (Receive(&callee, &lookup, sizeof(lookup))) {
         switch(lookup.type) {
             case REGISTER:
-                insert_ht(clients, lookup.name, lookup.tid);
+                insert_ht(clients, lookup.name, callee);
             case WHOIS:
                 if (exists_ht(clients, lookup.name)) {
                     lookup.tid = lookup_ht(clients, lookup.name);
@@ -71,6 +89,13 @@ void NameServer() {
                     lookup.tid = TASK_DOES_NOT_EXIST;
                 }
                 break;
+            case DELETE:
+                lookup.tid = lookup_ht(clients, lookup.name);
+                if (callee == lookup.tid) {
+                    /* only the task that matches the tid can delete itself */
+                    delete_ht(clients, lookup.name);
+                    lookup.name = "\0";
+                }
             default:
                 debugf("NameServer: Unknown request made: %d", lookup.type);
         }
