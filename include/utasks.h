@@ -2,20 +2,28 @@
 #define __UTASKS__
 #include <types.h>
 #include <task.h>
+#include <server.h>
 
-#define SIGNUP    0
-#define WHOIS     1
-#define WIN       2
-#define LOSE      3
-#define TIE       4
-#define ROCK      5
-#define PAPER     6
-#define SCISSORS  7
-#define PLAY      8
-#define QUIT      9
-#define REGISTER  10
+#define WIN       0
+#define LOSE      1
+#define TIE       2
+
 
 struct __gameMessage;
+
+
+typedef enum {
+    SIGNUP = 0,
+    PLAY,
+    QUIT
+} GameStatus;
+
+
+typedef enum {
+    ROCK = 0,
+    PAPER,
+    SCISSORS
+} Shape;
 
 
 typedef struct __gameMessage {
@@ -34,18 +42,8 @@ typedef struct {
 } GameMessageQueue;
 
 
-typedef struct {
-    int type;
-    char *name;
-    int tid;
-} Lookup;
-
-
 void firstTask();
-void nameServer();
-void server();
-void client();
-int RegisterAs(char*);
-int WhoIs(char*);
+void Server();
+void Client();
 
 #endif /* __UTASKS__ */

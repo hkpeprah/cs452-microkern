@@ -26,7 +26,7 @@ TARGET           = assn2.elf
 
 .SECONDARY:
 
-.NOTPARALLEL: all upload test
+.NOTPARALLEL: all upload test debug
 
 all: init target
 

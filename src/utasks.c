@@ -4,11 +4,6 @@
  *    - Bootstraps the other tasks and the clients.
  *    - Quits when it has gone through all the clients.
  *
- * Name Server
- *    - Accepts registration and lookup requests from other tasks
- *    - RPL_BLK waiting for a task to send it a request
- *    - After each reply, RPL_BLK again
- *
  * Client
  *    - Sends request to the server to play a game.
  *    - RPL_BLK waiting for server to respond with a request for its choice.
@@ -25,7 +20,6 @@
 #include <term.h>
 #include <syscall.h>
 #include <utasks.h>
-#include <hash.h>
 #include <random.h>
 
 #define NUM_CLIENTS  10
@@ -44,13 +38,13 @@ void testTask() {
 void firstTask() {
     unsigned int tid, i, priority;
 
-    tid = Create(12, nameServer);    /* create the NameServer */
+    tid = Create(12, NameServer);    /* create the NameServer */
     nameserver_tid = tid;
-    tid = Create(11, server);        /* create the Server */
+    tid = Create(11, Server);        /* create the Server */
 
     for (i = 0; i < NUM_CLIENTS; ++i) {
         priority = random() % 10;
-        tid = Create(priority, client);     /* lowest possible priority because why not */
+        tid = Create(priority, Client);     /* lowest possible priority because why not */
     }
 
     /* should always reach here */
@@ -58,40 +52,7 @@ void firstTask() {
 }
 
 
-void nameServer() {
-    /* NameServer performs lookups and inserts.  It should never exit. */
-    int errno;
-    int callee;
-    Lookup lookup;
-    HashTable __clients;
-    HashTable *clients;
-
-    init_ht((clients = &__clients));
-
-    /* loop forever processing requests from clients */
-    while (Receive(&callee, &lookup, sizeof(lookup))) {
-        switch(lookup.type) {
-            case REGISTER:
-                insert_ht(clients, lookup.name, lookup.tid);
-            case WHOIS:
-                if (exists_ht(clients, lookup.name)) {
-                    lookup.tid = lookup_ht(clients, lookup.name);
-                } else {
-                    lookup.tid = TASK_DOES_NOT_EXIST;
-                }
-                break;
-            default:
-                debugf("NameServer: Unknown request made: %d", lookup.type);
-        }
-        errno = Reply(callee, &lookup, sizeof(lookup));
-    }
-
-    /* should never reach here */
-    Exit();
-}
-
-
-void server() {
+void Server() {
     /* server plays the game of Rock-Paper-Scissors */
     int callee, errno, diff;
     int player1, player2;
@@ -187,7 +148,7 @@ void server() {
                     p2_name = req.name;
                 }
 
-                if (p1_choice > 0 && p2_choice > 0) {
+                if (p1_choice >= 0 && p2_choice >= 0) {
                     /* compare the hands that were dealt */
                     diff = p1_choice - p2_choice;
                     switch(diff) {
@@ -237,7 +198,7 @@ void server() {
 }
 
 
-void client() {
+void Client() {
     /* Client plays a game of Rock-Paper-Scissors. */
     unsigned int i;
     int errno;
@@ -246,7 +207,6 @@ void client() {
     int tid;
     char name[6];
     GameMessage request, result;
-    int choices[] = {ROCK, PAPER, SCISSORS};
     char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
 
     name[5] = '\0';
@@ -267,9 +227,9 @@ void client() {
     while (errno >= 0 && status == TIE) {
         /* as long as there is a tie, make another play */
         request.type = PLAY;
-        request.d0 = choices[random() % 3];
+        request.d0 = random_range(ROCK, SCISSORS);
         request.name = name;
-        printf("Player %s(Task %d) throwing %s\r\n", name, tid, choice_names[request.d0 % ROCK]);
+        printf("Player %s(Task %d) throwing %s\r\n", name, tid, choice_names[request.d0]);
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
             debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, server);
@@ -282,40 +242,4 @@ void client() {
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     Exit();
-}
-
-
-int RegisterAs(char *name) {
-    /* sends a request to the server to register */
-    int errno;
-    Lookup lookup;
-
-    lookup.type = REGISTER;
-    lookup.name = name;
-    lookup.tid = MyTid();
-    errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
-
-    if (errno < 0) {
-        debugf("RegisterAs: Error in send: %d got %d, sending to: %d", MyTid(), errno, server);
-        newline();
-    }
-
-    return errno;
-}
-
-
-int WhoIs(char *name) {
-    /* sends a request to the server to lookup user */
-    int errno;
-    Lookup lookup;
-
-    lookup.name = name;
-    lookup.type = WHOIS;
-    errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
-    if (errno < 0) {
-        debugf("WhoIs: Error in send: %d got %d, sending to: %d", MyTid(), errno, nameserver_tid);
-        newline();
-    }
-
-    return lookup.tid;
 }
