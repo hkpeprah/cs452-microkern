@@ -66,10 +66,96 @@ The application should now begin by running through the game tasks before reachi
 \subsection{System Calls}
 \section{Game Tasks}
 \subsection{Priorities}
+\begin{tabular}{|l|l|l}
+  \hline
+  Task Name & Task ID & Priority \\\hline
+  FirstTask       & $0$  & $15$ \\\hline
+  NameServer      & $1$  & $15$ \\\hline
+  Server          & $2$  & $11$ \\\hline
+  Client (OCDDX)  & $3$  & $6$ \\\hline
+  Client (BITTG)  & $4$  & $7$ \\\hline
+  Client (RNFKS)  & $5$  & $4$ \\\hline
+  Client (YCWTD)  & $6$  & $0$ \\\hline
+  Client (FWGJH)  & $7$  & $6$ \\\hline
+  Client (UQSTV)  & $8$  & $2$ \\\hline
+  Client (YCJLC)  & $9$  & $0$ \\\hline
+  Client (HGMSK)  & $10$ & $5$ \\\hline
+  Client (MSEYY)  & $11$ & $7$ \\\hline
+  Client (GEPMY)  & $12$ & $5$ \\\hline
+\end{tabular}
+\\[1\baselineskip]
 \subsection{Game Task Output}
+The output from the GameTask is as follows:
+\begin{verbatim}
+Player BITTG(Task 4) throwing PAPER
+Player MSEYY(Task 11) throwing PAPER
+Round was a TIE
+Press any key to continue:
+
+Player BITTG(Task 4) throwing PAPER
+Player MSEYY(Task 11) throwing PAPER
+Round was a TIE
+Press any key to continue:
+
+Player BITTG(Task 4) throwing ROCK
+Player MSEYY(Task 11) throwing PAPER
+MSEYY won the round
+Press any key to continue:
+
+Player OCDDX(Task 3) throwing ROCK
+Player FWGJH(Task 7) throwing PAPER
+FWGJH won the round
+Press any key to continue:
+
+Player HGMSK(Task 10) throwing ROCK
+Player GEPMY(Task 12) throwing ROCK
+Round was a TIE
+Press any key to continue:
+
+Player HGMSK(Task 10) throwing PAPER
+Player GEPMY(Task 12) throwing ROCK
+HGMSK won the round
+Press any key to continue:
+
+Player RNFKS(Task 5) throwing PAPER
+Player UQSTV(Task 8) throwing ROCK
+RNFKS won the round
+Press any key to continue:
+
+Player YCWTD(Task 6) throwing ROCK
+Player YCJLC(Task 9) throwing PAPER
+YCJLC won the round
+Press any key to continue:
+\end{verbatim}
+The implementation of \texttt{random} using a set seed, so the results from the game are deterministic, which allows us to argue that the results will always be the same as above.  First, the explanation of how Rock-Papers-Scissors works.  To begin a game of Rock-Paper-Scissors, two parties must agree to play, at which point, each party throws one of \{Rock, Paper, Scissors\} simulataenously.  Rock beats Scissors, Scissors beats Paper, and for some god awful reason, Paper beats Rock.  If both parties throw the same hand, the round ends in a tie, and neither party is victorious.
+\\[2\baselineskip]
+
 \section{Performance Measurements}
 \subsection{Results}
+\begin{tabular}{|c|c|c|c||c|}
+  \hline
+  {\bf Message Length} & {\bf Caches} & {\bf Send Before Receive*} & {\bf Optimization } & {\bf Microseconds} \\\hline
+  $4$ bytes & off & yes & off & $343.8453713$ \\\hline
+  $64$ bytes & off & yes & off & $462.8687691$ \\\hline
+  $4$ bytes & on & yes & off & $24.41505595$ \\\hline
+  $64$ bytes & on & yes & off & $31.53611394$ \\\hline
+  $4$ bytes & off & no & off & $378.4333672$ \\\hline
+  $64$ bytes & off & no & off & $496.439471$ \\\hline
+  $4$ bytes & on & no & off & $27.46693795$ \\\hline
+  $64$ bytes & on & no & off & $35.60528993$ \\\hline
+  $4$ bytes & off & yes & on & $192.2685656$ \\\hline
+  $64$ bytes & off & yes & on & $231.9430315$ \\\hline
+  $4$ bytes & on & yes & on & $12.20752798$ \\\hline
+  $64$ bytes & on & yes & on & $15.25940997$ \\\hline
+  $4$ bytes & off & no & on & $215.6663276$ \\\hline
+  $64$ bytes & off & no & on & $255.3407935$ \\\hline
+  $4$ bytes & on & no & on & $14.24211597$ \\\hline
+  $64$ bytes & on & no & on & $16.27670397$ \\\hline
+\end{tabular}
+\\[1\baselineskip]
 \subsection{Explanation}
+Something something...
+\\[2\baselineskip]
 \section{MD5 Hashes}
 Source files can be accessed at either \texttt{/u7/mqchen/cs452/cs452-microkern} or \\ \texttt{/u8/hkpeprah/cs452-microkern}. The MD5 hashes of the source files are as follows:\\
 % \lstinputlisting{md5}

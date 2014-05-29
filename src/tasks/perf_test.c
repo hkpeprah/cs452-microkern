@@ -17,7 +17,7 @@ static int MESSAGE_SIZE;
 
 #if CACHE
 static void cacheOn() {
-    /* 
+    /*
      * cache bits 0 (mmu), 2 (dcache), 12 (icache)
      * enable cache and invalidate it
      */

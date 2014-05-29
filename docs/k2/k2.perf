@@ -1,0 +1,20 @@
+| -------------- | ------ | ----------------- | ------------ | ---------------- |
+| Message Length | Caches | Send before Reply | Optimization |     Microseconds |
+| -------------- | ------ | ----------------- | ------------ | ---------------- |
+|    4 bytes     |   off  |       yes         |      off     |      343.8453713 |
+|    64 bytes    |   off  |       yes         |      off     |      462.8687691 |
+|    4 bytes     |   on   |       yes         |      off     |      24.41505595 |
+|    64 bytes    |   on   |       yes         |      off     |      31.53611394 |
+|    4 bytes     |   off  |       no          |      off     |      378.4333672 |
+|    64 bytes    |   off  |       no          |      off     |       496.439471 |
+|    4 bytes     |   on   |       no          |      off     |      27.46693795 |
+|    64 bytes    |   on   |       no          |      off     |      35.60528993 |
+|    4 bytes     |   off  |       yes         |       on     |      192.2685656 |
+|    64 bytes    |   off  |       yes         |       on     |      231.9430315 |
+|    4 bytes     |   on   |       yes         |       on     |      12.20752798 |
+|    64 bytes    |   on   |       yes         |       on     |      15.25940997 |
+|    4 bytes     |   off  |       no          |       on     |      215.6663276 |
+|    64 bytes    |   off  |       no          |       on     |      255.3407935 |
+|    4 bytes     |   on   |       no          |       on     |      14.24211597 |
+|    64 bytes    |   on   |       no          |       on     |      16.27670397 |
+| -------------- | ------ | ----------------- | ------------ | ---------------- |

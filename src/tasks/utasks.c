@@ -41,7 +41,8 @@ void firstTask() {
 
     for (i = 0; i < NUM_CLIENTS; ++i) {
         priority = random() % 10;
-        tid = Create(priority, Client);     /* lowest possible priority because why not */
+        tid = Create(priority, Client);
+        printf("Created Task %d with Priority: %d\r\n", tid, priority);
     }
 
     /* should always reach here */
