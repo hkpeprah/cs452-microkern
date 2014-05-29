@@ -16,11 +16,13 @@ void Shell() {
     char buf[80];
     unsigned int i;
 
-    /* produce the login prompt */
-    save_cursor();
-
     for (i = 0; i < 80; ++i) buf[i] = 0;
     i = 0;
+
+    /* produce the login prompt */
+    printf("\r\n=================PROMPT================\r\n");
+    puts("> ");
+    save_cursor();
 
     FOREVER {
         ch = getchar();
@@ -42,10 +44,10 @@ void Shell() {
             } else if (strcmp(buf, "play") == 0) {
                 /* user can play their own game of Rock-Paper-Scissors */
                 Create(1, Player);
-            } else {
-                puts("> ");
+                Create(2, Client);
             }
 
+            puts("> ");
             for (i = 0; i < 80; ++i) buf[i] = 0;
             i = 0;
             save_cursor();
@@ -56,14 +58,11 @@ void Shell() {
                 buf[i] = ch;
             }
 
-            if (loggedIn == 1) {
-                putchar('*');
-            } else {
-                putchar(ch);
-            }
-
+            putchar(ch);
             i++;
             save_cursor();
         }
     }
+
+    Exit();
 }

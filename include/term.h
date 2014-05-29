@@ -60,8 +60,8 @@
 #define erase_screen()           puts("\033[2J\033[0;0H")
 #define erase_line()             puts("\033[2K")
 #define clear_screen()           erase_screen()
-#define begin_color(x)           printf("\033[%dm", x)
-#define close_color()            puts("\033[0m")
+#define change_color(x)          printf("\033[%dm", x)
+#define end_color()              puts("\033[0m")
 #define newline()                puts("\r\n")
 
 #define TERMINAL_WIDTH           120

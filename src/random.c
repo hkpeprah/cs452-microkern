@@ -68,9 +68,7 @@ long random() {
 long random_range(unsigned int lower_bound, unsigned int upper_bound) {
     long rand;
 
-    rand = random() % upper_bound;
-    if (rand < lower_bound) {
-        rand = ((lower_bound - rand) % (upper_bound - lower_bound)) + lower_bound;
-    }
+    rand = random() % (upper_bound - lower_bound + 1);
+    rand += lower_bound;
     return rand;
 }

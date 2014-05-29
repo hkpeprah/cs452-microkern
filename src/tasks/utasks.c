@@ -43,7 +43,6 @@ void firstTask() {
     for (i = 0; i < NUM_CLIENTS; ++i) {
         priority = random_range(1, 10);
         tid = Create(priority, Client);
-        printf("Created Task %d with Priority: %d\r\n", tid, priority);
     }
 
     tid = Create(0, Shell);         /* create the terminal shell */
@@ -64,6 +63,7 @@ void Server() {
     GameMessage *free_queue, *tmp;
     GameMessageQueue signup_queue;
     int p1_choice, p2_choice;
+    char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
 
     player1 = -1;
     player2 = -1;
@@ -152,24 +152,31 @@ void Server() {
                 if (p1_choice >= ROCK && p2_choice >= ROCK) {
                     /* compare the hands that were dealt */
                     diff = p1_choice - p2_choice;
+                    printf("Player \033[35m%s(Task %d)\033[0m throwing %s\r\n", p1_name, player1, choice_names[p1_choice]);
+                    printf("Player \033[33m%s(Task %d)\033[0m throwing %s\r\n", p2_name, player2, choice_names[p2_choice]);
                     switch(diff) {
                         case 0:
                             p1_choice = TIE;
                             p2_choice = TIE;
-                            puts("Round was a TIE");
-                            newline();
+                            change_color(CYAN);
+                            puts("Round was a TIE\r\n");
+                            end_color();
                             break;
                         case 1:
                         case -2:
                             p1_choice = WIN;
                             p2_choice = LOSE;
+                            change_color(GREEN);
                             printf("%s won the round\r\n", p1_name);
+                            end_color();
                             break;
                         case 2:
                         case -1:
                             p1_choice = LOSE;
                             p2_choice = WIN;
+                            change_color(GREEN);
                             printf("%s won the round\r\n", p2_name);
+                            end_color();
                             break;
                     }
 
@@ -208,7 +215,6 @@ void Client() {
     int tid;
     char name[6];
     GameMessage request, result;
-    char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
 
     name[5] = '\0';
     for (i = 0; i < 5; ++i) {
@@ -230,10 +236,9 @@ void Client() {
         request.type = PLAY;
         request.d0 = random_range(ROCK, SCISSORS);
         request.name = name;
-        printf("Player %s(Task %d) throwing %s\r\n", name, tid, choice_names[request.d0]);
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            debugf("Client: Error in send: %d got %d, sending to: %d\r\n", tid, errno, server);
+            debugf("Client: Error in send: %d got %d, sending to: %d\r\n", tid, errno, rps_server);
         }
         status = result.type;
     }
@@ -252,22 +257,21 @@ void Player() {
     int status;
     char ch;
     int rps_server;
-    char name[] = "Player";
+    char name[] = "User";
     GameMessage request, result;
-    char *choice_names[] = {"ROCK", "PAPER", "SCISSORS"};
 
     /* register with the name server */
     errno = RegisterAs(name);
     rps_server = WhoIs(RPS_SERVER);
     status = TIE;
     tid = MyTid();
-    ch = 4;
 
     /* signup to play the game */
     request.type = SIGNUP;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
 
     while (errno >= 0 && status == TIE) {
+        ch = 4;
         while (ch > SCISSORS) {
             /* loop until a valid input is given */
             printf("Make your play: ");
@@ -296,15 +300,15 @@ void Player() {
         request.type = PLAY;
         request.d0 = (int)ch;
         request.name = name;
-        printf("You(Task %d) throwed %s\r\n", tid, choice_names[(int)ch]);
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            debugf("Player: Error in send: %d got %d, sending to: %d\r\n", tid, errno, server);
+            printf("Player: Error in send: %d got %d, sending to: %d\r\n", tid, errno, rps_server);
         }
         status = result.type;
     }
 
     /* should always reach here */
+    printf("Game Over.  Returning to prompt.\r\n\r\n");
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     UnRegister(name);
