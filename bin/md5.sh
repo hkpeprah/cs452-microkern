@@ -20,7 +20,9 @@ elif [[ "$unamestr" == 'FreeBSD' || "$unamestr" == 'Darwin' ]]; then
 fi
 
 if [ ${#} -gt 0 ]; then
-    path=`realpath ${1}`
-    checksums ${path}
+    for p in "$@"; do
+        path=`realpath ${p}`
+        checksums ${path}
+    done
 fi
 
