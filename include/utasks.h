@@ -4,12 +4,17 @@
 #include <task.h>
 #include <server.h>
 
-#define WIN       0
-#define LOSE      1
-#define TIE       2
-
 
 struct __gameMessage;
+
+
+typedef enum {
+    WIN = 0,
+    LOSE,
+    TIE,
+    PLAYER_QUIT,
+    NOT_PLAYING
+} RoundResult;
 
 
 typedef enum {

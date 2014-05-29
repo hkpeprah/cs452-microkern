@@ -11,13 +11,17 @@
 #include <term.h>
 
 
-int nameserver_tid = 0;
+int nameserver_tid = -1;
 
 
 int RegisterAs(char *name) {
     /* sends a request to the server to register */
     int errno;
     Lookup lookup;
+
+    if (nameserver_tid < 0) {
+        return -1;
+    }
 
     lookup.type = REGISTER;
     lookup.name = name;
@@ -26,9 +30,10 @@ int RegisterAs(char *name) {
 
     if (errno < 0) {
         debugf("RegisterAs: Error in send: %d got %d, sending to: %d\r\n", MyTid(), errno, nameserver_tid);
+        return -2;
     }
 
-    return errno;
+    return 0;
 }
 
 
@@ -37,11 +42,16 @@ int WhoIs(char *name) {
     int errno;
     Lookup lookup;
 
+    if (nameserver_tid < 0) {
+        return -1;
+    }
+
     lookup.name = name;
     lookup.type = WHOIS;
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
     if (errno < 0) {
         debugf("WhoIs: Error in send: %d got %d, sending to: %d\r\n", MyTid(), errno, nameserver_tid);
+        return -2;
     }
 
     return lookup.tid;
@@ -53,13 +63,17 @@ int UnRegister(char *name) {
     int errno;
     Lookup lookup;
 
+    if (nameserver_tid < 0) {
+        return -1;
+    }
+
     lookup.name = name;
     lookup.type = DELETE;
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
 
     if (errno < 0) {
         debugf("UnRegister: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, nameserver_tid);
-        return 1;
+        return -2;
     }
 
     return 0;

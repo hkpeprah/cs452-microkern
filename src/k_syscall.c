@@ -126,7 +126,9 @@ int sys_recv(int *tid, void *msg, int msglen) {
     return envelope->msglen;
 }
 
+
 int sys_reply(int tid, void *reply, int replylen) {
+    /* returns 0 on success */
     Task_t *target = getTaskByTid(tid);
 
     if (target == NULL) {
@@ -136,7 +138,7 @@ int sys_reply(int tid, void *reply, int replylen) {
     Envelope_t *envelope = target->outbox;
 
     if (envelope == NULL || target->state != REPL_BL) {
-        return TASK_NOT_EXPECTING_MSG;
+        return TASK_NOT_REPLY_BLOCKED;
     }
 
     if (envelope->replylen != replylen) {
@@ -147,8 +149,9 @@ int sys_reply(int tid, void *reply, int replylen) {
     addTask(target);
     releaseEnvelope(envelope);
     target->outbox = NULL;
-    return replylen;
+    return 0;
 }
+
 
 void sys_pass() {
     /* do nothing */

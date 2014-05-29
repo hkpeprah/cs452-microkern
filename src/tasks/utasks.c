@@ -141,7 +141,11 @@ void Server() {
                 break;
             case PLAY:
                 /* if received both choices, play them and reply in turn */
-                if (callee == player1) {
+                if (player1 == -1 || player2 == -1) {
+                    /* respond that a player quit on them */
+                    res.type = PLAYER_QUIT;
+                    errno = Reply(callee, &res, sizeof(res));
+                } else if (callee == player1) {
                     p1_choice = req.d0;
                     p1_name = req.name;
                 } else if (callee == player2) {
@@ -194,6 +198,8 @@ void Server() {
                     newline();
                 } else {
                     /* player that is not in the current game is attempting to play */
+                    res.type = NOT_PLAYING;
+                    errno = Reply(callee, &res, sizeof(res));
                 }
                 break;
             default:
