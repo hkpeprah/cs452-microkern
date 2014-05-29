@@ -16,7 +16,7 @@ CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -
 ASFLAGS          = -mcpu=arm920t -mapcs-32
 # -mapcs: always generate a complete stack frame
 LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L./lib
-SOURCE           = $(wildcard $(srcdir)/*.[cs])
+SOURCE           = $(wildcard $(srcdir)/*.[cs]) $(wildcard $(srcdir)/**/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
 TARGET           = assn2.elf
 
@@ -48,7 +48,6 @@ test: init
 
 init:
 	@-rm -f $(builddir)/*
-	@mkdir -p build
 	@-cp -r $(srcdir)/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
@@ -66,6 +65,8 @@ $(builddir)/%.o: $(builddir)/%.s
 	@echo "Compiled $@"
 
 $(builddir)/%.s: $(srcdir)/%.c
+	@$(eval DIRNAME=`dirname $@`)
+	@mkdir -p $(DIRNAME)
 	@$(XCC) -S $(CFLAGS) $< -o $@
 
 target: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))

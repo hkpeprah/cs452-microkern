@@ -19,6 +19,8 @@ void initDebug() {
         printf("Debugging Enabled...");
         set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT);
         move_cursor(0, BOTTOM_HALF + 1);
+    #else
+        set_scroll(0, TERMINAL_HEIGHT);
     #endif
 }
 

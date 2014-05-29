@@ -145,7 +145,7 @@ void Server() {
                     p2_name = req.name;
                 }
 
-                if (p1_choice >= 0 && p2_choice >= 0) {
+                if (p1_choice >= ROCK && p2_choice >= ROCK) {
                     /* compare the hands that were dealt */
                     diff = p1_choice - p2_choice;
                     switch(diff) {
