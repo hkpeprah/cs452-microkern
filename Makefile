@@ -38,7 +38,7 @@ profile: upload
 
 test: CFLAGS += -DDEBUG -DTEST
 test: init
-	$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
+	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
 	@$(MAKE) debug > /dev/null
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
@@ -54,6 +54,7 @@ init:
 	@echo $(CFLAGS)
 	@-rm -rf $(builddir)/*
 	@-cp -r $(srcdir)/*.s $(builddir)/
+	@-cp -r $(srcdir)/**/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 
