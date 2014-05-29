@@ -25,8 +25,7 @@ int RegisterAs(char *name) {
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
 
     if (errno < 0) {
-        debugf("RegisterAs: Error in send: %d got %d, sending to: %d", MyTid(), errno, server);
-        newline();
+        debugf("RegisterAs: Error in send: %d got %d, sending to: %d\r\n", MyTid(), errno, server);
     }
 
     return errno;
@@ -42,8 +41,7 @@ int WhoIs(char *name) {
     lookup.type = WHOIS;
     errno = Send(nameserver_tid, &lookup, sizeof(lookup), &lookup, sizeof(lookup));
     if (errno < 0) {
-        debugf("WhoIs: Error in send: %d got %d, sending to: %d", MyTid(), errno, nameserver_tid);
-        newline();
+        debugf("WhoIs: Error in send: %d got %d, sending to: %d\r\n", MyTid(), errno, nameserver_tid);
     }
 
     return lookup.tid;

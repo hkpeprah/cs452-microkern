@@ -229,8 +229,7 @@ void Client() {
         printf("Player %s(Task %d) throwing %s\r\n", name, tid, choice_names[request.d0]);
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, server);
-            newline();
+            debugf("Client: Error in send: %d got %d, sending to: %d\r\n", tid, errno, server);
         }
         status = result.type;
     }
