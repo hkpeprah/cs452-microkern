@@ -7,6 +7,7 @@
 #include <string.h>
 #include <utasks.h>
 #include <syscall.h>
+#include <random.h>
 
 #define FOREVER            for (;;)
 
