@@ -3,4 +3,4 @@
 
 #define MIN(x, y) (x < y ? x : y)
 
-#endif // __UTIL_H__
+#endif /* __UTIL_H__ */

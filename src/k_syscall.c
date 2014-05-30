@@ -9,6 +9,7 @@
 #define INIT_SPSR   0x13c0
 #define REGS_SAVE   11
 
+
 int sys_create(int priority, void (*code)(), uint32_t *retval) {
     Task_t *task;
     unsigned int i;
@@ -43,6 +44,7 @@ int sys_tid(uint32_t *retval) {
     return TASK_DOES_NOT_EXIST;
 }
 
+
 int sys_pid(uint32_t *retval) {
     Task_t *current = getCurrentTask();
     if(current != NULL) {
@@ -51,6 +53,7 @@ int sys_pid(uint32_t *retval) {
     }
     return TASK_DOES_NOT_EXIST;
 }
+
 
 int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
     Task_t *currentTask = getCurrentTask();
@@ -96,6 +99,7 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
     // value does not matter, will be overwritten during reply
     return msglen;
 }
+
 
 int sys_recv(int *tid, void *msg, int msglen) {
     Task_t *currentTask = getCurrentTask();
