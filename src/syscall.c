@@ -64,11 +64,16 @@ int Receive(int *tid, void *msg, int msglen) {
     args.a1 = (uint32_t)msg;
     args.a2 = msglen;
 
-    result = 0;
-    while (result != msglen) {
-        result = swi_call(0, &args);
+    // optimistic call - if no messages available, the task
+    // will be blocked until message is on its queue, at which
+    // point it will need to make another call to get the message
+    result = swi_call(0, &args);
+
+    if(result != NO_AVAILABLE_MESSAGES) {
+        return result;
     }
-    return result;
+
+    return swi_call(0, &args);
 }
 
 

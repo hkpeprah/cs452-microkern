@@ -63,7 +63,44 @@ The application should now begin by running through the game tasks before reachi
 \\[2\baselineskip]
 
 \section{Kernel Structure}
-\subsection{System Calls}
+\subsection{Modifications}
+A new structure, \texttt{Envelope\_t}, was defined to facilitate message passing between tasks. The struct contains the following information:
+\begin{center}
+  \begin{tabular}{|l|l|}
+    \hline
+    {\bf Field} & {\bf Description} \\\hline
+    void *msg & Source address to copy message from \\\hline
+    int msglen & Length of msg \\\hline
+    void *reply & Destination address to copy reply to \\\hline
+    int replylen & Length of reply \\\hline
+    Task\_t *sender & Pointer to TD of the Sender task \\\hline
+    Envelope\_t *next & Next envelope in the inbox - these are in a linked list \\\hline
+  \end{tabular}
+\end{center}
+A pool of \texttt{Envelope\_t} structures are allocated for message passing, and are retrieved/freed with a simple linked list of free structs. In addition, each Task Descriptor now has 3 additional fields of type \texttt{Envelope\_t*}, inboxHead, inboxTail, and outbox, that are used to associate envelopes to tasks.
+\\
+Three new states were added - \texttt{SEND\_BL}, \texttt{RECV\_BL} and \texttt{REPL\_BL}, corresponding to the possible blocked states. In addition, the scheduler was modified such that the active task is only added back to the ready queue if it was not in one of the above states.
+
+\subsection{Send}
+On a Send, an \texttt{Envelope\_t} is retrieved from the available pool, and if none are available, an error is returned (A more elegant solution could be implemented by blocking the task until one of structs is available). The msg, msglen, reply, and replylen parameters from the \texttt{Send} call are copied into the respective fields of the \texttt{Envelope\_t}. In addition, the current task pointer is added to the envelope as the sender, and the envelope is set as the outbox pointer of the sender.
+
+The sender is moved to the \texttt{RECV\_BL} state and the envelope is added to the tail of the receiver's inbound message queue, inboxTail.
+
+If the receiver is in the \texttt{SEND\_BL} state, it is added back to the ready queues.
+\subsection{Receive}
+On a Receive, the inbox of the current task is checked. If there is no inbound messages, the task is moved to the \texttt{SEND\_BL} state, and nothing else is done. In this case, the task will be unblocked by Send when a message is actually available, and the user task will have to make another call to Receive to get the message. This process is transparent to the user and is done through the user-mode Receive function.
+\\
+If there is a message available, then the corresponding values in the envelope are copied into the provided pointers, and the sender task is moved to the \texttt{REPL\_BL} state. The envelope is then removed from the head of the queue so the next message can be received.
+\subsection{Reply}
+For Reply, the intended sender task's outbox parameter is used to find the envelope, and the provided reply message is copied into the provided pointer. The sender is then added back to the ready queue and the envelope is released back into the envelope pool.
+\subsection{Design Decisions}
+The first significant design decision was how to block tasks on Send/Receive, and how to reschedule them when they become unblocked. Since tasks that are being blocked are always the active task, removing them from the ready queues can be achieved simply by changing their states from \texttt{Active} to one of the blocked states, and only add \texttt{Active} tasks back to the ready queue. Since the tasks aren't being blocked waiting to request some resource, there is no need to track them in any other way besides removing them from the ready queue.
+\\
+Rescheduling tasks as they become unblocked can be done as long as a reference to their task descriptor is available. In the case of both Send and Reply, the tid is known, so the TD of the intended task is known as well (in fact, this is required to enqueue the envelope for Send).
+\\
+The second design decision was how to receive block
+\subsection{Possible Improvements}
+\section{Nameserver}
 The following system calls have been implemented in this assignment (on top of the ones from previous assignments):
 \begin{center}
   \begin{tabular}{|l|l|p{8cm}|}
@@ -74,7 +111,6 @@ The following system calls have been implemented in this assignment (on top of t
     UnRegister & \texttt{UnRegister(char *name)} & Unregister the current task iff its name and tid match what is in the NameServer.  Returns $0$ on success, $-1$ or $-2$ on error.\\\hline
   \end{tabular}
 \end{center}
-
 \section{Game Tasks}
 \subsection{Priorities}
 \begin{center}

@@ -4,10 +4,10 @@
 #include <types.h>
 #include <stdlib.h>
 #include <term.h>
+#include <util.h>
 
 #define INIT_SPSR   0x13c0
 #define REGS_SAVE   11
-
 
 int sys_create(int priority, void (*code)(), uint32_t *retval) {
     Task_t *task;
@@ -93,6 +93,7 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
         addTask(target);
     }
 
+    // value does not matter, will be overwritten during reply
     return msglen;
 }
 
@@ -114,12 +115,7 @@ int sys_recv(int *tid, void *msg, int msglen) {
         currentTask->inboxTail = NULL;
     }
 
-    // mainly used for debug... mismatched message len = oh no bad stuff
-    if (envelope->msglen != msglen) {
-        return MISMATCHED_MESSAGE_LEN;
-    }
-
-    memcpy(msg, envelope->msg, msglen);
+    memcpy(msg, envelope->msg, MIN(msglen, envelope->msglen));
     *tid = envelope->sender->tid;
     envelope->sender->state = REPL_BL;
 
@@ -141,14 +137,14 @@ int sys_reply(int tid, void *reply, int replylen) {
         return TASK_NOT_REPLY_BLOCKED;
     }
 
-    if (envelope->replylen != replylen) {
-        return MISMATCHED_MESSAGE_LEN;
-    }
-    memcpy(envelope->reply, reply, replylen);
+    memcpy(envelope->reply, reply, MIN(replylen, envelope->replylen));
 
     addTask(target);
     releaseEnvelope(envelope);
     target->outbox = NULL;
+
+    // set result of send to the length of the reply
+    target->result = replylen;
     return 0;
 }
 
