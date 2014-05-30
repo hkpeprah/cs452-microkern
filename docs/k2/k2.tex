@@ -98,9 +98,11 @@ The first significant design decision was how to block tasks on Send/Receive, an
 \\
 Rescheduling tasks as they become unblocked can be done as long as a reference to their task descriptor is available. In the case of both Send and Reply, the tid is known, so the TD of the intended task is known as well (in fact, this is required to enqueue the envelope for Send).
 \\
-The second design decision was how to receive block
-\subsection{Nameserver}
-The following wrapper functions have been implemented in this assignment for communicating with the NameServer:
+The second design decision was how to Receive block. Inside Receive, up to 2 calls to the kernel may be made. The first one is made optimistically, and will return if a message is retrieved successfully from a queue. However, if the queue is empty, then the task is blocked, and Receive will make a second kernel call once it becomes unblocked to retrieve the message.
+\\
+This approach results in an extra call to the kernel in the Receive-Before-Send case, but makes the code in the primitive simpler as it does not need to handle the special case of storing the Receive parameters. In addition, Send can simply unblock the receiver and does not need to make the decision between directly copy the message instead of appending to the receiver's queue. This is an optimization that can be made later if the necessity arises.
+\section{Nameserver}
+The following function calls have been implemented for the nameserver:
 \begin{center}
   \begin{tabular}{|l|l|p{8cm}|}
     \hline
@@ -214,6 +216,12 @@ The implementation of \texttt{random} uses a set seed, so the results from the g
 \\[2\baselineskip]
 
 \section{Performance Measurements}
+\subsection{Profiling Technique}
+Our Makefile was modified to support building in profile mode, with the option of adding 3 define switches (message size, order, cache) as well as the -O2 option that modified our code to operate under the required settings. This is made easy by a script at bin/profiler.sh which generates the .elf executables for each configuration and uploads it to the tftp server.
+\\
+The receiver task must register itself with the nameserver so it can be found by the sender. This is done by creating the receiver task first, then having the genesis task send a message to it to force a context switch. After the register is complete, the sender task is created and the genesis task exits so the two can run.
+\\
+The profiling is done using the 40-bit debug timer, and two functions (startProfile, endProfile) that takes the difference between the value of the 40-bit timer as they are called, and cumulates that value into a running average. The send->receive->reply chain is done 20,000 times for accuracy, and the average is printed once both tasks finish their expected number of sends and receives.
 \subsection{Results}
 \begin{tabular}{|c|c|c|c|r|}
   \hline
@@ -238,7 +246,7 @@ The implementation of \texttt{random} uses a set seed, so the results from the g
 {\tiny {\bf *} - Assignment says ``Send Before Reply'', however, replies are non-blocking and don't depend on a send to occur.}
 \\[1\baselineskip]
 \subsection{Explanation}
-Something something...
+Caching increases the performance drastically, and optimization also increases the performance. The larger the message, the more time will be spent during message passing due to memcpy, and Receive-Before-Send takes a performance hit due to the extra call required by Receive.
 \\[2\baselineskip]
 \section{MD5 Hashes}
 Source files can be accessed at either \texttt{/u7/mqchen/cs452/cs452-microkern} or \\ \texttt{/u8/hkpeprah/cs452-microkern}. The listing of all the fields being submitted alongisde their MD5 hashes and locations are as follows:\\
