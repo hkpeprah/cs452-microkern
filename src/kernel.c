@@ -71,11 +71,11 @@ static void initSWI() {
 void boot () {
     /* sequence of boot operations */
     initIO();
+    clear_screen();                /* must be before debug */
     initDebug();
     initMem();
     initTasks();
     initSWI();
-    clear_screen();
     initClock();
     seed(43539805);                /* seed random number generator */
     debug("Successfully booted");
@@ -93,7 +93,9 @@ void kernel_main() {
 
         // nothing left to run
         if (task == NULL) break;
+        /*
         debugf("Got Task with TID: %d, stack: 0x%x", task->tid, task->sp);
+        */
 
         // context switch to user task here
         taskSP = swi_exit(task->result, task->sp, UNION_CAST(&args, void**));

@@ -55,6 +55,7 @@ void initTasks() {
     availableEnvelopes = lastBlock;
 }
 
+
 Envelope_t *getEnvelope() {
     if (availableEnvelopes == NULL) {
         return NULL;
@@ -65,6 +66,7 @@ Envelope_t *getEnvelope() {
     envelope->next = NULL;
     return envelope;
 }
+
 
 void releaseEnvelope(Envelope_t *envelope) {
     envelope->next = availableEnvelopes;
@@ -92,6 +94,7 @@ Task_t *createTaskD(uint32_t priority) {
     return t;
 }
 
+
 Task_t *getTaskByTid(uint32_t tid) {
     Task_t *task = &__taskBank[tid % TASK_BANK_SIZE];
 
@@ -101,6 +104,7 @@ Task_t *getTaskByTid(uint32_t tid) {
 
     return task;
 }
+
 
 Task_t *getCurrentTask() {
     return currentTask;
@@ -126,8 +130,10 @@ void addTask(Task_t *t) {
     availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
 
-    debugf("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
-           t->priority, availableQueues, highestTaskPriority);
+    /*
+      debugf("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
+          t->priority, availableQueues, highestTaskPriority);
+    */
 }
 
 
@@ -154,8 +160,6 @@ void findHighestTaskPriority() {
         return;
     }
 
-    debugf("AvailableQueues: 0x%x", availableQueues);
-
     for (high = highestTaskPriority; ; high = mid) {
         mid = high >> 1;
 
@@ -169,8 +173,8 @@ void findHighestTaskPriority() {
     }
 
     highestTaskPriority = high;
-    debugf("New high: %d", high);
 }
+
 
 Task_t *schedule() {
     if (highestTaskPriority < 0) {

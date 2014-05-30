@@ -110,6 +110,7 @@ void NameServer() {
                     delete_ht(clients, lookup.name);
                     lookup.name = "\0";
                 }
+                break;
             default:
                 debugf("NameServer: Unknown request made: %d", lookup.type);
         }

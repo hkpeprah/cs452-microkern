@@ -108,8 +108,11 @@ void Server() {
                             player2 = tmp->tid;
                         }
 
-                        res.type = tmp->type;
-                        errno = Reply(tmp->tid, &res, sizeof(res));
+                        if (player1 >= 0 && player2 >= 0) {
+                            res.type = tmp->type;
+                            errno = Reply(player1, &res, sizeof(res));
+                            errno = Reply(player2, &res, sizeof(res));
+                        }
                     }
                 }
                 break;
@@ -121,8 +124,12 @@ void Server() {
                     } else if (player2 < 0) {
                         player2 = callee;
                     }
-                    res.type = PLAY;
-                    errno = Reply(callee, &res, sizeof(res));
+
+                    if (player1 >= 0 && player2 >= 0) {
+                        res.type = tmp->type;
+                        errno = Reply(player1, &res, sizeof(res));
+                        errno = Reply(player2, &res, sizeof(res));
+                    }
                 } else {
                     /* two players are signed up, just add the player to the queue */
                     tmp = free_queue;
@@ -151,6 +158,11 @@ void Server() {
                 } else if (callee == player2) {
                     p2_choice = req.d0;
                     p2_name = req.name;
+                } else {
+                    /* player that is not in the current game is attempting to play */
+                    res.type = NOT_PLAYING;
+                    errno = Reply(callee, &res, sizeof(res));
+                    break;
                 }
 
                 if (p1_choice >= ROCK && p2_choice >= ROCK) {
@@ -196,10 +208,6 @@ void Server() {
                     printf("Press any key to continue: \r\n");
                     getchar();
                     newline();
-                } else {
-                    /* player that is not in the current game is attempting to play */
-                    res.type = NOT_PLAYING;
-                    errno = Reply(callee, &res, sizeof(res));
                 }
                 break;
             default:
@@ -244,9 +252,10 @@ void Client() {
         request.name = name;
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            debugf("Client: Error in send: %d got %d, sending to: %d\r\n", tid, errno, rps_server);
+            debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
         }
         status = result.type;
+        debugf("Client: %d got %d", tid, status);
     }
 
     /* should always reach here */
@@ -263,7 +272,7 @@ void Player() {
     int status;
     char ch;
     int rps_server;
-    char name[] = "User";
+    char name[] = "You";
     GameMessage request, result;
 
     /* register with the name server */
@@ -275,12 +284,18 @@ void Player() {
     /* signup to play the game */
     request.type = SIGNUP;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
+    change_color(BOLD);
+    puts("Welcome to Rock-Paper-Scissors\r\n");
+    end_color();
+    puts("Enter r/R for ROCK, p/P for Paper, s/S for Scissors\r\n");
 
     while (errno >= 0 && status == TIE) {
         ch = 4;
         while (ch > SCISSORS) {
             /* loop until a valid input is given */
-            printf("Make your play: ");
+            change_color(BOLD);
+            puts("Make your play: ");
+            end_color();
             ch = getchar();
             printf("%c\r\n", ch);
             save_cursor();
@@ -308,7 +323,7 @@ void Player() {
         request.name = name;
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            printf("Player: Error in send: %d got %d, sending to: %d\r\n", tid, errno, rps_server);
+            printf("Player: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
         }
         status = result.type;
     }

@@ -69,9 +69,9 @@ The following system calls have been implemented in this assignment (on top of t
   \begin{tabular}{|l|l|p{8cm}|}
     \hline
     {\bf System Call} & {\bf Prototype} & {\bf Description} \\\hline
-    RegisterAs & \texttt{RegisterAs(char *name)} & Register the current task with the name \texttt{name} in the NameServer. \\\hline
-    WhoIs & \texttt{WhoIs(char *name)} & Lookup the task with the given name in the NameServer and returns its tid if found. \\\hline
-    UnRegister & \texttt{UnRegister(char *name)} & Unregister the current task iff its name and tid match what is in the NameServer. \\\hline
+    RegisterAs & \texttt{RegisterAs(char *name)} & Register the current task with the name \texttt{name} in the NameServer.  Returns $0$ on success, $-1$ or $-2$ on error. \\\hline
+    WhoIs & \texttt{WhoIs(char *name)} & Lookup the task with the given name in the NameServer and returns its tid if found.  Returns the tid on success, otherwise $-1$ or $-2$.\\\hline
+    UnRegister & \texttt{UnRegister(char *name)} & Unregister the current task iff its name and tid match what is in the NameServer.  Returns $0$ on success, $-1$ or $-2$ on error.\\\hline
   \end{tabular}
 \end{center}
 
@@ -87,10 +87,10 @@ The following system calls have been implemented in this assignment (on top of t
     Client (NXCLZ)  & $3$  & $7$ \\\hline
     Client (HIIJS)  & $4$  & $8$ \\\hline
     Client (JUWKR)  & $5$  & $5$ \\\hline
-    Client (YEOYF)  & $6$  & $1$ \\\hline
+    Client (PDYEO)  & $6$  & $1$ \\\hline
     Client (NLZEM)  & $7$  & $7$ \\\hline
-    Client (GXKFQ)  & $8$  & $3$ \\\hline
-    Client (LPEKV)  & $9$  & $1$ \\\hline
+    Client (OGXKF)  & $8$  & $3$ \\\hline
+    Client (YFLPE)  & $9$  & $1$ \\\hline
     Client (CXWTY)  & $10$ & $6$ \\\hline
     Client (ABJFT)  & $11$ & $8$ \\\hline
     Client (TXRHX)  & $12$ & $6$ \\\hline
@@ -118,22 +118,22 @@ Player TXRHX(Task 12) throwing SCISSORS
 CXWTY won the round
 Press any key to continue:
 
-Player JUWKR(Task 5) throwing SCISSORS
-Player GXKFQ(Task 8) throwing SCISSORS
+Player JUWKR(Task 5) throwing PAPER
+Player OGXKF(Task 8) throwing SCISSORS
+OGXKF won the round
+Press any key to continue:
+
+Player PDYEO(Task 6) throwing SCISSORS
+Player YFLPE(Task 9) throwing SCISSORS
 Round was a TIE
 Press any key to continue:
 
-Player JUWKR(Task 5) throwing ROCK
-Player GXKFQ(Task 8) throwing PAPER
-GXKFQ won the round
-Press any key to continue:
-
-Player YEOYF(Task 6) throwing SCISSORS
-Player LPEKV(Task 9) throwing ROCK
-LPEKV won the round
+Player PDYEO(Task 6) throwing SCISSORS
+Player YFLPE(Task 9) throwing ROCK
+YFLPE won the round
 Press any key to continue:
 \end{verbatim}
-The implementation of \texttt{random} uses a set seed, so the results from the game are deterministic, which allows us to argue that the results will always be the same as above.  First, the explanation of how Rock-Papers-Scissors works.  To begin a game of Rock-Paper-Scissors, two parties must agree to play, at which point, each party throws one of \{Rock, Paper, Scissors\} simulataenously.  Rock beats Scissors, Scissors beats Paper, and for some god awful reason, Paper beats Rock.  If both parties throw the same hand, the round ends in a tie, and neither party is victorious.  Task $4$ and $11$ have the highest priority of the client/player tasks, so they are the two first to run.  They both signup with the server by sending a SIGNUP request, and give their hands by sending a PLAY request.  Since task $4$ threw PAPER and task $11$ threw ROCK, task $4$ wins the round, and they both send a QUIT request if the result is not a tie.  The result of the game is sent back as a reply to the two players indicating if they won, if they lost, or if it was a tie.  Any tasks that make a request to PLAY while a game is in session, is queued by the server and replied to when there is a free slot for that task to join.  The next two tasks then run, and so on, in order of decreasing priority.  On a tie, such as in the first case of task $5$ and task $8$, they play again by sending another PLAY request.  So, the order of the tasks by priority is \{$4$, $11$, $3$, $7$, $10$, $12$, $5$, $8$, $6$, $9$\}, which takes into account the order the tasks were created.  So $4$ plays against $11$, $3$ against $7$, $10$ against $12$, $5$ against $8$, and $6$ against $9$ as this is the order in which the tasks run and signup, and the first two tasks to signup are the first two to play; the server sends a reply indicating they can now play and to send it their hands.  After each round, the server prints out the tasks in order of when they signed up, what they threw, and the result of the result, then prompts the actual user for input to continue execution.
+The implementation of \texttt{random} uses a set seed, so the results from the game are deterministic, which allows us to argue that the results will always be the same as above.  First, the explanation of how Rock-Papers-Scissors works.  To begin a game of Rock-Paper-Scissors, two parties must agree to play, at which point, each party throws one of \{Rock, Paper, Scissors\} simulataenously.  Rock beats Scissors, Scissors beats Paper, and for some god awful reason, Paper beats Rock.  If both parties throw the same hand, the round ends in a tie, and neither party is victorious.  Task $4$ and $11$ have the highest priority of the client/player tasks, so they are the two first to run.  They both signup with the server by sending a SIGNUP request, and give their hands by sending a PLAY request.  Since task $4$ threw PAPER and task $11$ threw ROCK, task $4$ wins the round, and they both send a QUIT request if the result is not a tie.  The result of the game is sent back as a reply to the two players indicating if they won, if they lost, or if it was a tie.  Any tasks that make a request to PLAY while a game is in session, is queued by the server and replied to when there is a free slot for that task to join.  The next two tasks then run, and so on, in order of decreasing priority.  On a tie, such as in the first case of task $6$ and task $9$, they play again by sending another PLAY request.  So, the order of the tasks by priority is \{$4$, $11$, $3$, $7$, $10$, $12$, $5$, $8$, $6$, $9$\}, which takes into account the order the tasks were created.  So $4$ plays against $11$, $3$ against $7$, $10$ against $12$, $5$ against $8$, and $6$ against $9$ as this is the order in which the tasks run and signup, and the first two tasks to signup are the first two to play; the server sends a reply indicating they can now play and to send it their hands.  After each round, the server prints out the tasks in order of when they signed up, what they threw, and the result of the result, then prompts the actual user for input to continue execution.
 \\[2\baselineskip]
 
 \section{Performance Measurements}

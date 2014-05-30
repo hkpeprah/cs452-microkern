@@ -1,14 +1,13 @@
-Created Task 3 with Priority: 7
-Created Task 4 with Priority: 8
-Created Task 5 with Priority: 5
-Created Task 6 with Priority: 1
-Created Task 7 with Priority: 7
-Created Task 8 with Priority: 3
-Created Task 9 with Priority: 1
-Created Task 10 with Priority: 6
-
-Created Task 11 with Priority: 8
-Created Task 12 with Priority: 6
+Task: 3  Priority: 7
+Task: 4  Priority: 8
+Task: 5  Priority: 5
+Task: 6  Priority: 1
+Task: 7  Priority: 7
+Task: 8  Priority: 3
+Task: 9  Priority: 1
+Task: 10     Priority: 6
+Task: 11     Priority: 8
+Task: 12     Priority: 6
 Player HIIJS(Task 4) throwing PAPER
 Player ABJFT(Task 11) throwing ROCK
 HIIJS won the round
@@ -24,17 +23,17 @@ Player TXRHX(Task 12) throwing SCISSORS
 CXWTY won the round
 Press any key to continue: 
 
-Player JUWKR(Task 5) throwing SCISSORS
-Player GXKFQ(Task 8) throwing SCISSORS
+Player JUWKR(Task 5) throwing PAPER
+Player OGXKF(Task 8) throwing SCISSORS
+OGXKF won the round
+Press any key to continue: 
+
+Player PDYEO(Task 6) throwing SCISSORS
+Player YFLPE(Task 9) throwing SCISSORS
 Round was a TIE
 Press any key to continue: 
 
-Player JUWKR(Task 5) throwing ROCK
-Player GXKFQ(Task 8) throwing PAPER
-GXKFQ won the round
-Press any key to continue: 
-
-Player YEOYF(Task 6) throwing SCISSORS
-Player LPEKV(Task 9) throwing ROCK
-LPEKV won the round
+Player PDYEO(Task 6) throwing SCISSORS
+Player YFLPE(Task 9) throwing ROCK
+YFLPE won the round
 Press any key to continue: 

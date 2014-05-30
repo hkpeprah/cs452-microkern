@@ -16,14 +16,14 @@
 #define putchar(ch)              putch(ch)
 #endif
 #if DEBUG
-#define debugf(format, ...)      (move_to_debug(), printf("\r\n"), printf(format, ## __VA_ARGS__), restore_cursor())
+#define debugf(format, ...)      (move_to_debug(), printf("\r\n"), printf(format, ## __VA_ARGS__), return_to_term())
 #define debug(str)               debugf("%s", str)
 #else
 #define debug(str)
 #define debugf(format, ...)
 #endif
-#define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
-#define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINA_HEIGHT), restore_cursor())
+#define move_to_debug()          (save_cursor(), set_scroll(0, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
+#define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
 
 
 /* ANSI color codes */
@@ -69,7 +69,7 @@
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
 #define TOP_HALF                 0
-#define BOTTOM_HALF              TERMINAL_HEIGHT / 2
+#define BOTTOM_HALF              31
 
 
 void initDebug();

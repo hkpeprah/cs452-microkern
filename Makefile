@@ -50,11 +50,9 @@ test: init
 	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
 
 init:
-	@echo "CFLAGS:"
-	@echo $(CFLAGS)
+	@echo "CFLAGS: $(CFLAGS)"
 	@-rm -rf $(builddir)/*
 	@-cp -r $(srcdir)/*.s $(builddir)/
-	@-cp -r $(srcdir)/**/*.s $(builddir)/
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 

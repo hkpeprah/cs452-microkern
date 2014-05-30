@@ -22,4 +22,7 @@ Run `make TEST="testfilename"`
 Run `make debug`  
 
 **Documentation**:  
-Run `doxygen Doxyfile`
+Run `doxygen Doxyfile`  
+
+**Useful Links**:  
+* Kernel Description: http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/kernel.pdf
