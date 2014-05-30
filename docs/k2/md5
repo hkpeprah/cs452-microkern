@@ -42,6 +42,6 @@ e9facfa26e0292dd9ec45587eac01321  /u8/hkpeprah/cs452-microkern/src/kernel.c
 52014a086ab65f52ed72471b5cbe42b7  /u8/hkpeprah/cs452-microkern/src/time.c
 ebe3801abd7ec411fe0ce35330559696  /u8/hkpeprah/cs452-microkern/src/tasks/utasks.c
 b3a9b7222c0e4890e792f8e08f58a5aa  /u8/hkpeprah/cs452-microkern/src/tasks/perf_test.c
-5a35fdb34c03b6fa42ef36105622c168  /u8/hkpeprah/cs452-microkern/src/tasks/shell.c
+b357d998ff491423556eaec9980ac4d2  /u8/hkpeprah/cs452-microkern/src/tasks/shell.c
 ee681b5aebaeb4ead2fde72443af08b1  /u8/hkpeprah/cs452-microkern/tests/tasks2.c
 befff66a349448e4e08aab2f7abbaa51  /u8/hkpeprah/cs452-microkern/tests/tasks1.c
