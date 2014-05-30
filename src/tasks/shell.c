@@ -43,8 +43,12 @@ void Shell() {
                 break;
             } else if (strcmp(buf, "play") == 0) {
                 /* user can play their own game of Rock-Paper-Scissors */
-                Create(1, Player);
-                Create(2, Client);
+                Create(random() % 10, Player);
+                Create(random() % 10, Client);
+            } else if (strcmp(buf, "playc") == 0) {
+                /* two computers will play for the user's enjoyment */
+                Create(random() % 10, Client);
+                Create(random() % 10, Client);
             }
 
             puts("> ");
