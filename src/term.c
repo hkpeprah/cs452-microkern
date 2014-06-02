@@ -1,7 +1,5 @@
 #include <term.h>
-#include <string.h>
-#define USER        "jobs"
-#define PASSWORD    "steve"
+
 
 extern int get_cpsr(int dummy);
 extern int get_sp(int dummy);
@@ -25,23 +23,14 @@ void initDebug() {
 }
 
 
-int login(char *user, char *pass) {
-    debug("Processing user login.");
-    if (!(strcmp(user, USER) || strcmp(pass, PASSWORD))) {
-        return 1;
-    }
-    return 0;
-}
-
-
 void dumpRegisters() {
     #if DEBUG
         int i;
         int sp = (int)push_reg();
-        debugf("task cpsr: %x\n", get_cpsr(0));
-        debugf("task sp: %x\n", sp);
+        debugf("Task CPSR: %x\n", get_cpsr(0));
+        debugf("Task SP: %x\n", sp);
         for (i = 0; i < 15; ++i) {
-            debugf("reg +%d: %x\n", i, ((int*)sp)[i]);
+            debugf("Register R%d: %x\n", i, ((int*)sp)[i]);
         }
     #endif
 }

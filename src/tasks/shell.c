@@ -5,7 +5,7 @@
 #include <term.h>
 #include <stdio.h>
 #include <string.h>
-#include <utasks.h>
+#include <rps.h>
 #include <syscall.h>
 #include <random.h>
 
@@ -42,14 +42,8 @@ void Shell() {
             if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
                 /* quit the terminal and stop the kernel */
                 break;
-            } else if (strcmp(buf, "play") == 0) {
-                /* user can play their own game of Rock-Paper-Scissors */
-                Create(random_range(1, 10), Player);
-                Create(random_range(1, 10), Client);
-            } else if (strcmp(buf, "playc") == 0) {
-                /* two computers will play for the user's enjoyment */
-                Create(random_range(1, 10), Client);
-                Create(random_range(1, 10), Client);
+            } else if (strcmp(buf, "rps") == 0) {
+                Create(random_range(1, 2), RockPaperScissors);
             }
 
             puts("> ");

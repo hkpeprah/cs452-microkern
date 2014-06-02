@@ -59,10 +59,13 @@
 #define move_cur_right(x)        printf("\033[%dC", x)
 #define erase_screen()           puts("\033[2J\033[0;0H")
 #define erase_line()             puts("\033[2K")
+#define erase_line_forward()     puts("\033[0K")
 #define clear_screen()           erase_screen()
 #define change_color(x)          printf("\033[%dm", x)
 #define end_color()              puts("\033[0m")
 #define newline()                puts("\r\n")
+#define set_line_wrap(col)       printf("\033[7;%dh", col)
+#define set_window(name)         printf("\033]2;\"%s\"ST", name)
 
 #define TERMINAL_WIDTH           120
 #define TERMINAL_HEIGHT          63
@@ -73,7 +76,6 @@
 
 
 void initDebug();
-int login(char*, char*);
 void dumpRegisters();
 
 #endif /* __TERM__ */
