@@ -7,6 +7,7 @@
 #include <clock.h>
 #include <random.h>
 #include <stdlib.h>
+#include <interrupt.h>
 
 #define INIT_SPSR          0x13c0
 #define SWI_HANDLER_ADDR   0x28
