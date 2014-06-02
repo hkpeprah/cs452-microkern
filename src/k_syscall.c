@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <term.h>
 #include <util.h>
+#include <interrupt.h>
 
 #define INIT_SPSR   0x13c0
 #define REGS_SAVE   11
@@ -160,4 +161,22 @@ void sys_pass() {
 
 void sys_exit() {
     destroyTaskD();
+}
+
+
+int sys_await(int eventType) {
+    /*
+     * Blocks the task on the given eventType, then resume
+     * when the event occurs, to wake up the given task.
+     */
+    int errno;
+    Task_t *target = getCurrentTask();
+    target->state = EVENT_BL;
+    errno = addInterruptListener(eventType, target);
+
+    if (errno < 0) {
+        debugf("AwaitEvent: Got %d adding task %d", errno, target->tid);
+    }
+
+    return errno;
 }

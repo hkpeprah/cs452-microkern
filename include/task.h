@@ -13,6 +13,7 @@ typedef enum {
     SEND_BL,
     RECV_BL,
     REPL_BL,
+    EVENT_BL,
     NUM_STATES
 } TaskState_t;
 

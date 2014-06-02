@@ -51,6 +51,9 @@ static int handleRequest(Args_t *args) {
         case SYS_EXIT:
             sys_exit();
             break;
+        case SYS_AWAIT:
+            errno = sys_await(args->a0);
+            break;
         default:
             break;
     }
@@ -78,6 +81,7 @@ void boot () {
     initTasks();
     initSWI();
     seed(43539805);                /* seed random number generator */
+    initInterrupts();              /* enable interrupts */
     debug("Successfully booted");
 }
 

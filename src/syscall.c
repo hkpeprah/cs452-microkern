@@ -101,6 +101,8 @@ int AwaitEvent(int eventType) {
      *    -3 - data must be collected, interrupts re-enabled in caller
      *    Otherwise returns volatile data
      */
-
-    return 0;
+    Args_t args;
+    args.code = SYS_AWAIT;
+    args.a0 = eventType;
+    return swi_call(0, &args);
 }
