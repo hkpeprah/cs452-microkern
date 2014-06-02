@@ -15,7 +15,7 @@ typedef enum {
     DELAY = 0,
     TIME,
     DELAY_UNTIL
-} ClockRequestTypes;
+} ClockRequestType;
 
 
 typedef struct {
