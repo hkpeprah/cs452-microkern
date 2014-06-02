@@ -87,7 +87,6 @@ Task_t *createTaskD(uint32_t priority) {
         t->addrspace = getMem();
         t->sp = t->addrspace->addr;
         t->next = NULL;
-        t->result = -1;
         addTask(t);
     }
 
@@ -140,13 +139,6 @@ void addTask(Task_t *t) {
 void destroyTaskD() {
     freeMem(currentTask->addrspace);
 
-    currentTask->state = FREE;
-    currentTask->tid = 0;
-    currentTask->parentTid = -1;
-    currentTask->priority = -1;
-    currentTask->sp = 0;
-    currentTask->addrspace = NULL;
-    currentTask->result = 0;
     currentTask->state = ZOMBIE;
     currentTask = NULL;
 }
@@ -214,3 +206,9 @@ Task_t *schedule() {
 
     return currentTask;
 }
+
+void setResult(Task_t *task, int result) {
+    int *sp = (int*)task->sp;
+    sp[2] = result;
+}
+

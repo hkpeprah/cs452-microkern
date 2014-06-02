@@ -19,7 +19,6 @@ void task1() {
     uint32_t tid;
     tid = MyTid();
     finishTimes[finishIndex++] = tid;
-    Exit();
 }
 
 
@@ -28,7 +27,6 @@ void task2() {
     tid = MyTid();
     Pass();
     finishTimes[finishIndex++] = tid;
-    Exit();
 }
 
 
@@ -40,7 +38,6 @@ void task3() {
         Pass();
     }
     finishTimes[finishIndex++] = tid;
-    Exit();
 }
 
 
@@ -70,8 +67,6 @@ void task4() {
     if (num == res[index]) {
         finishTimes[finishIndex++] = tid;
     }
-
-    Exit();
 }
 
 

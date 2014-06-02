@@ -28,8 +28,6 @@ typedef struct __task_t {
     uint32_t sp;
     struct __task_t *next;
     MemBlock_t * addrspace;
-    // result of last request, TODO(max) - optimize this by using the stack
-    uint32_t result;
     struct __envelope_t *inboxHead;
     struct __envelope_t *inboxTail;
     struct __envelope_t *outbox;
@@ -61,5 +59,6 @@ Task_t *getCurrentTask();
 void destroyTaskD();
 void addTask(Task_t*);
 Task_t *schedule();
+void setResult(Task_t*, int);
 
 #endif /* __TASK_H__ */

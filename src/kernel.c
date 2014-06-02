@@ -14,10 +14,11 @@
 
 
 extern int swi_handler();
-extern int swi_exit(int result, int sp, void** tf);
+extern int swi_exit(int sp, void** tf);
 extern int get_cpsr(int dummy);
 extern int get_spsr(int dummy);
 extern int get_sp(int dummy);
+
 
 static int handleRequest(Args_t *args) {
     uint32_t result = 0;
@@ -97,15 +98,30 @@ void kernel_main() {
 
         // nothing left to run
         if (task == NULL) break;
-        /*
-        debugf("Got Task with TID: %d, stack: 0x%x", task->tid, task->sp);
-        */
+#if DEBUG_KERNEL
+        debugf("switching to task with tid: %d, stack:", task->tid);
+        int *sp = (int*) task->sp;
+        int i;
+        for(i = 0; i < 16; ++i) {
+            debugf("0x%x: 0x%x", sp + i, sp[i]);
+        }
+#endif
 
         // context switch to user task here
-        taskSP = swi_exit(task->result, task->sp, UNION_CAST(&args, void**));
+        taskSP = swi_exit(task->sp, UNION_CAST(&args, void**));
 
         // return from swi_exit -> user made a swi call
         task->sp = taskSP;
-        task->result = handleRequest(args);
+        int result = handleRequest(args);
+        setResult(task, result);
+
+#if DEBUG_KERNEL
+        sp = (int*) task->sp;
+        debugf("got request for task %d with result %d", task->tid, result);
+        for(i = 0; i < 16; ++i) {
+            debugf("0x%x: 0x%x", sp + i, sp[i]);
+        }
+#endif
+
     }
 }
