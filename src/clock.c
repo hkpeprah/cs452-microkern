@@ -13,6 +13,21 @@ int clockserver_tid = -1;
 
 
 static void ClockNotifier() {
+    /*
+     * Awaits an interrupt event corresponding to a tick.  On each tick, notifies
+     * the ClockServer.
+     */
+    int errno;
+    int response;
+    unsigned int clock;
+    ClockRequest msg;
+
+    // TODO: AwaitEvent
+    msg.type = TICK;
+    clock = MyParentTid();
+    errno = Send(clock, &msg, sizeof(msg), &response, sizeof(response));
+
+    /* should never reach here */
     Exit();
 }
 
@@ -40,6 +55,10 @@ void ClockServer() {
              * In the case of Delay or DelayUntil, what we return does not
              * actually matter.
              */
+            case TICK:
+                ++ticks;
+                response = 0;
+                break;
             case DELAY:
                 response = 0;
                 break;
@@ -55,6 +74,7 @@ void ClockServer() {
         Reply(callee, &response, sizeof(response));
     }
 
+    /* should never reach here */
     Exit();
 }
 

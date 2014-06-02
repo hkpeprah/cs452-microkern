@@ -14,7 +14,8 @@
 typedef enum {
     DELAY = 0,
     TIME,
-    DELAY_UNTIL
+    DELAY_UNTIL,
+    TICK
 } ClockRequestType;
 
 
