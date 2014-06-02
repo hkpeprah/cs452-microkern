@@ -81,4 +81,22 @@
 #define UART_HDLCRIB_OFFSET	0x218
 #define UART_HDLCSTS_OFFSET	0x21c
 
+// Interrupts (handler @ 0x38)
 
+// vic2->vic1->processor
+
+#define VIC1_BASE       0x800B0000 // 0-31
+#define VIC2_BASE       0x800C0000 // 32-63
+
+#define VICxIRQStatus       0x00
+#define VICxIntSelect       0x0c
+#define VICxIntEnable       0x10
+#define VICxIntEnClear      0x14
+#define VICxSoftInt         0x18
+#define VICxSoftIntClear    0x1c
+
+#define UART1RXINTR1    23
+#define UART1TXINTR1    24
+#define UART2RXINTR2    25
+#define UART2TXINTR2    26
+#define TC3OI           51 // bit 19 (51-32) in VIC2

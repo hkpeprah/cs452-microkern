@@ -1,5 +1,6 @@
 #include <mem.h>
 #include <k_syscall.h>
+#include <syscall.h>
 #include <task.h>
 #include <types.h>
 #include <stdlib.h>
@@ -7,7 +8,7 @@
 #include <util.h>
 
 #define INIT_SPSR   0x13c0
-#define REGS_SAVE   11
+#define REGS_SAVE   13
 
 
 int sys_create(int priority, void (*code)(), uint32_t *retval) {
@@ -18,13 +19,13 @@ int sys_create(int priority, void (*code)(), uint32_t *retval) {
     task = createTaskD(priority);
 
     if (task != NULL) {
-        /* save the sp, lr and regs 1 - 9 */
         sp = (uint32_t*)task->sp;
-        *(--sp) = (uint32_t)code;
+        *(--sp) = (uint32_t)Exit;
         for (i = 0; i < REGS_SAVE; ++i) {
             *(--sp) = 0;
         }
 
+        *(--sp) = (uint32_t)code;
         *(--sp) = INIT_SPSR;
         task->sp = (uint32_t)sp;
         *retval = task->tid;
@@ -148,7 +149,7 @@ int sys_reply(int tid, void *reply, int replylen) {
     target->outbox = NULL;
 
     // set result of send to the length of the reply
-    target->result = replylen;
+    setResult(target, replylen);
     return 0;
 }
 

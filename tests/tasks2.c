@@ -22,7 +22,7 @@ void sender() {
         printf("Incorrect replyLen of %d", replyLen);
     }
 
-    Exit();
+    debugf("sender exiting");
 }
 
 void receiver() {
@@ -42,7 +42,7 @@ void receiver() {
         printf("Incorrect replyResult of %d", replyResult);
     }
 
-    Exit();
+    debugf("receiver exiting");
 }
 
 int main() {
