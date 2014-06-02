@@ -18,10 +18,11 @@ typedef enum {
 
 struct __envelope_t;
 
+
 typedef struct __task_t {
     TaskState_t state;
-    uint32_t tid;
-    int parentTid;
+    uint32_t tid : 8;
+    uint32_t parentTid : 8;
     int priority;
     uint32_t sp;
     struct __task_t *next;
@@ -33,10 +34,12 @@ typedef struct __task_t {
     struct __envelope_t *outbox;
 } Task_t;
 
+
 typedef struct {
     Task_t *head;
     Task_t *tail;
 } TaskQueue_t;
+
 
 typedef struct __envelope_t {
     void *msg;

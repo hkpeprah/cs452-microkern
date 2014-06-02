@@ -18,13 +18,13 @@ void Shell() {
     unsigned int i;
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
-    i = 0;
 
     /* produce the login prompt */
-    printf("\r\n=================PROMPT================\r\n");
+    printf("=================PROMPT================\r\n");
     puts("> ");
     save_cursor();
 
+    i = 0;
     FOREVER {
         ch = getchar();
         if (ch == BS || ch == '\b') {
@@ -43,7 +43,7 @@ void Shell() {
                 /* quit the terminal and stop the kernel */
                 break;
             } else if (strcmp(buf, "rps") == 0) {
-                Create(random_range(1, 2), RockPaperScissors);
+                Create(random_range(2, 3), RockPaperScissors);
             }
 
             puts("> ");

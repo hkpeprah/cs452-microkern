@@ -8,6 +8,7 @@
 #include <syscall.h>
 #include <server.h>
 #include <syscall_types.h>
+#include <util.h>
 
 
 int clockserver_tid = -1;
@@ -30,6 +31,7 @@ static void ClockNotifier() {
     }
 
     /* should never reach here */
+    debug("Error: ClockNotifier: Exited.");
     Exit();
 }
 
@@ -38,12 +40,19 @@ void ClockServer() {
     int ticks;
     int errno;
     int callee;
-    int response;
+    unsigned int i;
     ClockRequest msg;
-    unsigned int tid;
+    DelayQueue __bank[32];
+    DelayQueue *free, *queue, *tmp, *last;
 
+    free = NULL;
+    queue = NULL;
     clockserver_tid = MyTid();
-    tid = Create(1, ClockNotifier);
+    Create(15, ClockNotifier);
+    for (i = 0; i < 32; ++i) {
+        __bank[i].next = free;
+        free = &__bank[i];
+    }
 
     errno = RegisterAs(CLOCK_SERVER);
     if (errno < 0) {
@@ -51,7 +60,12 @@ void ClockServer() {
     }
 
     ticks = 0;
-    while (Receive(&callee, &msg, sizeof(msg))) {
+    while (true) {
+        errno = Receive(&callee, &msg, sizeof(msg));
+        if (errno != sizeof(msg)) {
+            debugf("Error: ClockServer: Message length mistmatch %d != %d", errno, sizeof(msg));
+        }
+
         switch (msg.type) {
             /* 
              * In the case of Delay or DelayUntil, what we return does not
@@ -59,21 +73,72 @@ void ClockServer() {
              */
             case TICK:
                 ++ticks;
-                response = 0;
+                /* need to immediately reply to the ClockNotification task to unblock */
+                errno = 0;
+                Reply(callee, &errno, sizeof(errno));
+                while (queue != NULL && queue->delay <= ticks) {
+                    debugf("ClockServer: Delay over for %d", queue->tid);
+                    errno = ticks;
+                    Reply(queue->tid, &errno, sizeof(errno));
+                    tmp = queue->next;
+                    queue->next = free;
+                    free = queue;
+                    queue = tmp;
+                }
                 break;
             case DELAY:
-                response = 0;
+                msg.ticks += ticks;
+            case DELAY_UNTIL:
+                if (msg.ticks <= ticks) {
+                    errno = 0;
+                    Reply(callee, &errno, sizeof(errno));
+                } else if (free == NULL) {
+                    errno = OUT_OF_SPACE;
+                    Reply(callee, &errno, sizeof(errno));
+                } else {
+                    free->tid = callee;
+                    free->delay = msg.ticks;
+                    /* insert sorted into linked list */
+                    if (queue == NULL) {
+                        tmp = free->next;
+                        free->next = queue;
+                        queue = free;
+                        free = tmp;
+                    } else {
+                        tmp = queue;
+                        while (tmp != NULL && free->delay >= tmp->delay) {
+                            last = tmp;
+                            tmp = tmp->next;
+                        }
+
+                        if (tmp == NULL) {
+                            /* add callee as tail, has largest delay */
+                            last->next = free;
+                            free = free->next;
+                            last->next->next = NULL;
+                        } else {
+                            /* swap callee with the current tmp */
+                            last = free;
+                            free = free->next;
+                            last->next = tmp->next;
+                            tmp->next = last;
+                            last->tid = tmp->tid;
+                            tmp->tid = callee;
+                            callee = tmp->delay;
+                            tmp->delay = last->delay;
+                            last->delay = callee;
+                        }
+                    }
+                }
                 break;
             case TIME:
-                response = ticks;
-                break;
-            case DELAY_UNTIL:
-                response = 0;
+                errno = ticks;
+                Reply(callee, &errno, sizeof(errno));
                 break;
             default:
-                response = -1; /* unknown request */
+                errno = -1;
+                Reply(callee, &errno, sizeof(errno));
         }
-        Reply(callee, &response, sizeof(response));
     }
 
     /* should never reach here */

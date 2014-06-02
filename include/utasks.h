@@ -7,9 +7,9 @@
 
 
 typedef struct {
-    unsigned int t;
-    unsigned int n;
-    unsigned int complete;
+    unsigned int t : 8;
+    unsigned int n : 8;
+    unsigned int complete : 8;
 } DelayMessage;
 
 

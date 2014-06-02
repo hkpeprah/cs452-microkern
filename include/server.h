@@ -9,7 +9,7 @@ extern int nameserver_tid;
 
 
 typedef struct {
-    int type;
+    int type : 8;
     char *name;
     int tid;
 } Lookup;

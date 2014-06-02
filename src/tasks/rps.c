@@ -229,7 +229,6 @@ static void RPSComputer() {
             debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
         }
         status = result.type;
-        debugf("Client: %d got %d", tid, status);
     }
 
     /* should always reach here */
@@ -246,7 +245,7 @@ static void RPSPlayer() {
     int status;
     char ch;
     int rps_server;
-    char name[] = "You";
+    char name[] = "YOU";
     GameMessage request, result;
 
     /* register with the name server */
@@ -312,27 +311,31 @@ static void RPSPlayer() {
 
 
 void RockPaperScissors() {
-    unsigned int tid;
     unsigned int i;
+    bool quit;
 
-    if ((tid = WhoIs(RPS_SERVER)) < 0) {
+    if (WhoIs(RPS_SERVER) < 0) {
         /* check that the RPS Server exists */
+        debug("RockPaperScissors called without RPSServer, creating.");
         Create(14, RPSServer);
     }
 
-    while (true) {
+    quit = false;
+    while (quit == false) {
         puts("Enter the number of players (0 - 1): ");
         i = getchar() - '0';
-        puts("\r\n");
+        printf("%d\r\n", i);
 
         switch(i) {
             case 0:
-                Create(random_range(1, 2), RPSComputer);
-                Create(random_range(1, 2), RPSComputer);
+                Create(4, RPSComputer);
+                Create(4, RPSComputer);
+                quit = true;
                 break;
             case 1:
-                Create(random_range(1, 2), RPSPlayer);
-                Create(random_range(1, 2), RPSComputer);
+                Create(4, RPSPlayer);
+                Create(4, RPSComputer);
+                quit = true;
                 break;
             default:
                 printf("Invalid player count: %d\r\n", i);

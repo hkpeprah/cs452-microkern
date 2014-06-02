@@ -40,12 +40,13 @@ static void Client() {
          * each before exiting.
          */
         clock = WhoIs(CLOCK_SERVER);
+        debugf("Client: Task %d with (%d, %d).", tid, msg.t, msg.n);
         while (msg.complete < msg.n) {
-            Pass(); /* simulate a delay for now */
+            Delay(msg.t);
             printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
         }
     } else {
-        debugf("%d received status %d sending to %d", tid, errno, pTid);
+        debugf("Task %d received status %d sending to %d", tid, errno, pTid);
     }
 
     Exit();
@@ -69,18 +70,20 @@ void firstTask() {
 
     for (i = 0; i < 4; ++i) {
         Create(priorities[i], Client);
+        debugf("FirstTask: Created task with priority: %d", priorities[i]);
     }
 
-    i = 0;
-    while ((i < 4) && Receive(&callee, &msg, sizeof(msg))) {
+    for (i = 0; i < 4; ++i) {
+        Receive(&callee, &msg, sizeof(msg));
         res.t = delay_t[i];
         res.n = delay_n[i];
-        ++i;
         Reply(callee, &res, sizeof(res));
     }
 
     /* push the shell as the last task */
     Create(0, Shell);
+
+    debug("FirstTask: Exiting");
 
     Exit();
 }

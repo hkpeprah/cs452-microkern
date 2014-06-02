@@ -28,7 +28,7 @@ typedef enum {
 
 
 typedef struct __gameMessage {
-    int type;
+    int type : 8;
     int d0;
     int d1;
     char *name;
