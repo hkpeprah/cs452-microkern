@@ -3,6 +3,14 @@
 #include <types.h>
 #include <task.h>
 #include <server.h>
+#include <clock.h>
+
+
+typedef struct {
+    unsigned int t;
+    unsigned int n;
+    unsigned int complete;
+} DelayMessage;
 
 
 void testTask();

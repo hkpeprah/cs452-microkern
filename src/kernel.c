@@ -4,7 +4,7 @@
 #include <k_syscall.h>
 #include <syscall.h>
 #include <term.h>
-#include <time.h>
+#include <clock.h>
 #include <random.h>
 
 #define INIT_SPSR          0x13c0
