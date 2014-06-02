@@ -13,6 +13,7 @@
 #include <term.h>
 #include <utasks.h>
 #include <syscall.h>
+#include <shell.h>
 
 
 void testTask() {
@@ -77,6 +78,9 @@ void firstTask() {
         ++i;
         Reply(callee, &res, sizeof(res));
     }
+
+    /* push the shell as the last task */
+    Create(0, Shell);
 
     Exit();
 }

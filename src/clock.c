@@ -7,6 +7,7 @@
 #include <term.h>
 #include <syscall.h>
 #include <server.h>
+#include <syscall_types.h>
 
 
 int clockserver_tid = -1;
@@ -17,15 +18,16 @@ static void ClockNotifier() {
      * Awaits an interrupt event corresponding to a tick.  On each tick, notifies
      * the ClockServer.
      */
+    int n;
     int errno;
-    int response;
     unsigned int clock;
     ClockRequest msg;
 
-    // TODO: AwaitEvent
-    msg.type = TICK;
-    clock = MyParentTid();
-    errno = Send(clock, &msg, sizeof(msg), &response, sizeof(response));
+    while ((n = AwaitEvent(EVENT_CLOCK))) {
+        msg.type = TICK;
+        clock = MyParentTid();
+        errno = Send(clock, &msg, sizeof(msg), &n, sizeof(n));
+    }
 
     /* should never reach here */
     Exit();

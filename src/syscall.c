@@ -7,6 +7,7 @@
 // sp is a dummy input to pad r0, and is set in the asm function
 extern int swi_call(int sp, void *args);
 
+
 int MyTid() {
     Args_t args;
     args.code = SYS_MYTID;
@@ -86,4 +87,20 @@ int Reply(int tid, void *reply, int replylen) {
     args.a1 = (uint32_t)reply;
     args.a2 = replylen;
     return swi_call(0, &args);
+}
+
+
+int AwaitEvent(int eventType) {
+    /*
+     * Waits for an external event.  Blocks until the event defined by the
+     * passed parameter occurs then returns.
+     * Returns
+     *    0  - volatie data in event buffer
+     *    -1 - invalid event
+     *    -2 - corrupted data, error in event buffer
+     *    -3 - data must be collected, interrupts re-enabled in caller
+     *    Otherwise returns volatile data
+     */
+
+    return 0;
 }

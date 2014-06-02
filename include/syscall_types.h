@@ -2,6 +2,7 @@
 #define __SYSCALL_DEFS__
 #include <types.h>
 
+
 typedef enum {
     SYS_MYTID = 0,
     SYS_PTID,
@@ -11,8 +12,15 @@ typedef enum {
     SYS_EXIT,
     SYS_SEND,
     SYS_RECV,
-    SYS_REPL
+    SYS_REPL,
+    SYS_AWAIT
 } system_calls;
+
+
+typedef enum {
+    EVENT_CLOCK = 0
+} system_events;
+
 
 typedef struct args {
     system_calls code;
