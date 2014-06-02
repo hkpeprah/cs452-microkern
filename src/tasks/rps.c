@@ -21,6 +21,7 @@
 #include <rps.h>
 #include <random.h>
 #include <shell.h>
+#include <server.h>
 
 #define RPS_SERVER   "RPS_SERVER"
 
@@ -321,7 +322,7 @@ void RockPaperScissors() {
 
     while (true) {
         puts("Enter the number of players (0 - 1): ");
-        i = getch() - '0';
+        i = getchar() - '0';
         puts("\r\n");
 
         switch(i) {

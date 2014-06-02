@@ -6,6 +6,7 @@
 #include <term.h>
 #include <clock.h>
 #include <random.h>
+#include <stdlib.h>
 
 #define INIT_SPSR          0x13c0
 #define SWI_HANDLER_ADDR   0x28
@@ -76,7 +77,6 @@ void boot () {
     initMem();
     initTasks();
     initSWI();
-    initClock();
     seed(43539805);                /* seed random number generator */
     debug("Successfully booted");
 }

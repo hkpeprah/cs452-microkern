@@ -29,8 +29,8 @@ static void Client() {
     DelayMessage msg;
 
     pTid = MyParentTid();
-    msg->complete = 0;
-    errno = Send(pTid, msg, sizeof(msg), msg, sizeof(msg));
+    msg.complete = 0;
+    errno = Send(pTid, &msg, sizeof(msg), &msg, sizeof(msg));
     tid = MyTid();
 
     if (errno >= 0) {
@@ -39,9 +39,9 @@ static void Client() {
          * each before exiting.
          */
         clock = WhoIs(CLOCK_SERVER);
-        while (msg->complete < msg->n) {
+        while (msg.complete < msg.n) {
             Pass(); /* simulate a delay for now */
-            printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg->t, ++msg->complete);
+            printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
         }
     } else {
         debugf("%d received status %d sending to %d", tid, errno, pTid);
@@ -55,9 +55,9 @@ void firstTask() {
     int callee;
     unsigned int i;
     DelayMessage msg, res;
-    int priorities = {3, 4, 5, 6};
-    int delay_t = {10, 23, 33, 71};
-    int delay_n = {20, 9, 6, 3};
+    int priorities[] = {3, 4, 5, 6};
+    int delay_t[] = {10, 23, 33, 71};
+    int delay_n[] = {20, 9, 6, 3};
 
     /*
      * First user task creats the ClockServer and four
@@ -72,10 +72,10 @@ void firstTask() {
 
     i = 0;
     while ((i < 4) && Receive(&callee, &msg, sizeof(msg))) {
-        resp.t = delay_t[i];
-        resp.n = delay_n[i];
+        res.t = delay_t[i];
+        res.n = delay_n[i];
         ++i;
-        Reply(callee, &resp, sizeof(resp));
+        Reply(callee, &res, sizeof(res));
     }
 
     Exit();
