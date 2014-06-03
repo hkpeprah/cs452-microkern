@@ -6,25 +6,7 @@
 #include <kernel.h>
 
 #define FIRST_PRIORITY     14
-#include <ts7200.h>
-#include <syscall.h>
-#include <shell.h>
 
-void interruptTestTask() {
-    int i = 0;
-    char c;
-    do {
-        printf("%d\n", i++);
-        c = getchar();
-
-        if(c == 'i') {
-            // trigger interrupt here!
-        }
-
-    } while(c != 'q');
-
-    Exit();
-}
 
 int main() {
     int status;

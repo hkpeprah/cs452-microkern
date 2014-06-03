@@ -8,11 +8,25 @@
 #include <term.h>
 #include <ts7200.h>
 
-#define INTERRUPT_HANDLER  0x38
+#define INTERRUPT_HANDLER    0x38
+#define TIMER_INTERRUPT      19
+#define EXTRACT_BIT(n, k)    ((n & (1 << k)) >> k)
 
 
 extern void irq_handler();
 static interruptQueue InterruptTable[NUMBER_INTERRUPTS];
+
+
+static void clearInterrupts() {
+    /* clears interrupt bits */
+    unsigned int *vic;
+
+    vic = (unsigned int*)VIC1_BASE;
+    *(vic + VICxIntEnClear) = 0;
+
+    vic = (unsigned int*)VIC2_BASE;
+    *(vic + VICxIntEnClear) = 0;
+}
 
 
 void enableInterrupts() {
@@ -28,9 +42,9 @@ void enableInterrupts() {
 
     /* enable timer */
     vic = (unsigned int*)VIC2_BASE;
-    *(vic + VICxIntSelect) = 0;           /* IRQ */
-    *(vic + VICxIntEnClear) = 0;          /* clear interrupt bits */
-    *(vic + VICxIntEnable) = 1 << 19;     /* enable interrupt */
+    *(vic + VICxIntSelect) = 0;                        /* IRQ */
+    *(vic + VICxIntEnClear) = 0;                       /* clear interrupt bits */
+    *(vic + VICxIntEnable) = 1 << TIMER_INTERRUPT;     /* enable interrupt */
     debug("Interrupt: Enabling interrupts.");
 }
 
@@ -38,19 +52,47 @@ void enableInterrupts() {
 void disableInterrupts() {
     unsigned int *vic;
 
+    vic = (unsigned int*)VIC1_BASE;
+    *(vic + VICxIntEnable) = 0;
+
     vic = (unsigned int*)VIC2_BASE;
     *(vic + VICxIntEnable) = 0;          /* turn off interrupt */
+
+    clearInterrupts();
     debug("Interrupt: Disabling interrupts.");
 }
 
 
-void HandleInterrupt() {
+int HandleInterrupt() {
     /*
      * Figures out the event corresponding to the mask,
      * and wakes all events in its bucket.
      * Does not return anything.
      */
-    puts("YOU CAN'T DOGDGE THE RODGE\r\n");
+    int result;
+    unsigned int i;
+    unsigned int j;
+    interruptQueue *table;
+
+    for (i = CLOCK_INTERRUPT; i < NUM_INTERRUPTS; ++i) {
+        table = NULL;
+        switch(i) {
+            /* determine if status bit set */
+            case CLOCK_INTERRUPT:
+                break;
+        }
+
+        if (table != NULL) {
+            /* wake up all waiting on that queue */
+            for (j = 0; j < table->n; ++j) {
+                setResult(table->bucket[j], result);
+            }
+            table->n = 0;
+        }
+    }
+    clearInterrupts();
+    debug("Interrupt: Handling interrupt.");
+    return 1;
 }
 
 
@@ -61,7 +103,7 @@ int addInterruptListener(int eventType, Task_t *t) {
      */
     interruptQueue table;
 
-    if (eventType < NUMBER_INTERRUPTS) {
+    if (eventType < NUM_INTERRUPTS) {
         table = InterruptTable[eventType];
         if (table.n < MAX_INTERRUPT_LEN) {
             debugf("Interrupt: Task %d waiting on %d", t->tid, eventType);

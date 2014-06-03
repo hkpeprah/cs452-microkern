@@ -7,7 +7,7 @@
 
 typedef enum {
     CLOCK_INTERRUPT = 0,
-    NUMBER_INTERRUPTS
+    NUM_INTERRUPTS
 } interrupt_types;
 
 
@@ -19,7 +19,7 @@ typedef struct {
 
 void enableInterrupts();
 void disableInterrupts();
-void HandleInterrupt();
+int HandleInterrupt();
 int addInterruptListener(int, Task_t*);
 
 #endif /* __INTERRUPT_H__ */

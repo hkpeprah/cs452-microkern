@@ -52,7 +52,7 @@ static int handleRequest(Args_t *args) {
             errno = sys_await(args->a0);
             break;
         case SYS_INTERRUPT:
-            printf("INTERRUPTED");
+            errno = HandleInterrupt();
             break;
         default:
             break;

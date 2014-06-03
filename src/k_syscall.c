@@ -49,7 +49,7 @@ int sys_tid(uint32_t *retval) {
 
 int sys_pid(uint32_t *retval) {
     Task_t *current = getCurrentTask();
-    if(current != NULL) {
+    if (current != NULL) {
         *retval = current->parentTid;
         return 0;
     }
