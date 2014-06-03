@@ -226,7 +226,7 @@ static void RPSComputer() {
         request.name = name;
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            debugf("Client: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
+            error("Client: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
         }
         status = result.type;
     }
@@ -296,7 +296,7 @@ static void RPSPlayer() {
         request.name = name;
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
-            printf("Player: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
+            error("Player: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
         }
         status = result.type;
     }

@@ -11,7 +11,7 @@
 #include <util.h>
 
 
-int clockserver_tid = -1;
+static int clockserver_tid = -1;
 
 
 static void ClockNotifier() {
@@ -31,7 +31,7 @@ static void ClockNotifier() {
     }
 
     /* should never reach here */
-    debug("Error: ClockNotifier: Exited.");
+    error("ClockNotifier: Error: Exited.");
     Exit();
 }
 
@@ -56,17 +56,21 @@ void ClockServer() {
 
     errno = RegisterAs(CLOCK_SERVER);
     if (errno < 0) {
-        debugf("Error: ClockServer: NameServer returned %d", errno);
+        error("ClockServer: Error: NameServer returned %d", errno);
     }
 
+    /*
+     * 1 kHz = 0.001 seconds => 1 kHz = 1 millisecond
+     * 508 ticks/ms, so tenth of second (100 milliseconds) = 508 * 100
+     */
     *((uint32_t*)TIMER_CONTROL) = TIMER_ENABLE | TIMER_508KHZ;
-    *((uint32_t*)TIMER_LOAD) = MAXUINT;
+    *((uint32_t*)TIMER_LOAD) = 50800;
 
     ticks = 0;
     while (true) {
         errno = Receive(&callee, &msg, sizeof(msg));
         if (errno != sizeof(msg)) {
-            debugf("Error: ClockServer: Message length mistmatch %d != %d", errno, sizeof(msg));
+            error("ClockServer: Error: Message length mistmatch %d != %d", errno, sizeof(msg));
         }
 
         switch (msg.type) {
@@ -81,7 +85,7 @@ void ClockServer() {
                 Reply(callee, &errno, sizeof(errno));
                 errno = ticks;
                 while (queue != NULL && queue->delay <= ticks) {
-                    debugf("ClockServer: Delay over for %d", queue->tid);
+                    debugf("ClockServer: Waking up Task %d", queue->tid);
                     Reply(queue->tid, &errno, sizeof(errno));
                     tmp = queue->next;
                     queue->next = free;
@@ -166,7 +170,7 @@ int Time() {
     msg.type = TIME;
     errno = Send(clockserver_tid, &msg, sizeof(msg), &ticks, sizeof(ticks));
     if (errno < 0) {
-        debugf("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
+        error("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
         return -2;
     }
 
@@ -190,7 +194,7 @@ int Delay(int ticks) {
     msg.ticks = ticks;
     errno = Send(clockserver_tid, &msg, sizeof(msg), &msg, sizeof(msg));
     if (errno < 0) {
-        debugf("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
+        error("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
         return -2;
     }
 
@@ -214,7 +218,7 @@ int DelayUntil(int ticks) {
     msg.ticks = ticks;
     errno = Send(clockserver_tid, &msg, sizeof(msg), &msg, sizeof(msg));
     if (errno < 0) {
-        debugf("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
+        error("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
         return -2;
     }
 

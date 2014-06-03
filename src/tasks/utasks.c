@@ -46,7 +46,7 @@ static void Client() {
             printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
         }
     } else {
-        debugf("Task %d received status %d sending to %d", tid, errno, pTid);
+        error("Client: Error: Task %d received status %d sending to %d", tid, errno, pTid);
     }
 
     Exit();

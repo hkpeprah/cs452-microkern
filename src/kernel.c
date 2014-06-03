@@ -129,7 +129,7 @@ void kernel_main() {
         task->sp = taskSP;
 
         result = handleRequest(args);
-        if(args->code != SYS_INTERRUPT) {
+        if (args->code != SYS_INTERRUPT) {
             setResult(task, result);
         }
 

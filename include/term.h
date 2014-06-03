@@ -24,6 +24,7 @@
 #endif
 #define move_to_debug()          (save_cursor(), set_scroll(0, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
 #define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
+#define error(format, ...)       (change_color(RED), debugf(format, ## __VA_ARGS__), end_color())
 
 
 /* ANSI color codes */
