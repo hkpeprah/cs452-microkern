@@ -16,10 +16,6 @@
 
 extern int swi_handler();
 extern int swi_exit(int sp, void** tf);
-extern int get_cpsr(int dummy);
-extern int get_spsr(int dummy);
-extern int get_sp(int dummy);
-
 
 static int handleRequest(Args_t *args) {
     uint32_t result = 0;
@@ -55,6 +51,9 @@ static int handleRequest(Args_t *args) {
             break;
         case SYS_AWAIT:
             errno = sys_await(args->a0);
+            break;
+        case SYS_INTERRUPT:
+            printf("INTERRUPTED");
             break;
         default:
             break;
@@ -100,6 +99,7 @@ void kernel_main() {
     int taskSP;
     int result;
     Args_t *args;
+    Args_t defaultArg = {.code = SYS_INTERRUPT};
     Task_t *task = NULL;
 
     FOREVER {
@@ -118,13 +118,20 @@ void kernel_main() {
             }
         #endif
 
+        // default to interrupt, ie. if not swi then the pointer is not modified and we know
+        // it is an interrupt that needs to be handled
+        args = &defaultArg;
+
         // context switch to user task here
         taskSP = swi_exit(task->sp, UNION_CAST(&args, void**));
 
-        // return from swi_exit -> user made a swi call
+        // store user stack pointer
         task->sp = taskSP;
+
         result = handleRequest(args);
-        setResult(task, result);
+        if(args->code != SYS_INTERRUPT) {
+            setResult(task, result);
+        }
 
         #if DEBUG_KERNEL
             sp = (int*) task->sp;

@@ -76,6 +76,5 @@
 
 
 void initDebug();
-void dumpRegisters();
 
 #endif /* __TERM__ */

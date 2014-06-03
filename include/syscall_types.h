@@ -13,7 +13,8 @@ typedef enum {
     SYS_SEND,
     SYS_RECV,
     SYS_REPL,
-    SYS_AWAIT
+    SYS_AWAIT,
+    SYS_INTERRUPT
 } system_calls;
 
 

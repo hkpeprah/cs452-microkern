@@ -1,19 +1,48 @@
+# goto system mode
+# stores user state to sp
+# moves sp to r0
+.macro save_user_state
+    msr     cpsr_c, #0x9F
+    stmfd   sp!, {r0-r12, lr}
+    mov     r0, sp
+.endm
+
+# save the spsr and lr of the user process to r0
+# r0 should be the user sp
+# uses r2 as scratch
+.macro save_spsr_lr
+    mrs     r2, spsr
+    stmfd   r0!, {r2, lr}
+.endm
+
     .global swi_call
     .type   swi_call, %function
 swi_call:
     swi
     mov     pc, lr
 
+    .global irq_handler
+    .type   irq_handler, %function
+irq_handler:
+
+    save_user_state
+
+    # go back to irq mode
+    mrs     r2, cpsr
+    bic     r2, r2, #0x1F
+    orr     r2, r2, #0x12
+    msr     cpsr_c, r2
+
+    save_spsr_lr
+
+    msr     cpsr_c, #0x93
+    ldmfd   sp!, {r1-r12, pc}
+
     .global swi_handler
     .type   swi_handler, %function
 swi_handler:
 
-    # go to system mode
-    msr     cpsr_c, #0x9F
-
-    # store user state, move sp to r0
-    stmfd   sp!, {r0-r12, lr}
-    mov     r0, sp
+    save_user_state
 
     # go to svc mode
     mrs     r2, cpsr
@@ -21,9 +50,7 @@ swi_handler:
     orr     r2, r2, #0x13
     msr     cpsr_c, r2
 
-    # save the spsr and lr of the user process on top of the user process stack
-    mrs     r2, spsr
-    stmfd   r0!, {r2, lr}
+    save_spsr_lr
 
     # r2 is an output param ptr to write trap frame (r1) to
     # r0 is return value for this call, which gives us the sp
@@ -58,29 +85,3 @@ swi_exit:
 
     # return to user
     movs    pc, lr
-
-    .global get_cpsr
-    .type   get_cpsr, %function
-get_cpsr:
-    mrs     r0, cpsr
-    mov     pc, lr
-
-    .global get_spsr
-    .type   get_spsr, %function
-get_spsr:
-    mrs     r0, spsr
-    mov     pc, lr
-
-    .global get_sp
-    .type   get_sp, %function
-get_sp:
-    mov     r0, sp
-    mov     pc, lr
-
-
-    .global push_reg
-    .type   push_reg, %function
-push_reg:
-    stmfd   sp!, {r0-r14}
-    mov     r0, sp
-    mov     pc, lr
