@@ -18,6 +18,13 @@ static int finishIndex = 0;
 static int firstClientTid = -1;
 
 
+typedef struct {
+    unsigned int t : 8;
+    unsigned int n : 8;
+    unsigned int complete : 8;
+} DelayMessage;
+
+
 static void TestClient() {
     unsigned int pTid;
     unsigned int tid;
@@ -30,27 +37,28 @@ static void TestClient() {
     errno = Send(pTid, &msg, sizeof(msg), &msg, sizeof(msg));
     tid = MyTid();
 
-    if (errno >= 0) {
-        /*
-         * Client delays n times, each for a time interval of t, printing after
-         * each before exiting.
-         */
-        clock = WhoIs(CLOCK_SERVER);
-        debugf("Client: Task %d with (Interval %d, Number of Delays %d).", tid, msg.t, msg.n);
-        while (msg.complete < msg.n) {
-            Delay(msg.t);
-            printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
-        }
-    } else {
+    if (errno < 0) {
         error("TestClient: Error: Task %d received status %d sending to %d", tid, errno, pTid);
+        Exit();
+    }
+
+    /*
+     * Client delays n times, each for a time interval of t, printing after
+     * each before exiting.
+     */
+    clock = WhoIs(CLOCK_SERVER);
+    debugf("Client: Task %d with (Interval %d, Number of Delays %d).", tid, msg.t, msg.n);
+    while (msg.complete < msg.n) {
+        Delay(msg.t);
+        printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
     }
 
     /* track finish time */
     finishTimes[finishIndex++] = tid;
+    printf("Client: Task %d finished.  Calling Exit.\r\n", tid);
 
     Exit();
 }
-
 
 
 void Ticker() {
@@ -97,7 +105,7 @@ void Ticker() {
     timer = 0xFFFFFFFF;
     currentTimer = (uint32_t*)TIMER_VALUE;
     tick.type = TICK;
-    for (i = 0; i < 20; ++i) {
+    for (i = 0; i < 200; ++i) {
         /* 
          * all clients should finish by the time this is done ticking
          */
@@ -106,10 +114,11 @@ void Ticker() {
         errno = Send(clock, &tick, sizeof(tick), &callee, sizeof(callee));
     }
 
+    debug("Ticker: Getting Clock Time.");
     tick.type = TIME;
     Send(clock, &tick, sizeof(tick), &timer, sizeof(timer));
-    if (timer != 20) {
-        printf("Ticker: Error: Expected time to be 20, received %d\r\n", timer);
+    if (timer != 200) {
+        printf("Ticker: Error: Expected time to be 200, received %d\r\n", timer);
         firstClientTid = -1;
     }
 
@@ -128,6 +137,8 @@ int main() {
     for (i = 0; i < NUM_TASKS; ++i) {
         finishTimes[i] = -1;
     }
+    finishIndex = 0;
+    firstClientTid = -1;
 
     status = sys_create(1, Ticker, &tid);
     if (status < 0) {
@@ -145,9 +156,9 @@ int main() {
              * finish times should be the order of creation as the
              * clients will preempt the Ticker.
              */
-            if (finishTimes[i] != (firstClientTid + i)) {
+            if (finishTimes[i] != (firstClientTid + (NUM_TASKS - i - 1))) {
                 puts("FirstTask: Error: Tests failed.\r\nExpected:\r\n");
-                for (i = 0; i < NUM_TASKS; ++i) printf("%d ", firstClientTid + 1);
+                for (i = 0; i < NUM_TASKS; ++i) printf("%d ", firstClientTid + (NUM_TASKS - i - 1));
                 puts("\r\nActual:\r\n");
                 for (i = 0; i < NUM_TASKS; ++i) printf("%d ", finishTimes[i]);
                 puts("\r\n");
@@ -156,6 +167,8 @@ int main() {
         }
     }
 
-    puts("All tests passed successfully.");
+    change_color(CYAN);
+    puts("All tests passed successfully.\r\n");
+    end_color();
     return shutdown();
 }
