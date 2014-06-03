@@ -3,6 +3,26 @@
 #include <bwio.h>
 #include <stdio.h>
 #include <vargs.h>
+
+/* ANSI color codes */
+#define CLEAR                    0
+#define BOLD                     1
+#define ITALICS                  3
+#define UNDERLINE                4
+#define BLACK                    30
+#define RED                      31
+#define GREEN                    32
+#define YELLOW                   33
+#define BLUE                     34
+#define MAGENTA                  35
+#define CYAN                     36
+#define WHITE                    37
+
+/* character codes */
+#define BS                       9
+#define LF                       10
+#define CR                       13
+
 /* Note: ## __VA_ARGS__ is only valid with GNU CPP */
 #ifndef BUFFEREDIO
 #define printf(format, ...)      bwprintf(IO, format, ## __VA_ARGS__)
@@ -24,27 +44,11 @@
 #endif
 #define move_to_debug()          (save_cursor(), set_scroll(0, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
 #define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
-#define error(format, ...)       (change_color(RED), debugf(format, ## __VA_ARGS__), end_color())
-
-
-/* ANSI color codes */
-#define CLEAR                    0
-#define BOLD                     1
-#define ITALICS                  3
-#define UNDERLINE                4
-#define BLACK                    30
-#define RED                      31
-#define GREEN                    32
-#define YELLOW                   33
-#define BLUE                     34
-#define MAGENTA                  35
-#define CYAN                     36
-#define WHITE                    37
-
-/* character codes */
-#define BS                       9
-#define LF                       10
-#define CR                       13
+#define error(format, ...)       {                                \
+        change_color(RED);                                        \
+        debugf(format, ## __VA_ARGS__);                           \
+        end_color();                                              \
+    }
 
 #define restore_cursor()         puts("\033[u")
 #define save_cursor()            puts("\033[s")
