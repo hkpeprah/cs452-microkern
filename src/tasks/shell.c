@@ -20,7 +20,7 @@ void Shell() {
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    Delay(22);       /* remove after assignment 3 */
+    Delay(300);    /* remove after assignment 3 */
     puts("> ");
     save_cursor();
 

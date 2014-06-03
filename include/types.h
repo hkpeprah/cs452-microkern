@@ -24,9 +24,8 @@ typedef unsigned int     size_t;
 #define NO_MORE_ENVELOPES       -3      /* out of envelopes... oh no! */
 #define TRANSACTION_INCOMPLETE  -3      /* send-receive-reply transaction incomplete */
 #define TASK_NOT_REPLY_BLOCKED  -3      /* task is not reply blocked */
-#define NO_AVAILABLE_MESSAGES   -4      /* task called receive, but no messages, blocked */
 #define BUFFER_SPACE_INSUFF     -4      /* insufficient space for entire reply in sender's reply buffer */
-#define MISMATCHED_MESSAGE_LEN  -5      /* incorrect length between send/receive calls */
+#define NO_AVAILABLE_MESSAGES   -5      /* task called receive, but no messages, blocked */
 #define TASK_NOT_EXPECTING_MSG  -6      /* tried to reply to a task which didn't send */
 
 #endif /* __TYPES_H__ */
