@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <interrupt.h>
 
-#define INIT_SPSR          0x13c0
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
 

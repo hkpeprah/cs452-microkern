@@ -8,7 +8,7 @@
 #include <util.h>
 #include <interrupt.h>
 
-#define INIT_SPSR   0x13c0
+#define INIT_SPSR   0x10
 #define REGS_SAVE   13
 
 

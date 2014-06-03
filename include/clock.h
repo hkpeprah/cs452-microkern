@@ -7,6 +7,7 @@
 #define TIMER_CONTROL  0x80810088
 #define TIMER_CLEAR    0x8081008C
 #define TIMER_ENABLE   0x00000080
+#define TIMER_MODE     0x00000040
 #define TIMER_508KHZ   0x00000008
 
 #define CLOCK_SERVER   "ClockServer"
