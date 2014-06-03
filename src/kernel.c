@@ -90,39 +90,40 @@ void boot () {
 
 void kernel_main() {
     int taskSP;
+    int result;
     Args_t *args;
     Task_t *task = NULL;
-
 
     FOREVER {
         task = schedule();
 
         // nothing left to run
         if (task == NULL) break;
-#if DEBUG_KERNEL
-        debugf("switching to task with tid: %d, stack:", task->tid);
-        int *sp = (int*) task->sp;
-        int i;
-        for(i = 0; i < 16; ++i) {
-            debugf("0x%x: 0x%x", sp + i, sp[i]);
-        }
-#endif
+
+        #if DEBUG_KERNEL
+            int * sp;
+            int i;
+            debugf("Kernel: switching to task with tid: %d,\r\nStack:", task->tid);
+            *sp = (int*) task->sp;
+            for (i = 0; i < 16; ++i) {
+                debugf("0x%x: 0x%x", sp + i, sp[i]);
+            }
+        #endif
 
         // context switch to user task here
         taskSP = swi_exit(task->sp, UNION_CAST(&args, void**));
 
         // return from swi_exit -> user made a swi call
         task->sp = taskSP;
-        int result = handleRequest(args);
+        result = handleRequest(args);
         setResult(task, result);
 
-#if DEBUG_KERNEL
-        sp = (int*) task->sp;
-        debugf("got request for task %d with result %d", task->tid, result);
-        for(i = 0; i < 16; ++i) {
-            debugf("0x%x: 0x%x", sp + i, sp[i]);
-        }
-#endif
-
+        #if DEBUG_KERNEL
+            sp = (int*) task->sp;
+            debugf("Kernel: Got request for task %d with result %d", task->tid, result);
+            for (i = 0; i < 16; ++i) {
+                debugf("0x%x: 0x%x", sp + i, sp[i]);
+            }
+        #endif
     }
 }

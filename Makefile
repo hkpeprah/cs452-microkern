@@ -19,6 +19,7 @@ LDFLAGS          = -init main -Map $(builddir)/kern.map -N -T src/orex.ld -L/u/w
 SOURCE           = $(wildcard $(srcdir)/*.[cs]) $(wildcard $(srcdir)/**/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
 TARGET           = assn3.elf
+DEBUG            ?= DEBUG
 
 .PHONY: all
 
@@ -30,7 +31,7 @@ TARGET           = assn3.elf
 
 all: init target
 
-debug: CFLAGS += -DDEBUG
+debug: CFLAGS += -DDEBUG -D$(DEBUG)
 debug: upload
 
 profile: CFLAGS += -DPROFILE $(PROFILING)
