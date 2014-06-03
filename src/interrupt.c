@@ -11,6 +11,7 @@
 #define INTERRUPT_HANDLER  0x38
 
 
+extern void irq_handler();
 static interruptQueue InterruptTable[NUMBER_INTERRUPTS];
 
 
@@ -23,7 +24,7 @@ void enableInterrupts() {
     }
 
     /* set the handler address */
-    *((uint32_t*)INTERRUPT_HANDLER) = (uint32_t)HandleInterrupt;
+    *((uint32_t*)INTERRUPT_HANDLER) = (uint32_t)irq_handler;
 
     /* enable timer */
     vic = (unsigned int*)VIC2_BASE;
