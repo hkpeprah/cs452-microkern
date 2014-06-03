@@ -33,6 +33,8 @@ irq_handler:
     orr     r2, r2, #0x12
     msr     cpsr_c, r2
 
+    sub     lr, lr, #4
+
     save_spsr_lr
 
     msr     cpsr_c, #0x93
