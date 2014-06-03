@@ -63,8 +63,8 @@ void ClockServer() {
      * 1 kHz = 0.001 seconds => 1 kHz = 1 millisecond
      * 508 ticks/ms, so tenth of second (100 milliseconds) = 508 * 100
      */
-    *((uint32_t*)TIMER_CONTROL) = TIMER_ENABLE | TIMER_508KHZ;
     *((uint32_t*)TIMER_LOAD) = 50800;
+    *((uint32_t*)TIMER_CONTROL) = TIMER_ENABLE | TIMER_508KHZ | TIMER_MODE;
 
     ticks = 0;
     while (true) {

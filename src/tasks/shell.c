@@ -8,6 +8,7 @@
 #include <rps.h>
 #include <syscall.h>
 #include <random.h>
+#include <clock.h>
 
 #define FOREVER            for (;;)
 
@@ -19,8 +20,7 @@ void Shell() {
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    /* produce the login prompt */
-    printf("=================PROMPT================\r\n");
+    Delay(22);       /* remove after assignment 3 */
     puts("> ");
     save_cursor();
 

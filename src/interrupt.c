@@ -7,6 +7,7 @@
 #include <interrupt.h>
 #include <term.h>
 #include <ts7200.h>
+#include <clock.h>
 
 #define INTERRUPT_HANDLER    0x38
 #define TIMER_INTERRUPT      19
@@ -14,7 +15,7 @@
 
 
 extern void irq_handler();
-static interruptQueue InterruptTable[NUMBER_INTERRUPTS];
+static interruptQueue InterruptTable[NUM_INTERRUPTS];
 
 
 static void clearInterrupts() {
@@ -33,7 +34,7 @@ void enableInterrupts() {
     unsigned int i;
     unsigned int *vic;
 
-    for (i = 0; i < NUMBER_INTERRUPTS; ++i) {
+    for (i = 0; i < NUM_INTERRUPTS; ++i) {
         InterruptTable[i].n = 0;
     }
 
@@ -69,30 +70,39 @@ int HandleInterrupt() {
      * and wakes all events in its bucket.
      * Does not return anything.
      */
+    int mask;
     int result;
     unsigned int i;
     unsigned int j;
+    unsigned int *vic;
     interruptQueue *table;
 
-    for (i = CLOCK_INTERRUPT; i < NUM_INTERRUPTS; ++i) {
+    for (i = 0; i < NUM_INTERRUPTS; ++i) {
         table = NULL;
         switch(i) {
             /* determine if status bit set */
             case CLOCK_INTERRUPT:
+                vic = (unsigned int*)VIC2_BASE;
+                mask = *(vic + VICxIRQStatus);
+                if (EXTRACT_BIT(mask, TIMER_INTERRUPT)) {
+                    table = &InterruptTable[i];
+                    result = 1;
+                    *(uint32_t*)TIMER_CLEAR = 0;
+                }
                 break;
         }
 
         if (table != NULL) {
             /* wake up all waiting on that queue */
             for (j = 0; j < table->n; ++j) {
+                addTask(table->bucket[j]);
                 setResult(table->bucket[j], result);
             }
             table->n = 0;
         }
     }
-    clearInterrupts();
-    debug("Interrupt: Handling interrupt.");
-    return 1;
+
+    return 0;
 }
 
 
@@ -101,13 +111,13 @@ int addInterruptListener(int eventType, Task_t *t) {
      * Adds a task to the bucket awaiting a particular event.
      * Returns 0 on success, -1 on event not existing, -2 on no space
      */
-    interruptQueue table;
+    interruptQueue *table;
 
     if (eventType < NUM_INTERRUPTS) {
-        table = InterruptTable[eventType];
-        if (table.n < MAX_INTERRUPT_LEN) {
+        table = &InterruptTable[eventType];
+        if (table->n < MAX_INTERRUPT_LEN) {
             debugf("Interrupt: Task %d waiting on %d", t->tid, eventType);
-            table.bucket[table.n++] = t;
+            table->bucket[table->n++] = t;
             return 0;
         }
         return -2;

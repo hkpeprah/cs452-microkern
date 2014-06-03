@@ -16,6 +16,7 @@
 extern int swi_handler();
 extern int swi_exit(int sp, void** tf);
 
+
 static int handleRequest(Args_t *args) {
     uint32_t result = 0;
     uint32_t errno = 0;
