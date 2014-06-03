@@ -83,8 +83,16 @@ void boot () {
     initTasks();
     initSWI();
     seed(43539805);                /* seed random number generator */
-    initInterrupts();              /* enable interrupts */
+    enableInterrupts();            /* enable interrupts */
     debug("Successfully booted");
+}
+
+
+int shutdown() {
+    /* sequence of shutdown operations */
+    disableInterrupts();
+    puts("Exiting...\r\n");
+    return 0;
 }
 
 

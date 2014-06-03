@@ -59,6 +59,9 @@ void ClockServer() {
         debugf("Error: ClockServer: NameServer returned %d", errno);
     }
 
+    *((uint32_t*)TIMER_CONTROL) = TIMER_ENABLE | TIMER_508KHZ;
+    *((uint32_t*)TIMER_LOAD) = MAXUINT;
+
     ticks = 0;
     while (true) {
         errno = Receive(&callee, &msg, sizeof(msg));
@@ -76,9 +79,9 @@ void ClockServer() {
                 /* need to immediately reply to the ClockNotification task to unblock */
                 errno = 0;
                 Reply(callee, &errno, sizeof(errno));
+                errno = ticks;
                 while (queue != NULL && queue->delay <= ticks) {
                     debugf("ClockServer: Delay over for %d", queue->tid);
-                    errno = ticks;
                     Reply(queue->tid, &errno, sizeof(errno));
                     tmp = queue->next;
                     queue->next = free;

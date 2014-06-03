@@ -2,11 +2,12 @@
 #define __CLOCK_H__
 #include <types.h>
 
-#define TIMER_BASE     0x80810080
+#define TIMER_LOAD     0x80810080
 #define TIMER_VALUE    0x80810084
 #define TIMER_CONTROL  0x80810088
 #define TIMER_CLEAR    0x8081008C
-#define ENABLE_CLOCK   0x00000080
+#define TIMER_ENABLE   0x00000080
+#define TIMER_508KHZ   0x00000008
 
 #define CLOCK_SERVER   "ClockServer"
 

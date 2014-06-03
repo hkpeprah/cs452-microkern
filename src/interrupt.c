@@ -1,24 +1,55 @@
+/*
+ * interrupt.c - interrupt handling, enabling and disabling
+ * Notes:
+ *    - VIC powers up with vectored interrupts disabled, interupts masked, interrupts giving IRQ
+ *    - Write interrupt handler to 0x38
+ */
 #include <interrupt.h>
 #include <term.h>
+#include <ts7200.h>
+
+#define INTERRUPT_HANDLER  0x38
 
 
 static interruptQueue InterruptTable[NUMBER_INTERRUPTS];
 
 
-void initInterrupts() {
+void enableInterrupts() {
     unsigned int i;
+    unsigned int *vic;
+
     for (i = 0; i < NUMBER_INTERRUPTS; ++i) {
         InterruptTable[i].n = 0;
     }
+
+    /* set the handler address */
+    *((uint32_t*)INTERRUPT_HANDLER) = (uint32_t)HandleInterrupt;
+
+    /* enable timer */
+    vic = (unsigned int*)VIC2_BASE;
+    *(vic + VICxIntSelect) = 0;           /* IRQ */
+    *(vic + VICxIntEnClear) = 0;          /* clear interrupt bits */
+    *(vic + VICxIntEnable) = 1 << 19;     /* enable interrupt */
+    debug("Interrupt: Enabling interrupts.");
 }
 
 
-void HandleInterrupt(int mask) {
+void disableInterrupts() {
+    unsigned int *vic;
+
+    vic = (unsigned int*)VIC2_BASE;
+    *(vic + VICxIntEnable) = 0;          /* turn off interrupt */
+    debug("Interrupt: Disabling interrupts.");
+}
+
+
+void HandleInterrupt() {
     /*
      * Figures out the event corresponding to the mask,
      * and wakes all events in its bucket.
      * Does not return anything.
      */
+    puts("YOU CAN'T DOGDGE THE RODGE\r\n");
 }
 
 

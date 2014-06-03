@@ -2,7 +2,7 @@
 #define __INTERRUPT_H__
 #include <task.h>
 
-#define MAX_INTERRUPT_LEN 32
+#define MAX_INTERRUPT_LEN 8
 
 
 typedef enum {
@@ -17,8 +17,9 @@ typedef struct {
 } interruptQueue;
 
 
-void initInterrupts();
-void HandleInterrupt(int);
+void enableInterrupts();
+void disableInterrupts();
+void HandleInterrupt();
 int addInterruptListener(int, Task_t*);
 
 #endif /* __INTERRUPT_H__ */

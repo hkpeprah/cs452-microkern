@@ -40,7 +40,7 @@ static void Client() {
          * each before exiting.
          */
         clock = WhoIs(CLOCK_SERVER);
-        debugf("Client: Task %d with (%d, %d).", tid, msg.t, msg.n);
+        debugf("Client: Task %d with (Interval %d, Number of Delays %d).", tid, msg.t, msg.n);
         while (msg.complete < msg.n) {
             Delay(msg.t);
             printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
