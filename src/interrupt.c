@@ -103,11 +103,12 @@ int addInterruptListener(int eventType, Task_t *t) {
     if (eventType < NUM_INTERRUPTS) {
         table = &InterruptTable[eventType];
         if (table->n < MAX_INTERRUPT_LEN) {
-            debugf("Interrupt: Task %d waiting on %d", t->tid, eventType);
             table->bucket[table->n++] = t;
             return 0;
         }
+        error("Interrupt: Error: Out of bucket space.");
         return -2;
     }
+    error("Interrupt: Error: Invalid interrupt %d given.", eventType);
     return -1;
 }
