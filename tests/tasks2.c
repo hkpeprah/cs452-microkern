@@ -11,15 +11,19 @@
 
 #define SEND_SIZE 15
 #define REPLY_SIZE 22
+#define NUM_RUNS 100
 
 void sender() {
     char sendBuffer[16];
     char recvBuffer[10];
+    int i, replyLen;
 
-    int replyLen = Send(1, &sendBuffer, SEND_SIZE, &recvBuffer, 10);
+    for(i = 0; i < NUM_RUNS; ++i) {
+        replyLen = Send(1, &sendBuffer, SEND_SIZE, &recvBuffer, 10);
 
-    if(replyLen != REPLY_SIZE) {
-        printf("Incorrect replyLen of %d", replyLen);
+        if(replyLen != REPLY_SIZE) {
+            printf("Incorrect replyLen of %d\n", replyLen);
+        }
     }
 
     debugf("sender exiting");
@@ -28,18 +32,20 @@ void sender() {
 void receiver() {
     char recvBuffer[20];
     char replBuffer[25];
-    int tid;
+    int i, tid, sendLen, replyResult;
 
-    int sendLen = Receive(&tid, &recvBuffer, 20);
+    for(i = 0; i < NUM_RUNS; ++i) {
+        sendLen = Receive(&tid, &recvBuffer, 20);
 
-    if(sendLen != SEND_SIZE) {
-        printf("Incorrect sendLen of %d", sendLen);
-    }
+        if(sendLen != SEND_SIZE) {
+            printf("Incorrect sendLen of %d\n", sendLen);
+        }
 
-    int replyResult = Reply(tid, &replBuffer, REPLY_SIZE);
+        replyResult = Reply(tid, &replBuffer, REPLY_SIZE);
 
-    if(replyResult != 0) {
-        printf("Incorrect replyResult of %d", replyResult);
+        if(replyResult != 0) {
+            printf("Incorrect replyResult of %d\n", replyResult);
+        }
     }
 
     debugf("receiver exiting");

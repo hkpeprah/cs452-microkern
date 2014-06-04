@@ -112,7 +112,7 @@ void kernel_main() {
             int * sp;
             int i;
             debugf("Kernel: switching to task with tid: %d,\r\nStack:", task->tid);
-            *sp = (int*) task->sp;
+            sp = (int*) task->sp;
             for (i = 0; i < 16; ++i) {
                 debugf("0x%x: 0x%x", sp + i, sp[i]);
             }
