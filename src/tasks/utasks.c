@@ -25,13 +25,12 @@ void testTask() {
 static void Client() {
     unsigned int pTid;
     unsigned int tid;
-    unsigned int clock;
     int errno;
-    DelayMessage msg;
+    DelayMessage msg, res;
 
     pTid = MyParentTid();
     msg.complete = 0;
-    errno = Send(pTid, &msg, sizeof(msg), &msg, sizeof(msg));
+    errno = Send(pTid, &msg, sizeof(msg), &res, sizeof(res));
     tid = MyTid();
 
     if (errno >= 0) {
@@ -39,11 +38,11 @@ static void Client() {
          * Client delays n times, each for a time interval of t, printing after
          * each before exiting.
          */
-        clock = WhoIs(CLOCK_SERVER);
-        debugf("Client: Task %d with (Interval %d, Number of Delays %d).", tid, msg.t, msg.n);
-        while (msg.complete < msg.n) {
-            Delay(msg.t);
-            printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, msg.t, ++msg.complete);
+        debugf("Client: Task %d with (Interval %d, Number of Delays %d).", tid, res.t, res.n);
+        while (res.n--) {
+            Delay(res.t);
+            res.complete += 1;
+            printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, res.t, res.complete);
         }
     } else {
         error("Client: Error: Task %d received status %d sending to %d", tid, errno, pTid);

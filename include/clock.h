@@ -26,7 +26,7 @@ typedef enum {
 
 typedef struct {
     short type;
-    int ticks;
+    unsigned int ticks;
 } ClockRequest;
 
 

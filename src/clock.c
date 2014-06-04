@@ -43,7 +43,7 @@ void ClockServer() {
     unsigned int i;
     ClockRequest msg;
     DelayQueue __bank[32];
-    DelayQueue *free, *queue, *tmp, *last;
+    DelayQueue *free, *queue, *tmp, *last, *node;
 
     free = NULL;
     queue = NULL;
@@ -71,6 +71,7 @@ void ClockServer() {
         errno = Receive(&callee, &msg, sizeof(msg));
         if (errno != sizeof(msg)) {
             error("ClockServer: Error: Message length mistmatch %d != %d", errno, sizeof(msg));
+            continue;
         }
 
         switch (msg.type) {
@@ -84,7 +85,11 @@ void ClockServer() {
                 errno = 0;
                 Reply(callee, &errno, sizeof(errno));
                 errno = ticks;
-                while (queue != NULL && queue->delay <= ticks) {
+                while (queue != NULL) {
+                    if (queue->delay > ticks) {
+                        debugf("ClockServer: Task %d, Delay %d > Ticks %d", queue->tid, queue->delay, ticks);
+                        break;
+                    }
                     debugf("ClockServer: Waking up Task %d", queue->tid);
                     Reply(queue->tid, &errno, sizeof(errno));
                     tmp = queue->next;
@@ -103,37 +108,30 @@ void ClockServer() {
                     errno = OUT_OF_SPACE;
                     Reply(callee, &errno, sizeof(errno));
                 } else {
-                    free->tid = callee;
-                    free->delay = msg.ticks;
-                    /* insert sorted into linked list */
+                    node = free;
+                    free = free->next;
+                    node->tid = callee;
+                    node->delay = msg.ticks;
+
                     if (queue == NULL) {
-                        tmp = free->next;
-                        free->next = queue;
-                        queue = free;
-                        free = tmp;
+                        node->next = queue;
+                        queue = node;
                     } else {
                         tmp = queue;
-                        while (tmp != NULL && free->delay >= tmp->delay) {
+                        last = NULL;
+                        while (tmp != NULL && tmp->delay <= node->delay) {
                             last = tmp;
                             tmp = tmp->next;
                         }
 
-                        if (tmp == NULL) {
-                            /* add callee as tail, has largest delay */
-                            last->next = free;
-                            free = free->next;
-                            last->next->next = NULL;
+                        if (last == NULL) {
+                            debugf("Added Task %d to head of queue", node->tid);
+                            node->next = queue;
+                            queue = node;
                         } else {
-                            /* swap callee with the current tmp */
-                            last = free;
-                            free = free->next;
-                            last->next = tmp->next;
-                            tmp->next = last;
-                            last->tid = tmp->tid;
-                            tmp->tid = callee;
-                            callee = tmp->delay;
-                            tmp->delay = last->delay;
-                            last->delay = callee;
+                            debugf("Added Task %d with delay %d to queue after Task %d", node->tid, node->delay - ticks, tmp->tid);
+                            last->next = node;
+                            node->next = tmp;
                         }
                     }
                 }

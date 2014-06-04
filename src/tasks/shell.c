@@ -16,11 +16,12 @@
 void Shell() {
     char ch;
     char buf[80];
+    int status;
     unsigned int i;
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    Delay(300);    /* remove after assignment 3 */
+    status = Delay(71 * 3 + 20);    /* remove after assignment 3 */
     puts("> ");
     save_cursor();
 

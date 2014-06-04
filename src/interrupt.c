@@ -18,18 +18,6 @@ extern void irq_handler();
 static interruptQueue InterruptTable[NUM_INTERRUPTS];
 
 
-static void clearInterrupts() {
-    /* clears interrupt bits */
-    unsigned int *vic;
-
-    vic = (unsigned int*)VIC1_BASE;
-    *(vic + VICxIntEnClear) = 0;
-
-    vic = (unsigned int*)VIC2_BASE;
-    *(vic + VICxIntEnClear) = 0;
-}
-
-
 void enableInterrupts() {
     unsigned int i;
     unsigned int *vic;
@@ -59,7 +47,8 @@ void disableInterrupts() {
     vic = (unsigned int*)VIC2_BASE;
     *(vic + VICxIntEnable) = 0;          /* turn off interrupt */
 
-    clearInterrupts();
+    /* clear interrupts */
+    *(uint32_t*)TIMER_CLEAR = 0;
     debug("Interrupt: Disabling interrupts.");
 }
 
