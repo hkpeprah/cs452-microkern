@@ -84,8 +84,7 @@ In addition, the way a user task's result is stored was changed. Since hardware 
 The clock interrupt is enabled by:
 \begin{enumerate}
     \item Loading 50800 into the clock load register (interrupt every 1/10 second), then starting the clock in 508 KHz, pre-loaded mode
-    \item Enable the clock interrupt - interrupt 51 - by setting bit 19 of the VIC2 enable register (32-63 in VIC2, 51-32 = 19)
-    \\[1\baselineskip]
+    \item Enable the clock interrupt - interrupt 51 - by setting bit 19 of the VIC2 enable register (32-63 in VIC2, 51-32 = 19) \\
 \end{enumerate}
 \subsubsection{Context Switch}
 The updated context switch which supports the handling of hardware interrupts now saves the scratch registers. That is, {r0-r12, lr} (r13 = sp, r15 = pc) are now pushed and popped from the user stack. There is a separate handler for IRQ and SWI that do some slightly different things, but share a good portion of code that is re-used through assembly macros. The first step in both handlers is to save the user state:
@@ -105,7 +104,8 @@ After the user state is saved, the processor is returned to the kernel by poppin
 \texttt{swi\_exit} has the same function as it did in K1, switching from the kernel back to the user task. The main difference is that now all registers are restored, and the result is no longer passed in as a parameter to be assigned to r0 (it should already be stored as r0 on the user stack). In addition, the LR received from SVC/IRQ is now stored on the user stack and returned to, instead of the short-cut taken in K1 where the kernel would immediate return to the user's LR. While the shortcut was okay for SWI (the \texttt{swi\_call} function stub meant that the LR for each SWI call would point to the same instruction - mov pc, lr), it would not work for interrupts since the interrupted task could have been executing at any point.
 
 \subsubsection{Handling Interrupts}
-
+Something something
+\\[1\baselineskip]
 
 \subsection{ClockServer}
 \subsubsection{Implementation}

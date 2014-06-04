@@ -29,7 +29,9 @@ static void cacheOn() {
         "mcr p15, 0, r0, c7, c7, 0\n\t"
         "ldmfd sp!, {r0}\n\t");
 }
-// this seems to break stuff. Don't use it.
+
+#if 0
+/* this seems to break stuff. Don't use it. */
 static void cacheOff() {
     /* clear cache enable bits */
     asm("stmfd sp!, {r0}\n\t"
@@ -39,6 +41,8 @@ static void cacheOff() {
         "mcr p15, 0, r0, c1, c0, 0\n\t"
         "ldmfd sp!, {r0}\n\t");
 }
+#endif
+
 
 static int handleRequest(Args_t *args) {
     uint32_t result = 0;
@@ -118,7 +122,6 @@ int shutdown() {
     /* sequence of shutdown operations */
     clearTasks();
     disableInterrupts();
-    //cacheOff();
     puts("\r\nExiting...\r\n");
     return 0;
 }
