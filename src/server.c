@@ -115,7 +115,7 @@ void NameServer() {
                 }
                 break;
             default:
-                debugf("NameServer: Unknown request made: %d", lookup.type);
+                error("NameServer: Error: Unknown request made: %d from Task %d", lookup.type, callee);
         }
         errno = Reply(callee, &lookup, sizeof(lookup));
     }

@@ -82,10 +82,8 @@ int AwaitEvent(int eventType) {
      * Waits for an external event.  Blocks until the event defined by the
      * passed parameter occurs then returns.
      * Returns
-     *    0  - volatie data in event buffer
      *    -1 - invalid event
-     *    -2 - corrupted data, error in event buffer
-     *    -3 - data must be collected, interrupts re-enabled in caller
+     *    -2 - event queue full
      *    Otherwise returns volatile data
      */
     Args_t args;

@@ -109,7 +109,7 @@ void Ticker() {
         /* 
          * all clients should finish by the time this is done ticking
          */
-        while (timer - *currentTimer < 50800);
+        while (timer - *currentTimer < 5080);
         timer = *currentTimer;
         errno = Send(clock, &tick, sizeof(tick), &callee, sizeof(callee));
     }

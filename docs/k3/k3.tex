@@ -78,23 +78,23 @@ After the startup tasks have finished running, the user will reach a command pro
 
 \subsection{ClockServer}
 \subsubsection{Implementation}
-The ClockServer registers with the NameServer then creates the ClockNotifier which handles processing of timer generated interrupts.  We use the $508kHz$ $32$-bit timer.  It then writes $50800$ to the timer load register; using the $508kHz$ timer and with $100$ milliseconds in a tenth of a second, this corresponds to $50800$ in the timer load register.  It then writes to the timer control register to enable it, to set the mode to periodic so that the count resumes back at $50800$ after counting down, and to set the timer to the $508kHz$ timer.  The ClockServer then blocks on \texttt{Receive} to handle messages from other tasks.  When the ClockServer recieves a message of type \texttt{Delay} or \texttt{DelayUntil}, it adds the task to its delay queue sorted by the number of ticks that the task is waiting; the array is sorted in ascending order.  When it receives a message of type \texttt{Tick} it increments its internal counter, replies to the sending task immediately, then iterates through its delay queue waking up every task with a delay less than the current count by replying to them, and stopping as soon as it reaches a task with a delay greater than its current tick count.  This ensures that we do not needlessly check tasks that will not wake up as the queue is sorted.
-\\[1\baselineskip]
+The ClockServer registers with the NameServer then creates the ClockNotifier which handles processing of timer generated interrupts.  We use the $508kHz$ $32$-bit timer.  It then writes $5080$ to the timer load register; using the $508kHz$ timer and with $10$ milliseconds, this corresponds to $5080$ in the timer load register.  It then writes to the timer control register to enable it, to set the mode to periodic so that the count resumes back at $5080$ after counting down, and to set the timer to the $508kHz$ timer.  The ClockServer then blocks on \texttt{Receive} to handle messages from other tasks.  When the ClockServer recieves a message of type \texttt{Delay} or \texttt{DelayUntil}, it adds the task to its delay queue sorted by the number of ticks that the task is waiting; the array is sorted in ascending order.  When it receives a message of type \texttt{Tick} it increments its internal counter, replies to the sending task immediately, then iterates through its delay queue waking up every task with a delay less than the current count by replying to them, and stopping as soon as it reaches a task with a delay greater than its current tick count.  This ensures that we do not needlessly check tasks that will not wake up as the queue is sorted.
+\\
 \subsubsection{ClockNotifier}
-The ClockNotifier is responsible for notifying the ClockServer when a tick occurs; a tick is defined as a tenth of a millisecond passing on the $32$-bit hardware timer.  Since the $508kHz$ clock is used, a tenth of a millisecond is equivalent to setting the value of the clock to $508\cdot 100 = 50800$ upon which it will countdown to $0$ then generate an interrupt.  The ClockNotifier blocks on the timer interrupt and on return it sends a message to the ClockServer indicating a tick took place, which the ClockServer immediately replies to, and then the ClockNotifier blocks on AwaitEvent again.  This task never exits unless the system is shutting down.
-\\[1\baselineskip]
+The ClockNotifier is responsible for notifying the ClockServer when a tick occurs; a tick is defined as ten milliseconds passing on the $32$-bit hardware timer.  Since the $508kHz$ clock is used, ten milliseconds is equivalent to setting the value of the clock to $508\cdot 10 = 5080$ upon which it will countdown to $0$ then generate an interrupt.  The ClockNotifier blocks on the timer interrupt and on return it sends a message to the ClockServer indicating a tick took place, which the ClockServer immediately replies to, and then the ClockNotifier blocks on AwaitEvent again.  This task never exits unless the system is shutting down.
+\\
 \subsubsection{API}
-\begin{tabular}{|l|l|p{0.7\textwidth}|}
+\begin{tabular}{|l|l|p{0.48\textwidth}|}
   \hline
   {\bf Method} & {\bf Prototype} & {\bf Description} \\\hline
   Time & \texttt{int Time()} & Sends a message to the ClockServer to get the current tick count. \\\hline
   Delay & \texttt{int Delay(int ticks)} & Sends a message to the ClockServer to block the current task until number of ticks passed. \\\hline
   DelayUntil & \texttt{int DelayUntil(int ticks)} & Sends a message to the ClockServer to block the current task until the time ticks has been reached. \\\hline
 \end{tabular}
-\\[2\baselineskip]
+\\[1\baselineskip]
 
 \subsection{System Calls}
-\begin{tabular}{|l|l|p{0.7\textwidth}|}
+\begin{tabular}{|l|l|p{0.39\textwidth}|}
   \hline
   {\bf System Call} & {\bf Prototype} & {\bf Description} \\\hline
   AwaitEvent & \texttt{int AwaitEvent(int eventType)} & Blocks until the event identified occurs then returns. \\\hline
@@ -102,7 +102,7 @@ The ClockNotifier is responsible for notifying the ClockServer when a tick occur
 \end{tabular}
 \subsubsection{AwaitEvent}
 \texttt{AwaitEvent} blocks until the event identified by the passed integer, \texttt{eventType}, occurs as an interrupt then returns with the value generated by the interrupt.  The value is non-zero.  In the event that the passed integer is not a valid event, it returns $-1$ or if the queues are full it returns $-2$.  Since we do not use event buffers, the previous correspondence for $0$, $-2$ and $-3$ are irrelevant to our implementation.
-\\[1\baselineskip]
+\\
 \subsubsection{WaitTid}
 \texttt{WaitTid} blocks on the wait queue of the specified task and returns when that task exists with the status of the exit.  Returns $-1$ if the task does not exist.
 \\[2\baselineskip]
@@ -110,17 +110,18 @@ The ClockNotifier is responsible for notifying the ClockServer when a tick occur
 \section{User Tasks and Output}
 \subsection{Program Output}
 Our kernel implements larger number as being a higher priority, but gives the same values to the requesting tasks based on their priority.
-\begin{tabular}{|c|c|c|c|}
-  \hline
-  {\bf Priority (larger is higher)} & {\bf Delay Times (tics)} & {\bf Number of Delays} & {\bf Task ID} \\\hline
-  $3$ & $10$ & $20$ & $4$\\\hline
-  $4$ & $23$ & $9$ & $5$\\\hline
-  $5$ & $33$ & $6$ & $6$\\\hline
-  $6$ & $71$ & $3$ & $7$\\\hline
-\end{tabular}
+\begin{center}
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+    {\bf Priority (larger is higher)} & {\bf Delay Times (tics)} & {\bf Number of Delays} & {\bf Task ID} \\\hline
+    $3$ & $10$ & $20$ & $4$\\\hline
+    $4$ & $23$ & $9$ & $5$\\\hline
+    $5$ & $33$ & $6$ & $6$\\\hline
+    $6$ & $71$ & $3$ & $7$\\\hline
+  \end{tabular}
+\end{center}
 where the last column gives the id of the task that was created with those parameters for reference in the output.  Then, the output is:
 \lstinputlisting{k3.output}
-\\[1\baselineskip]
 \subsection{Explanation of Output}
 In the context of this description, we define ``waking up'' as ``unblocking and printing.''  We get this output because task $4$ (priority $3$) has the lowest delay interval, so it wakes up twice before the next task with the lowest delay interval (task $5$) wakes up as $10 * 2 = 20 < 23$.  Now, after that task wakes up, task $4$ wakes up a third time before task $6$ wakes up as $10 * 3 = 30 < 33$.   This process repeats a second time before task $4$ wakes up for a seventh time, followed by task $7$ waking up for the first time as it delays for $7$ ticks.  Task $6$ is the first to finish as it has the lowest total delay time; $6\cdot 33 = 198$ ticks.  Then task $4$ with $10\cdot 20 = 200$ ticks, then task $5$ with $23\cdot 9 = 207$ ticks followed lastly by task $7$ with $3\cdot 71 = 213$ ticks.  The output corresponds to each task delaying the number of ticks it was given before waking up and delaying again until its completed the required number of delays it was passed.  When a task delayed, it could only be woken up by a subsequent tick, which for tasks with small delays, meant they would wake up faster as they would be waiting for a smaller amount of time.
 \\[2\baselineskip]

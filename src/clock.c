@@ -41,6 +41,7 @@ void ClockServer() {
     int errno;
     int callee;
     unsigned int i;
+    uint32_t notifier;
     ClockRequest msg;
     DelayQueue __bank[32];
     DelayQueue *free, *queue, *tmp, *last, *node;
@@ -48,7 +49,7 @@ void ClockServer() {
     free = NULL;
     queue = NULL;
     clockserver_tid = MyTid();
-    Create(15, ClockNotifier);
+    notifier = Create(15, ClockNotifier);
     for (i = 0; i < 32; ++i) {
         __bank[i].next = free;
         free = &__bank[i];
@@ -59,11 +60,7 @@ void ClockServer() {
         error("ClockServer: Error: NameServer returned %d", errno);
     }
 
-    /*
-     * 1 kHz = 0.001 seconds => 1 kHz = 1 millisecond
-     * 508 ticks/ms, so tenth of second (100 milliseconds) = 508 * 100
-     */
-    *((uint32_t*)TIMER_LOAD) = 50800;
+    *((uint32_t*)TIMER_LOAD) = 5080; /* one millisecond */
     *((uint32_t*)TIMER_CONTROL) = TIMER_ENABLE | TIMER_508KHZ | TIMER_MODE;
 
     ticks = 0;
@@ -86,18 +83,25 @@ void ClockServer() {
              * actually matter.
              */
             case TICK:
+                if (callee != notifier) {
+                    continue;
+                }
                 ++ticks;
                 /* need to immediately reply to the ClockNotification task to unblock */
                 errno = 0;
                 Reply(callee, &errno, sizeof(errno));
                 errno = ticks;
+                tmp = queue;
+                last = NULL;
                 while (queue != NULL && queue->delay <= ticks) {
                     debugf("ClockServer: Waking up Task %d", queue->tid);
                     Reply(queue->tid, &errno, sizeof(errno));
-                    tmp = queue->next;
-                    queue->next = free;
-                    free = queue;
-                    queue = tmp;
+                    last = queue;
+                    queue = queue->next;
+                }
+                if (last != NULL) {
+                    last->next = free;
+                    free = tmp;
                 }
                 break;
             case DELAY:
