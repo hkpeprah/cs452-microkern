@@ -100,7 +100,7 @@ static void RPSServer() {
                     }
 
                     if (player1 >= 0 && player2 >= 0) {
-                        res.type = tmp->type;
+                        res.type = req.type;
                         errno = Reply(player1, &res, sizeof(res));
                         errno = Reply(player2, &res, sizeof(res));
                     }

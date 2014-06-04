@@ -32,7 +32,7 @@ typedef struct __task_t {
     MemBlock_t * addrspace;
     struct __envelope_t *inboxHead;
     struct __envelope_t *inboxTail;
-    struct __envelope_t *outbox;
+    struct __envelope_t *outbox;    // information for reply (Sender case) or receive (blocked Receive case)
 } Task_t;
 
 
@@ -46,7 +46,7 @@ typedef struct __envelope_t {
     int msglen;
     void *reply;
     int replylen;
-    void *sender;
+    void *sender;   // Task_t* when it is sent, int* when it is attached to a blocked receiver (used to write the sender tid into)
     struct __envelope_t *next;
 } Envelope_t;
 

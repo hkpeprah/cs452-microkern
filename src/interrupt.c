@@ -15,7 +15,7 @@
 
 
 extern void irq_handler();
-static interruptQueue InterruptTable[NUM_INTERRUPTS];
+static Task_t *interruptTable[NUM_INTERRUPTS];
 
 
 void enableInterrupts() {
@@ -23,7 +23,7 @@ void enableInterrupts() {
     unsigned int *vic;
 
     for (i = 0; i < NUM_INTERRUPTS; ++i) {
-        InterruptTable[i].n = 0;
+        interruptTable[i] = NULL;
     }
 
     /* set the handler address */
@@ -31,9 +31,9 @@ void enableInterrupts() {
 
     /* enable timer */
     vic = (unsigned int*)VIC2_BASE;
-    *(vic + VICxIntSelect) = 0;                        /* IRQ */
-    *(vic + VICxIntEnClear) = 0;                       /* clear interrupt bits */
-    *(vic + VICxIntEnable) = 1 << TIMER_INTERRUPT;     /* enable interrupt */
+    vic[VICxIntSelect] = 0;                        /* IRQ */
+    vic[VICxIntEnClear] = 0;                       /* clear interrupts */
+    vic[VICxIntEnable] = 1 << TIMER_INTERRUPT;     /* enable interrupt */
     debug("Interrupt: Enabling interrupts.");
 }
 
@@ -50,43 +50,29 @@ void disableInterrupts() {
     debug("Interrupt: Disabling interrupts.");
 }
 
-
-int HandleInterrupt() {
+int handleInterrupt() {
     /*
      * Figures out the event corresponding to the mask,
      * and wakes all events in its bucket.
      * Does not return anything.
      */
-    int mask;
-    int result;
-    unsigned int i;
-    unsigned int j;
-    unsigned int *vic;
-    interruptQueue *table;
 
-    for (i = 0; i < NUM_INTERRUPTS; ++i) {
-        table = NULL;
-        switch(i) {
-            /* determine if status bit set */
-            case CLOCK_INTERRUPT:
-                vic = (unsigned int*)VIC2_BASE;
-                mask = *(vic + VICxIRQStatus);
-                if (EXTRACT_BIT(mask, TIMER_INTERRUPT)) {
-                    table = &InterruptTable[i];
-                    result = 1;
-                    *(uint32_t*)TIMER_CLEAR = 0;
-                }
-                break;
-        }
+    uint32_t vic1, vic2;
+    int result = 0;
+    Task_t **taskp = NULL;
 
-        if (table != NULL) {
-            /* wake up all waiting on that queue */
-            for (j = 0; j < table->n; ++j) {
-                addTask(table->bucket[j]);
-                setResult(table->bucket[j], result);
-            }
-            table->n = 0;
-        }
+    vic1 = ((uint32_t*)VIC1_BASE)[VICxIRQStatus];
+    vic2 = ((uint32_t*)VIC2_BASE)[VICxIRQStatus];
+
+    if (EXTRACT_BIT(vic2, TIMER_INTERRUPT)) {
+        taskp = &interruptTable[CLOCK_INTERRUPT];
+        *((uint32_t*)TIMER_CLEAR) = 0;
+        result = 1;
+    }
+
+    if (*taskp) {
+        addTask(*taskp);
+        setResult(*taskp, result);
     }
 
     return 0;
@@ -98,17 +84,22 @@ int addInterruptListener(int eventType, Task_t *t) {
      * Adds a task to the bucket awaiting a particular event.
      * Returns 0 on success, -1 on event not existing, -2 on no space
      */
-    interruptQueue *table;
+    
+    Task_t **taskp;
 
-    if (eventType < NUM_INTERRUPTS) {
-        table = &InterruptTable[eventType];
-        if (table->n < MAX_INTERRUPT_LEN) {
-            table->bucket[table->n++] = t;
-            return 0;
-        }
-        error("Interrupt: Error: Out of bucket space.");
+    if (eventType >= NUM_INTERRUPTS) {
+        error("Interrupt: Error: Invalid interrupt %d given.", eventType);
+        return -1;
+    }
+
+    taskp = &interruptTable[eventType];
+
+    if (*taskp) {
+        error("Interrupt: Error: Task already waiting.");
         return -2;
     }
-    error("Interrupt: Error: Invalid interrupt %d given.", eventType);
-    return -1;
+
+    *taskp = t;
+    return 0;
+
 }

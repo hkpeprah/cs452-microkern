@@ -76,6 +76,37 @@ After the startup tasks have finished running, the user will reach a command pro
 
 \section{Kernel Structure}
 
+\subsection{Refactoring}
+Send-Receive-Reply was modified to better handle the Receive-Before-Send case. In the last kernel submission, our \texttt{Receive} implementation did not store the user supplied parameters when no message was available, and simply had a second call if the first were to fail. This incurred an overhead of an extra context switch. The issue was fixed in this version of the kernel, and the receive parameters are now stored and \texttt{Send} directly copies into them if they are present.
+\\
+In addition, the way a user task's result is stored was changed. Since hardware interrupts require scratch registers to be saved, the user task result must now be saved on to its stack. This is done by writing the result into the location where r0 is stored on the user stack based on its SP. This method also saves us a word in our task descriptor since the result is no longer stored there.
+\subsection{Hardware Interrupts}
+The clock interrupt is enabled by:
+\begin{enumerate}
+    \item Loading 50800 into the clock load register (interrupt every 1/10 second), then starting the clock in 508 KHz, pre-loaded mode
+    \item Enable the clock interrupt - interrupt 51 - by setting bit 19 of the VIC2 enable register (32-63 in VIC2, 51-32 = 19)
+    \\[1\baselineskip]
+\end{enumerate}
+\subsubsection{Context Switch}
+The updated context switch which supports the handling of hardware interrupts now saves the scratch registers. That is, {r0-r12, lr} (r13 = sp, r15 = pc) are now pushed and popped from the user stack. There is a separate handler for IRQ and SWI that do some slightly different things, but share a good portion of code that is re-used through assembly macros. The first step in both handlers is to save the user state:
+\begin{enumerate}
+    \item Switch to SYS mode with interrupts disabled (write 0x9F to CPSR).
+    \item Save {r0-r12, lr} to the user stack, move the SP to r0.
+    \item Switch back to the service mode (SWI/IRQ).
+    \item Push SPSR, LR of the respective service mode to r0 (user stack).
+\end{enumerate}
+
+IRQ Only: The IRQ handler subtracts 4 from the LR when storing it to the user stack (interrupted instruction instead of next instruction).
+\\
+SWI Only: THe SWI handler pops the top of the kernel stack as an address and writes r1 into it. This is the method of passing the arguments (a struct on the user stack) of the sys call to the kernel, as described in K1.
+\\
+After the user state is saved, the processor is returned to the kernel by popping off the stored kernel registers from its stack. Since the kernel starts in SVC mode, the IRQ handler must first switch to SVC mode before making the pop from the stack. Both handlers will enter the kernel in the exact same way, returning the task's SP (since it's in r0) as the result of the \texttt{swi\_exit} call.
+\\
+\texttt{swi\_exit} has the same function as it did in K1, switching from the kernel back to the user task. The main difference is that now all registers are restored, and the result is no longer passed in as a parameter to be assigned to r0 (it should already be stored as r0 on the user stack). In addition, the LR received from SVC/IRQ is now stored on the user stack and returned to, instead of the short-cut taken in K1 where the kernel would immediate return to the user's LR. While the shortcut was okay for SWI (the \texttt{swi\_call} function stub meant that the LR for each SWI call would point to the same instruction - mov pc, lr), it would not work for interrupts since the interrupted task could have been executing at any point.
+
+\subsubsection{Handling Interrupts}
+
+
 \subsection{ClockServer}
 \subsubsection{Implementation}
 The ClockServer registers with the NameServer then creates the ClockNotifier which handles processing of timer generated interrupts.  We use the $508kHz$ $32$-bit timer.  It then writes $5080$ to the timer load register; using the $508kHz$ timer and with $10$ milliseconds, this corresponds to $5080$ in the timer load register.  It then writes to the timer control register to enable it, to set the mode to periodic so that the count resumes back at $5080$ after counting down, and to set the timer to the $508kHz$ timer.  The ClockServer then blocks on \texttt{Receive} to handle messages from other tasks.  When the ClockServer recieves a message of type \texttt{Delay} or \texttt{DelayUntil}, it adds the task to its delay queue sorted by the number of ticks that the task is waiting; the array is sorted in ascending order.  When it receives a message of type \texttt{Tick} it increments its internal counter, replies to the sending task immediately, then iterates through its delay queue waking up every task with a delay less than the current count by replying to them, and stopping as soon as it reaches a task with a delay greater than its current tick count.  This ensures that we do not needlessly check tasks that will not wake up as the queue is sorted.

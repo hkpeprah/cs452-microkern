@@ -16,6 +16,29 @@
 extern int swi_handler();
 extern int swi_exit(int sp, void** tf);
 
+static void cacheOn() {
+    /*
+     * cache bits 0 (mmu), 2 (dcache), 12 (icache)
+     * enable cache and invalidate it
+     */
+    asm("stmfd sp!, {r0}\n\t"
+        "mrc p15, 0, r0, c1, c0, 0\n\t"
+        "orr r0, r0, #4096\n\t"
+        "orr r0, r0, #4\n\t"
+        "mcr p15, 0, r0, c1, c0, 0\n\t"
+        "mcr p15, 0, r0, c7, c7, 0\n\t"
+        "ldmfd sp!, {r0}\n\t");
+}
+// this seems to break stuff. Don't use it.
+static void cacheOff() {
+    /* clear cache enable bits */
+    asm("stmfd sp!, {r0}\n\t"
+        "mrc p15, 0, r0, c1, c0, 0\n\t"
+        "bic r0, r0, #4096\n\t"
+        "bic r0, r0, #4\n\t"
+        "mcr p15, 0, r0, c1, c0, 0\n\t"
+        "ldmfd sp!, {r0}\n\t");
+}
 
 static int handleRequest(Args_t *args) {
     uint32_t result = 0;
@@ -53,7 +76,7 @@ static int handleRequest(Args_t *args) {
             errno = sys_await(args->a0);
             break;
         case SYS_INTERRUPT:
-            errno = HandleInterrupt();
+            errno = handleInterrupt();
             break;
         case SYS_WAITTID:
             errno = sys_waittid(args->a0);
@@ -78,6 +101,7 @@ static void initSWI() {
 
 void boot () {
     /* sequence of boot operations */
+    cacheOn();
     initIO();
     clear_screen();                /* must be before debug */
     initDebug();
@@ -94,6 +118,7 @@ int shutdown() {
     /* sequence of shutdown operations */
     clearTasks();
     disableInterrupts();
+    //cacheOff();
     puts("\r\nExiting...\r\n");
     return 0;
 }
