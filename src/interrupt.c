@@ -84,7 +84,6 @@ int addInterruptListener(int eventType, Task_t *t) {
      * Adds a task to the bucket awaiting a particular event.
      * Returns 0 on success, -1 on event not existing, -2 on no space
      */
-    
     Task_t **taskp;
 
     if (eventType >= NUM_INTERRUPTS) {
@@ -101,5 +100,4 @@ int addInterruptListener(int eventType, Task_t *t) {
 
     *taskp = t;
     return 0;
-
 }
