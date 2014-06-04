@@ -131,14 +131,14 @@ int sys_recv(int *tid, void *msg, int msglen) {
 
 int sys_reply(int tid, void *reply, int replylen) {
     /* returns 0 on success */
+    Envelope_t *envelope;
     Task_t *target = getTaskByTid(tid);
 
     if (target == NULL) {
         return TASK_DOES_NOT_EXIST;
     }
 
-    Envelope_t *envelope = target->outbox;
-
+    envelope = target->outbox;
     if (envelope == NULL || target->state != REPL_BL) {
         return TASK_NOT_REPLY_BLOCKED;
     }
@@ -176,8 +176,27 @@ int sys_await(int eventType) {
     errno = addInterruptListener(eventType, target);
 
     if (errno < 0) {
-        debugf("AwaitEvent: Got %d adding task %d", errno, target->tid);
+        error("AwaitEvent: Error: Got %d adding task %d", errno, target->tid);
     }
 
     return errno;
+}
+
+
+int sys_waittid(uint32_t tid) {
+    Task_t *target;
+    Task_t *currentTask;
+
+    target = getTaskByTid(tid);
+    currentTask = getCurrentTask();
+
+    if (target == NULL) {
+        return TASK_DOES_NOT_EXIST;
+    }
+
+    currentTask->state = WAITTID_BL;
+    currentTask->next = target->waitQueue;
+    target->waitQueue = currentTask;
+
+    return tid;
 }

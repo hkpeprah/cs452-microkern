@@ -30,5 +30,6 @@ int main() {
     kernel_main();
 
     // should reach here after all work has been done
-    return shutdown();
+    shutdown();
+    return 0;
 }

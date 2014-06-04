@@ -79,10 +79,14 @@ void firstTask() {
         Reply(callee, &res, sizeof(res));
     }
 
-    /* push the shell as the last task */
-    Create(0, Shell);
+    /* push the NullTask to avoid the kernel quitting */
+    Create(0, NullTask);
+
+    /* waitpid and on return, bring up the shell */
+    if ((callee = WaitTid(4) >= 0)) {
+        Create(0, Shell);
+    }
 
     debug("FirstTask: Exiting");
-
     Exit();
 }

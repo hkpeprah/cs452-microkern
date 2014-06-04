@@ -35,6 +35,7 @@ void initTasks() {
 
         __taskBank[i].inboxHead = NULL;
         __taskBank[i].inboxTail = NULL;
+        __taskBank[i].waitQueue = NULL;
     }
 
     for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
@@ -53,6 +54,22 @@ void initTasks() {
     }
 
     availableEnvelopes = lastBlock;
+}
+
+
+void clearTasks() {
+    unsigned int i;
+
+    for (i = 0; i < TASK_BANK_SIZE; ++i) {
+        __taskBank[i].state = FREE;
+    }
+
+    for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
+        taskQueue[i].head = NULL;
+        taskQueue[i].tail = NULL;
+    }
+
+    currentTask = NULL;
 }
 
 
@@ -128,18 +145,22 @@ void addTask(Task_t *t) {
 
     availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
-
-    /*
-      debugf("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
-          t->priority, availableQueues, highestTaskPriority);
-    */
 }
 
 
 void destroyTaskD() {
-    freeMem(currentTask->addrspace);
+    Task_t *t;
 
+    freeMem(currentTask->addrspace);
     currentTask->state = ZOMBIE;
+
+    t = currentTask->waitQueue;
+    while (t != NULL) {
+        setResult(t, currentTask->tid);
+        addTask(t);
+        t = t->next;
+    }
+
     currentTask = NULL;
 }
 
@@ -169,10 +190,6 @@ void findHighestTaskPriority() {
 
 
 Task_t *schedule() {
-    if (highestTaskPriority < 0) {
-        return currentTask;
-    }
-
     // only when current task exists and is ACTIVE (ie. it didn't just get blocked)
     if (currentTask && currentTask->state == ACTIVE) {
         if (currentTask->priority > highestTaskPriority) {
@@ -183,6 +200,11 @@ Task_t *schedule() {
 
         // add current task to queue
         addTask(currentTask);
+    }
+
+    if (highestTaskPriority < 0) {
+        // no more tasks to be run
+        return NULL;
     }
 
     // get queue with highest priority. this is guaranteed to not be empty
@@ -211,4 +233,3 @@ void setResult(Task_t *task, int result) {
     int *sp = (int*)task->sp;
     sp[2] = result;
 }
-

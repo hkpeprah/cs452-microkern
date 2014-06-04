@@ -185,7 +185,7 @@ static void RPSServer() {
                 }
                 break;
             default:
-                debugf("Server: Unknown request type: %d", req.type);
+                error("Server: Error: Unknown request type: %d", req.type);
         }
     }
 

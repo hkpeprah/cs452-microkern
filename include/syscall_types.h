@@ -14,7 +14,8 @@ typedef enum {
     SYS_RECV,
     SYS_REPL,
     SYS_AWAIT,
-    SYS_INTERRUPT
+    SYS_INTERRUPT,
+    SYS_WAITTID
 } system_calls;
 
 

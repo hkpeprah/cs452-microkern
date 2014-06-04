@@ -3,5 +3,6 @@
 
 
 void Shell();
+void NullTask();   /* very important */
 
 #endif /* __SHELL__ */

@@ -39,16 +39,14 @@ void enableInterrupts() {
 
 
 void disableInterrupts() {
+    /* clear interrupts */
     unsigned int *vic;
 
-    vic = (unsigned int*)VIC1_BASE;
-    *(vic + VICxIntEnable) = 0;
+    *(uint32_t*)TIMER_CLEAR = 0;
 
     vic = (unsigned int*)VIC2_BASE;
-    *(vic + VICxIntEnable) = 0;          /* turn off interrupt */
+    *(vic + VICxIntEnable) = 0;
 
-    /* clear interrupts */
-    *(uint32_t*)TIMER_CLEAR = 0;
     debug("Interrupt: Disabling interrupts.");
 }
 

@@ -72,7 +72,7 @@ int Receive(int *tid, void *msg, int msglen) {
      */
     result = swi_call(0, &args);
 
-    if(result != NO_AVAILABLE_MESSAGES) {
+    if (result != NO_AVAILABLE_MESSAGES) {
         return result;
     }
 
@@ -104,5 +104,13 @@ int AwaitEvent(int eventType) {
     Args_t args;
     args.code = SYS_AWAIT;
     args.a0 = eventType;
+    return swi_call(0, &args);
+}
+
+
+int WaitTid(unsigned int tid) {
+    Args_t args;
+    args.code = SYS_WAITTID;
+    args.a0 = tid;
     return swi_call(0, &args);
 }

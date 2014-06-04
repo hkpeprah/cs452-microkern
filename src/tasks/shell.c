@@ -13,16 +13,27 @@
 #define FOREVER            for (;;)
 
 
+static int SHELL_EXITED = 0;
+
+
+void NullTask() {
+    /* sits on the kernel passing */
+    SHELL_EXITED = 0;
+    while (!SHELL_EXITED) {
+        Pass();
+    }
+    Exit();
+}
+
+
 void Shell() {
     char ch;
     char buf[80];
-    int status;
     unsigned int i;
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    status = Delay(71 * 3 + 20);    /* remove after assignment 3 */
-    puts("> ");
+    puts("\r\nCS452 Real-Time Microkernel (Version 0.1.1001)\r\nCopyright <c> Max Chen, Ford Peprah.  All rights reserved.\r\n> ");
     save_cursor();
 
     i = 0;
@@ -64,5 +75,6 @@ void Shell() {
         }
     }
 
+    SHELL_EXITED = 1;
     Exit();
 }

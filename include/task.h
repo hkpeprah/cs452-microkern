@@ -14,6 +14,7 @@ typedef enum {
     RECV_BL,
     REPL_BL,
     EVENT_BL,
+    WAITTID_BL,
     NUM_STATES
 } TaskState_t;
 
@@ -27,6 +28,7 @@ typedef struct __task_t {
     int priority;
     uint32_t sp;
     struct __task_t *next;
+    struct __task_t *waitQueue;
     MemBlock_t * addrspace;
     struct __envelope_t *inboxHead;
     struct __envelope_t *inboxTail;
@@ -51,6 +53,7 @@ typedef struct __envelope_t {
 
 
 void initTasks();
+void clearTasks();
 Envelope_t *getEnvelope();
 void releaseEnvelope(Envelope_t *envelope);
 Task_t *createTaskD(uint32_t);

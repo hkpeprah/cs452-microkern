@@ -69,8 +69,14 @@ void ClockServer() {
     ticks = 0;
     while (true) {
         errno = Receive(&callee, &msg, sizeof(msg));
-        if (errno != sizeof(msg)) {
-            error("ClockServer: Error: Message length mistmatch %d != %d", errno, sizeof(msg));
+        if (errno < 0 || errno != sizeof(msg)) {
+            switch(errno) {
+                case NO_AVAILABLE_MESSAGES:
+                    error("ClockServer: Error: No available messages.");
+                    break;
+                default:
+                    error("ClockServer: Error: Message length mistmatch", errno, sizeof(msg));
+            }
             continue;
         }
 
@@ -85,11 +91,7 @@ void ClockServer() {
                 errno = 0;
                 Reply(callee, &errno, sizeof(errno));
                 errno = ticks;
-                while (queue != NULL) {
-                    if (queue->delay > ticks) {
-                        debugf("ClockServer: Task %d, Delay %d > Ticks %d", queue->tid, queue->delay, ticks);
-                        break;
-                    }
+                while (queue != NULL && queue->delay <= ticks) {
                     debugf("ClockServer: Waking up Task %d", queue->tid);
                     Reply(queue->tid, &errno, sizeof(errno));
                     tmp = queue->next;
@@ -141,8 +143,7 @@ void ClockServer() {
                 Reply(callee, &errno, sizeof(errno));
                 break;
             default:
-                errno = -1;
-                Reply(callee, &errno, sizeof(errno));
+                error("ClockServer: Error: Received unknown request %d from Task %d", msg.type, callee);
         }
     }
 

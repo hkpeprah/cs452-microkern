@@ -55,6 +55,9 @@ static int handleRequest(Args_t *args) {
         case SYS_INTERRUPT:
             errno = HandleInterrupt();
             break;
+        case SYS_WAITTID:
+            errno = sys_waittid(args->a0);
+            break;
         default:
             break;
     }
@@ -89,6 +92,7 @@ void boot () {
 
 int shutdown() {
     /* sequence of shutdown operations */
+    clearTasks();
     disableInterrupts();
     puts("Exiting...\r\n");
     return 0;
