@@ -60,58 +60,102 @@ int sys_pid(uint32_t *retval) {
 int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
     Task_t *currentTask = getCurrentTask();
     Task_t *target = getTaskByTid(tid);
+    Envelope_t *envelope;
 
     if (target == NULL) {
         return TASK_DOES_NOT_EXIST;
     }
 
-    Envelope_t *envelope = getEnvelope();
+    if (target->state == SEND_BL && target->outbox != NULL) {
+        /*
+         * case 1: target already blocked on receive, so directly copy to it
+         * use the "outbox" to store the envelope when it blocks. A hack to
+         * save some space in our task descriptors
+         */
+        envelope = target->outbox;
+        target->outbox = NULL;
 
-    if (envelope == NULL) {
-        return NO_MORE_ENVELOPES;
+        // copy into it
+        memcpy(envelope->msg, msg, MIN(msglen, envelope->msglen));
+        *(UNION_CAST(envelope->sender, int*)) = currentTask->tid;
+        setResult(target, msglen);
+
+        // set up reply destination
+        envelope->reply = reply;
+        envelope->replylen = replylen;
+        envelope->sender = currentTask;
+
+        // take over envelope!
+        currentTask->outbox = envelope;
+        currentTask->state = REPL_BL;
+    } else {
+        /*
+         * case 2: not blocked on receive -> build envelope and add it to target's inbound
+         * queue
+         */
+        envelope = getEnvelope();
+
+        if (envelope == NULL) {
+            return NO_MORE_ENVELOPES;
+        }
+
+        // copy parameters into envelope struct
+        envelope->msg = msg;
+        envelope->msglen = msglen;
+        envelope->reply = reply;
+        envelope->replylen = replylen;
+        envelope->sender = currentTask;
+
+        // stored here for reply
+        currentTask->outbox = envelope;
+
+        // block current
+        currentTask->state = RECV_BL;
+
+        // add envelope to receiver's queue
+        if (target->inboxHead == NULL) {
+            target->inboxHead = envelope;
+        } else if (target->inboxTail != NULL) {
+            target->inboxTail->next = envelope;
+        }
+
+        target->inboxTail = envelope;
     }
 
-    // copy parameters into envelope struct
-    envelope->msg = msg;
-    envelope->msglen = msglen;
-    envelope->reply = reply;
-    envelope->replylen = replylen;
-    envelope->sender = currentTask;
-
-    // stored here for reply
-    currentTask->outbox = envelope;
-
-    // block current
-    currentTask->state = RECV_BL;
-
-    // add envelope to receiver's queue
-    if (target->inboxHead == NULL) {
-        target->inboxHead = envelope;
-    } else if (target->inboxTail != NULL) {
-        target->inboxTail->next = envelope;
-    }
-
-    target->inboxTail = envelope;
-
-    // unblock receiver if they are blocked
-    if (target->state == SEND_BL) {
+    if(target->state == SEND_BL) {
         addTask(target);
     }
 
-    // value does not matter, will be overwritten during reply
     return msglen;
 }
 
 
 int sys_recv(int *tid, void *msg, int msglen) {
     Task_t *currentTask = getCurrentTask();
-    Envelope_t *envelope = currentTask->inboxHead;
+    Envelope_t *envelope;
 
-    // no messages available, block & return error
-    if (envelope == NULL) {
+    /*
+     * no messages available, copy info into envelope, block & return error
+     * when this is unblocked by send, the result should be updated by it
+     */
+    if (currentTask->inboxHead == NULL) {
         currentTask->state = SEND_BL;
+        envelope = getEnvelope();
+
+        if(envelope == NULL) {
+            return NO_MORE_ENVELOPES;
+        }
+
+        envelope->msg = msg;
+        envelope->msglen = msglen;
+        envelope->sender = tid;
+
+        currentTask->outbox = envelope;
+
         return NO_AVAILABLE_MESSAGES;
     }
+
+    envelope = currentTask->inboxHead;
 
     // otherwise, pop head
     currentTask->inboxHead = envelope->next;
@@ -121,9 +165,11 @@ int sys_recv(int *tid, void *msg, int msglen) {
         currentTask->inboxTail = NULL;
     }
 
+    Task_t *sender = UNION_CAST(envelope->sender, Task_t*);
+
     memcpy(msg, envelope->msg, MIN(msglen, envelope->msglen));
-    *tid = envelope->sender->tid;
-    envelope->sender->state = REPL_BL;
+    *tid = sender->tid;
+    sender->state = REPL_BL;
 
     return envelope->msglen;
 }

@@ -41,13 +41,12 @@ typedef struct {
     Task_t *tail;
 } TaskQueue_t;
 
-
 typedef struct __envelope_t {
     void *msg;
     int msglen;
     void *reply;
     int replylen;
-    Task_t *sender;
+    void *sender;
     struct __envelope_t *next;
 } Envelope_t;
 

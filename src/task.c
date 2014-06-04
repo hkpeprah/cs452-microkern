@@ -36,6 +36,7 @@ void initTasks() {
         __taskBank[i].inboxHead = NULL;
         __taskBank[i].inboxTail = NULL;
         __taskBank[i].waitQueue = NULL;
+        __taskBank[i].outbox = NULL;
     }
 
     for (i = 0; i < TASK_QUEUE_SIZE; ++i) {
@@ -104,6 +105,9 @@ Task_t *createTaskD(uint32_t priority) {
         t->addrspace = getMem();
         t->sp = t->addrspace->addr;
         t->next = NULL;
+        t->inboxHead = NULL;
+        t->inboxTail = NULL;
+        t->outbox = NULL;
         addTask(t);
     }
 
@@ -145,6 +149,10 @@ void addTask(Task_t *t) {
 
     availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
+    #if DEBUG_KERNEL
+        debugf("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
+               t->priority, availableQueues, highestTaskPriority);
+    #endif
 }
 
 
