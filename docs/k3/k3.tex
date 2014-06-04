@@ -1,0 +1,40 @@
+\documentclass[12pt]{article}
+\usepackage{enumerate, amsmath, fullpage, hyperref, amsfonts, titlesec, listings}
+\renewcommand*\contentsname{Table of Contents}
+\newlength\tindent
+\setlength{\tindent}{\parindent}
+\setlength{\parindent}{0pt}
+\renewcommand{\indent}{\hspace*{\tindent}}
+\lstset{
+   breaklines=true,
+   basicstyle=\scriptsize\rmfamily}
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+  {\bf\Large Kernel 3}\\
+  {\bf\large CS452 - Spring 2014}\\
+  Real-Time Programming\vspace{5cm}\\
+  {\bf Team }\\
+  Max Chen - mqchen\\
+  mqchen@uwaterloo.ca\\[1\baselineskip]
+  Ford Peprah - hkpeprah\\
+  ford.peprah@uwaterloo.ca\vspace{5cm}\\
+  Bill Cowan\\
+  University of Waterloo\\
+  {\bf Due Date:} Monday, $9^{th}$, June, $2014$
+\end{center}
+\newpage
+% Program Description: how to operate it, full pathname
+% Description fo structure of Kernel: algorithms, data structures, etc.
+% Location fo source code + MD5
+% Output produced by program and explanation of why it does
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+\section{Program Description}
+\section{Kernel Structure}
+\section{Program Output}
+\section{MD5 Hashes}
+Source files can be accessed at either \texttt{/u7/mqchen/cs452/cs452-microkern} or \\ \texttt{/u8/hkpeprah/cs452-microkern} on the \texttt{kernel3} branch. The listing of all the fields being submitted alongisde their MD5 hashes and locations are as follows:
+\lstinputlisting{md5}
+\end{document}
