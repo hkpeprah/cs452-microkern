@@ -94,7 +94,7 @@ int shutdown() {
     /* sequence of shutdown operations */
     clearTasks();
     disableInterrupts();
-    puts("Exiting...\r\n");
+    puts("\r\nExiting...\r\n");
     return 0;
 }
 

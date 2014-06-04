@@ -42,7 +42,7 @@ static void Client() {
         while (res.n--) {
             Delay(res.t);
             res.complete += 1;
-            printf("Tid: %d\tInterval: %d\tComplete: %d\r\n", tid, res.t, res.complete);
+            printf("Tid: %d      Delay Interval: %d     Delays Complete: %d\r\n", tid, res.t, res.complete);
         }
     } else {
         error("Client: Error: Task %d received status %d sending to %d", tid, errno, pTid);
@@ -53,26 +53,27 @@ static void Client() {
 
 
 void firstTask() {
+    int i;
     int callee;
-    unsigned int i;
+    uint32_t tid;
     DelayMessage msg, res;
     int priorities[] = {3, 4, 5, 6};
     int delay_t[] = {10, 23, 33, 71};
     int delay_n[] = {20, 9, 6, 3};
 
     /*
-     * First user task creats the ClockServer and four
+     * First user task creates the ClockServer and four
      * client tasks.
      */
     Create(15, NameServer);
     Create(15, ClockServer);
 
     for (i = 0; i < 4; ++i) {
-        Create(priorities[i], Client);
+        tid = Create(priorities[i], Client);
         debugf("FirstTask: Created task with priority: %d", priorities[i]);
     }
 
-    for (i = 0; i < 4; ++i) {
+    for (i = 3; i >= 0; --i) {
         Receive(&callee, &msg, sizeof(msg));
         res.t = delay_t[i];
         res.n = delay_n[i];
@@ -83,7 +84,7 @@ void firstTask() {
     Create(0, NullTask);
 
     /* waitpid and on return, bring up the shell */
-    if ((callee = WaitTid(4) >= 0)) {
+    if ((callee = WaitTid(tid) >= 0)) {
         Create(0, Shell);
     }
 
