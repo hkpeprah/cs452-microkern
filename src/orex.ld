@@ -32,5 +32,6 @@ text : /* The actual instructions. */
 *(.glue_7t)
 *(.rodata.str1.4)
 *(.data.rel.ro.local)
+*(.data.rel.local)
 } >ram
 }

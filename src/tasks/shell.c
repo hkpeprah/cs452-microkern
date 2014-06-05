@@ -31,6 +31,7 @@ void Shell() {
     char ch;
     char buf[80];
     unsigned int i;
+    unsigned int tid;
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -58,7 +59,8 @@ void Shell() {
             } else if (strcmp(buf, "rps") == 0) {
                 Create(random_range(2, 3), RockPaperScissors);
             } else if (strcmp(buf, "sl") == 0) {
-                Create(random_range(2, 3), SteamLocomotive);
+                tid = Create(random_range(2, 3), SteamLocomotive);
+                WaitTid(tid);
             }
 
             puts("> ");
