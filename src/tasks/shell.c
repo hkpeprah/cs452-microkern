@@ -9,6 +9,7 @@
 #include <syscall.h>
 #include <random.h>
 #include <clock.h>
+#include <sl.h>
 
 #define FOREVER            for (;;)
 
@@ -56,6 +57,8 @@ void Shell() {
                 break;
             } else if (strcmp(buf, "rps") == 0) {
                 Create(random_range(2, 3), RockPaperScissors);
+            } else if (strcmp(buf, "sl") == 0) {
+                Create(random_range(2, 3), SteamLocomotive);
             }
 
             puts("> ");
