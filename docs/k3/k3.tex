@@ -105,7 +105,9 @@ After the user state is saved, the processor is returned to the kernel by poppin
 \texttt{swi\_exit} has the same function as it did in K1, switching from the kernel back to the user task. The main difference is that now all registers are restored, and the result is no longer passed in as a parameter to be assigned to r0 (it should already be stored as r0 on the user stack). In addition, the LR received from SVC/IRQ is now stored on the user stack and returned to, instead of the short-cut taken in K1 where the kernel would immediate return to the user's LR. While the shortcut was okay for SWI (the \texttt{swi\_call} function stub meant that the LR for each SWI call would point to the same instruction - mov pc, lr), it would not work for interrupts since the interrupted task could have been executing at any point.
 
 \subsubsection{Handling Interrupts}
-Something something
+We differentiate between a hardware and software interrupt by the \texttt{Arg\_t} structure passed to the output parameter of the \texttt{swi\_exit}. The default value has request code ``INTERRUPT'', so in the case of a swi the request code will be overwritten whereas a hardware interrupt will not modify it. In addition, in the case of hardware interrupts, the result is not saved to the stack of the interrupted task.
+\\
+An interrupt is handled by reading the VIC status registers and the interrupt with the highest priority is determined (done in software by the order in which the interrupts are checked). If a task is blocked on the interrupt, the result of the interrupt is written to its stack and it is then rescheduled.
 \\[1\baselineskip]
 
 \subsection{ClockServer}
