@@ -65,23 +65,24 @@ void SteamLocomotive() {
         /* iterate thorugh the rows of the train */
         for (j = 0; j < 15; ++j) {
             line = i % 2 == 0 ? TRAIN1[j] : TRAIN2[j];
-            printf("\033[2K\033[%dC", i > 0 ? i : 0);       /* wipe line and move to column */
+            erase_line();
+            move_cur_right(i > 0 ? i : 0);
             k = i > 0 ? 0 : start;
             for (; k < MIN(end, strlen(line)); ++k) {
                 if (line[k] == '\\') {
-                    printf("%c", '\\');
+                    putchar('\\');
                     ++k;
                 } else {
-                    printf("%c", line[k]);
+                    putchar(line[k]);
                 }
             }
             printf("\033[E");
         }
-        printf("\033[15F");
-        Delay(10000);
+        move_cur_up(15);
+        Delay(5);
     }
 
     /* reset back to bottom to continue */
-    printf("\033[15E");
+    move_cur_down(15);
     Exit();
 }
