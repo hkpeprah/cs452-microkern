@@ -19,10 +19,24 @@ static int SHELL_EXITED = 0;
 
 void NullTask() {
     /* sits on the kernel passing */
+    int lastTime = 0;
+    int currentTime = 0;
+    int timeNotInNull = 0;
+
     SHELL_EXITED = 0;
+
     while (!SHELL_EXITED) {
+        lastTime = Time();
         Pass();
+        currentTime = Time();
+
+        timeNotInNull += currentTime - lastTime;
+        save_cursor();
+        move_cursor(0, 100);
+        printf("%d\n", 100 - ((timeNotInNull * 100) / currentTime));
+        restore_cursor();
     }
+
     Exit();
 }
 
