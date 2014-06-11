@@ -8,6 +8,7 @@
 #include <random.h>
 #include <stdlib.h>
 #include <interrupt.h>
+#include <train.h>
 
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
@@ -106,7 +107,8 @@ static void initSWI() {
 void boot () {
     /* sequence of boot operations */
     cacheOn();
-    initIO();
+    initUart(IO, 115200, false);   /* TODO: enable FIFO */
+    initUart(TRAIN, 2400, false);
     clear_screen();                /* must be before debug */
     initDebug();
     initMem();
@@ -114,7 +116,6 @@ void boot () {
     initSWI();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
-    debug("Successfully booted");
 }
 
 
@@ -140,16 +141,6 @@ void kernel_main() {
         // nothing left to run
         if (task == NULL) break;
 
-        #if DEBUG_KERNEL
-            int * sp;
-            int i;
-            debugf("Kernel: switching to task with tid: %d,\r\nStack:", task->tid);
-            sp = (int*) task->sp;
-            for (i = 0; i < 16; ++i) {
-                debugf("0x%x: 0x%x", sp + i, sp[i]);
-            }
-        #endif
-
         // default to interrupt, ie. if not swi then the pointer is not modified and we know
         // it is an interrupt that needs to be handled
         args = &defaultArg;
@@ -164,13 +155,5 @@ void kernel_main() {
         if (args->code != SYS_INTERRUPT) {
             setResult(task, result);
         }
-
-        #if DEBUG_KERNEL
-            sp = (int*) task->sp;
-            debugf("Kernel: Got request for task %d with result %d", task->tid, result);
-            for (i = 0; i < 16; ++i) {
-                debugf("0x%x: 0x%x", sp + i, sp[i]);
-            }
-        #endif
     }
 }

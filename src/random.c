@@ -18,8 +18,6 @@ void seed(unsigned int s) {
     unsigned int c;
     long *mt;
 
-    debugf("Seeding: %d", s);
-
     SEED = s;
     index = 0;
     c = 1812433253;

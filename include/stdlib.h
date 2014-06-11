@@ -7,5 +7,6 @@
 
 
 void *memcpy(void*, const void*, size_t);
+void initUart(short, int, bool);
 
 #endif /* __STDLIB__ */

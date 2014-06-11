@@ -16,6 +16,17 @@
 #include <shell.h>
 
 
+void firstTask() {
+    Create(15, NameServer);
+    Create(15, ClockServer);
+    Create(0, NullTask);
+    Create(1, Shell);
+
+    debug("FirstTask: Exiting");
+    Exit();
+}
+
+
 void testTask() {
     printf("Calling task with priority: %d\r\n", getCurrentTask()->priority);
     Exit();
@@ -38,7 +49,7 @@ static void Client() {
          * Client delays n times, each for a time interval of t, printing after
          * each before exiting.
          */
-        debugf("Client: Task %d with (Interval %d, Number of Delays %d).", tid, res.t, res.n);
+        debug("Client: Task %d with (Interval %d, Number of Delays %d).", tid, res.t, res.n);
         while (res.n--) {
             Delay(res.t);
             res.complete += 1;
@@ -52,25 +63,17 @@ static void Client() {
 }
 
 
-void firstTask() {
+void testTask2() {
     int i;
     int callee;
-    uint32_t tid;
     DelayMessage msg, res;
     int priorities[] = {3, 4, 5, 6};
     int delay_t[] = {10, 23, 33, 71};
     int delay_n[] = {20, 9, 6, 3};
 
-    /*
-     * First user task creates the ClockServer and four
-     * client tasks.
-     */
-    Create(15, NameServer);
-    Create(15, ClockServer);
-
     for (i = 0; i < 4; ++i) {
-        tid = Create(priorities[i], Client);
-        debugf("FirstTask: Created task with priority: %d", priorities[i]);
+        Create(priorities[i], Client);
+        debug("TestTask2: Created task with priority: %d", priorities[i]);
     }
 
     for (i = 3; i >= 0; --i) {
@@ -80,14 +83,5 @@ void firstTask() {
         Reply(callee, &res, sizeof(res));
     }
 
-    /* push the NullTask to avoid the kernel quitting */
-    Create(0, NullTask);
-
-    /* waitpid and on return, bring up the shell */
-    if ((callee = WaitTid(tid) >= 0)) {
-        Create(0, Shell);
-    }
-
-    debug("FirstTask: Exiting");
     Exit();
 }

@@ -94,7 +94,7 @@ void senderTask() {
         startProfile(&tick);
         result = Send(receiverTid, &msg, MESSAGE_SIZE, &msg, MESSAGE_SIZE);
         endProfile(tick, &avg, i);
-        debugf("Sent tid: %d, count: %d, result: %d\n", receiverTid, i, result);
+        debug("Sent tid: %d, count: %d, result: %d\n", receiverTid, i, result);
     }
 
     printf("send->receive->reply average time: %d\n", avg);
@@ -117,7 +117,7 @@ void receiverTask() {
         startProfile(&tick);
         result = Receive(&senderTid, &msg, MESSAGE_SIZE);
         endProfile(tick, &avg, i);
-        debugf("Received tid: %d, count: %d, result: %d\n", senderTid, i, result);
+        debug("Received tid: %d, count: %d, result: %d\n", senderTid, i, result);
         Reply(senderTid, &msg, MESSAGE_SIZE);
     }
 

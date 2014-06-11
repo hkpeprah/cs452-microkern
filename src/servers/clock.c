@@ -94,7 +94,7 @@ void ClockServer() {
                 tmp = queue;
                 last = NULL;
                 while (queue != NULL && queue->delay <= ticks) {
-                    debugf("ClockServer: Waking up Task %d", queue->tid);
+                    debug("ClockServer: Waking up Task %d", queue->tid);
                     Reply(queue->tid, &errno, sizeof(errno));
                     last = queue;
                     queue = queue->next;
@@ -131,11 +131,11 @@ void ClockServer() {
                         }
 
                         if (last == NULL) {
-                            debugf("Added Task %d to head of queue", node->tid);
+                            debug("Added Task %d to head of queue", node->tid);
                             node->next = queue;
                             queue = node;
                         } else {
-                            debugf("Added Task %d with delay %d to queue after Task %d", node->tid, node->delay - ticks, tmp->tid);
+                            debug("Added Task %d with delay %d to queue after Task %d", node->tid, node->delay - ticks, tmp->tid);
                             last->next = node;
                             node->next = tmp;
                         }

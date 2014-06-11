@@ -30,6 +30,7 @@ static void clearEntry(InterruptType_t i) {
     interruptTable[i].buflen = 0;
 }
 
+
 void enableInterrupts() {
     unsigned int i;
     unsigned int *vic;
@@ -48,8 +49,8 @@ void enableInterrupts() {
     vic[VICxIntSelect] = 0;                        /* IRQ */
     vic[VICxIntEnClear] = 0;                       /* clear interrupts */
     vic[VICxIntEnable] = 1 << TIMER_INTERRUPT;     /* enable interrupt */
-    debug("Interrupt: Enabling interrupts.");
 }
+
 
 void disableInterrupts() {
     /* clear interrupts */
@@ -60,8 +61,8 @@ void disableInterrupts() {
 
     vic = (unsigned int*)VIC2_BASE;
     vic[VICxIntEnable] = 0;
-    debug("Interrupt: Disabling interrupts.");
 }
+
 
 int handleInterrupt() {
     /*

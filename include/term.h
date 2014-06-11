@@ -3,6 +3,8 @@
 #include <bwio.h>
 #include <stdio.h>
 #include <vargs.h>
+#include <syscall.h>
+#include <train.h>
 
 /* ANSI color codes */
 #define CLEAR                    0
@@ -30,23 +32,25 @@
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
 #else
-#define printf(format, ...)      sprintf(format, ## __VA_ARGS__)
-#define puts(str)                putstr(str)
-#define getchar()                getch()
-#define putchar(ch)              putch(ch)
+#define printf(format, ...)      bufsprintf(format, ## __VA_ARGS__)
+#define puts(str)                bufputstr(IO, str)
+#define trputs(str)              bufputstr(TRAIN, str)
 #endif
 #if DEBUG
-#define debugf(format, ...)      (move_to_debug(), printf("\r\n"), printf(format, ## __VA_ARGS__), return_to_term())
-#define debug(str)               debugf("%s", str)
+#define debug(format, ...)       {              \
+        move_to_debug();                            \
+        printf("\r\n");                             \
+        printf(format, ##__VA_ARGS__);              \
+        return_to_term();                           \
+    }
 #else
-#define debug(str)
-#define debugf(format, ...)
+#define debug(format, ...)
 #endif
-#define move_to_debug()          (save_cursor(), set_scroll(0, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
+#define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
 #define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
 #define error(format, ...)       {                                \
         change_color(RED);                                        \
-        debugf(format, ## __VA_ARGS__);                           \
+        debug(format, ## __VA_ARGS__);                            \
         end_color();                                              \
     }
 
@@ -76,7 +80,7 @@
 #define TERMINAL_HEIGHT          63
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
-#define TOP_HALF                 0
+#define TOP_HALF                 1
 #define BOTTOM_HALF              20
 
 

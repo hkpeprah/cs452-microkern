@@ -16,11 +16,12 @@ typedef struct {
 } IOController;
 
 
-void initIO();
 int atod(const char);
 int ctod(const char);
 int atoi(const char*, int*);
 int atoin(const char*, int*);
 int sscanf(const char*, const char*, ...);
+int bufputstr(int, char*);
+int bufprintf(const char*, ...);
 
 #endif /* __STDIO__ */

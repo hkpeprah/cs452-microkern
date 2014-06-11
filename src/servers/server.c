@@ -96,12 +96,12 @@ void NameServer() {
         switch(lookup.type) {
             case REGISTER:
                 insert_ht(clients, lookup.name, callee);
-                debugf("RegisterAs: %s registered.", lookup.name);
+                debug("RegisterAs: %s registered.", lookup.name);
             case WHOIS:
                 if (exists_ht(clients, lookup.name)) {
                     lookup.tid = lookup_ht(clients, lookup.name);
                 } else {
-                    debugf("WhoIs: %s does not exist in lookup table.", lookup.name);
+                    debug("WhoIs: %s does not exist in lookup table.", lookup.name);
                     lookup.tid = TASK_DOES_NOT_EXIST;
                 }
                 break;
@@ -110,7 +110,7 @@ void NameServer() {
                 if (callee == lookup.tid) {
                     /* only the task that matches the tid can delete itself */
                     delete_ht(clients, lookup.name);
-                    debugf("UnRegister: Removed %s from lookup table.", lookup.name);
+                    debug("UnRegister: Removed %s from lookup table.", lookup.name);
                     lookup.name = "\0";
                 }
                 break;

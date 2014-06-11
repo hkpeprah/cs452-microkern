@@ -10,6 +10,7 @@
 #include <random.h>
 #include <clock.h>
 #include <sl.h>
+#include <hash.h>
 
 #define FOREVER            for (;;)
 
@@ -23,18 +24,20 @@ void NullTask() {
     int currentTime = 0;
     int timeNotInNull = 0;
 
-    SHELL_EXITED = 0;
-
     while (!SHELL_EXITED) {
         lastTime = Time();
         Pass();
         currentTime = Time();
 
-        timeNotInNull += currentTime - lastTime;
-        save_cursor();
-        move_cursor(0, 100);
-        printf("%d\n", 100 - ((timeNotInNull * 100) / currentTime));
-        restore_cursor();
+        if (currentTime != lastTime) {
+            timeNotInNull += currentTime - lastTime;
+            save_cursor();
+            move_cursor(RIGHT_HALF, 0);
+            change_color(MAGENTA);
+            printf("Time Not Idle: %d milliseconds\n", 100 - ((timeNotInNull * 100) / currentTime));
+            end_color();
+            restore_cursor();
+        }
     }
 
     Exit();
@@ -46,10 +49,22 @@ void Shell() {
     char buf[80];
     unsigned int i;
     unsigned int tid;
+    char *help =
+        "sl   - Steam locomotive\r\n"
+        "rps  - Play a game of Rock-Paper-Scissors\r\n"
+        "?    - Display this help dialog\r\n";
+    HashTable commands;
+    void *command;
+
+    init_ht(&commands);
+    insert_ht(&commands, "rps", (int)RockPaperScissors);
+    insert_ht(&commands, "sl", (int)SteamLocomotive);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    puts("\r\nCS452 Real-Time Microkernel (Version 0.1.1001)\r\nCopyright <c> Max Chen, Ford Peprah.  All rights reserved.\r\n> ");
+    puts("\r\nCS452 Real-Time Microkernel (Version 0.1.1001)");
+    newline();
+    puts("Copyright <c> Max Chen, Ford Peprah.  All rights reserved.\r\n> ");
     save_cursor();
 
     i = 0;
@@ -70,18 +85,16 @@ void Shell() {
             if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
                 /* quit the terminal and stop the kernel */
                 break;
-            } else if (strcmp(buf, "rps") == 0) {
-                Create(random_range(2, 3), RockPaperScissors);
-            } else if (strcmp(buf, "sl") == 0) {
-                tid = Create(random_range(2, 3), SteamLocomotive);
-                WaitTid(tid);
+            } else if (strcmp(buf, "?") == 0) {
+                puts(help);
+            } else if ((command = (void*)lookup_ht(&commands, buf))) {
+                tid = Create(random_range(2, 3), command);
             }
 
             puts("> ");
             for (i = 0; i < 80; ++i) buf[i] = 0;
             i = 0;
             save_cursor();
-            Pass();
         } else {
             /* print character to the screen */
             if (i < 79) {

@@ -15,14 +15,6 @@
 #define __LONG            6
 
 
-void initIO() {
-    bwsetspeed(IO, 115200);
-    bwsetspeed(COM1, 2400);
-    bwsetfifo(IO, OFF);
-    bwsetfifo(COM1, OFF);
-}
-
-
 int atod(const char ch) {
     /*
      * returns the integer value of the digit
@@ -221,4 +213,14 @@ int sscanf(const char *src, const char *fmt, ...) {
     va_end(va);
 
     return retval;
+}
+
+
+int bufputstr(int channel, char *str) {
+    return 0;
+}
+
+
+int bufprintf(const char *format, ...) {
+    return 0;
 }
