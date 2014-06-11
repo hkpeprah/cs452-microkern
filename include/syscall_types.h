@@ -18,12 +18,6 @@ typedef enum {
     SYS_WAITTID
 } system_calls;
 
-
-typedef enum {
-    EVENT_CLOCK = 0
-} system_events;
-
-
 typedef struct args {
     system_calls code;
     uint32_t a0;

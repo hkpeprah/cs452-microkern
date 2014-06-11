@@ -26,7 +26,7 @@ static void ClockNotifier() {
 
     clock = MyParentTid();
     msg.type = TICK;
-    while ((n = AwaitEvent(EVENT_CLOCK))) {
+    while ((n = AwaitEvent(CLOCK_INTERRUPT, NULL, 0))) {
         errno = Send(clock, &msg, sizeof(msg), &n, sizeof(n));
     }
 

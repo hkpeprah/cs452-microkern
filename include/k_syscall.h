@@ -11,7 +11,7 @@ int sys_recv(int *tid, void *msg, int msglen);
 int sys_reply(int tid, void *reply, int replylen);
 void sys_pass();
 void sys_exit();
-int sys_await(int);
+int sys_await(int, void*, int);
 int sys_waittid(uint32_t);
 
 #endif /* __K_SYSCALL__ */

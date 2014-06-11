@@ -17,6 +17,12 @@ typedef unsigned int     uint16_t;
 typedef unsigned int     uint32_t;
 typedef unsigned int     size_t;
 
+typedef enum {
+    CLOCK_INTERRUPT = 0,
+    UART_INTERRUPT,
+    NUM_INTERRUPTS
+} InterruptType_t;
+
 /* errors that can happen during syscalls */
 #define OUT_OF_SPACE            -1
 #define TASK_ID_IMPOSSIBLE      -1      /* the task id is impossible */

@@ -211,7 +211,7 @@ void sys_exit() {
 }
 
 
-int sys_await(int eventType) {
+int sys_await(int eventType, void *buf, int buflen) {
     /*
      * Blocks the task on the given eventType, then resume
      * when the event occurs, to wake up the given task.
@@ -219,7 +219,7 @@ int sys_await(int eventType) {
     int errno;
     Task_t *target = getCurrentTask();
     target->state = EVENT_BL;
-    errno = addInterruptListener(eventType, target);
+    errno = addInterruptListener(eventType, target, buf, buflen);
 
     if (errno < 0) {
         error("AwaitEvent: Error: Got %d adding task %d", errno, target->tid);

@@ -77,7 +77,7 @@ static int handleRequest(Args_t *args) {
             sys_exit();
             break;
         case SYS_AWAIT:
-            errno = sys_await(args->a0);
+            errno = sys_await(args->a0, (void *)args->a1, args->a2);
             break;
         case SYS_INTERRUPT:
             errno = handleInterrupt();

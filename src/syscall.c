@@ -77,18 +77,12 @@ int Reply(int tid, void *reply, int replylen) {
 }
 
 
-int AwaitEvent(int eventType) {
-    /*
-     * Waits for an external event.  Blocks until the event defined by the
-     * passed parameter occurs then returns.
-     * Returns
-     *    -1 - invalid event
-     *    -2 - event queue full
-     *    Otherwise returns volatile data
-     */
+int AwaitEvent(int eventType, void *buf, int buflen) {
     Args_t args;
     args.code = SYS_AWAIT;
     args.a0 = eventType;
+    args.a1 = (uint32_t) buf;
+    args.a2 = buflen;
     return swi_call(0, &args);
 }
 
