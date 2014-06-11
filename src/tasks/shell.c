@@ -89,6 +89,7 @@ void Shell() {
                 puts(help);
             } else if ((command = (void*)lookup_ht(&commands, buf))) {
                 tid = Create(random_range(2, 3), command);
+                WaitTid(tid);
             }
 
             puts("> ");

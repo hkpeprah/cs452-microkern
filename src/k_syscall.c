@@ -236,7 +236,8 @@ int sys_waittid(uint32_t tid) {
     target = getTaskByTid(tid);
     currentTask = getCurrentTask();
 
-    if (target == NULL) {
+    if (target == NULL || currentTask->tid != tid) {
+        error("WaitTid: Task does not exist or exited already.");
         return TASK_DOES_NOT_EXIST;
     }
 
