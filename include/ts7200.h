@@ -69,6 +69,10 @@
 	#define RXFF_MASK	0x40	// Receive buffer full
 	#define TXFE_MASK	0x80	// Transmit buffer empty
 #define UART_INTR_OFFSET	0x1c
+    #define MIS_MASK    0x1     // modem interrupt
+    #define RIS_MASK    0x2     // rcv interrupt
+    #define TIS_MASK    0x4     // xmt interrupt
+    #define RTIS_MASK   0x8     // receive timeout
 #define UART_DMAR_OFFSET	0x28
 
 // Specific to UART1
@@ -98,3 +102,5 @@
 #define UART2RXINTR2    25
 #define UART2TXINTR2    26
 #define TC3OI           51   // bit 19 (51-32) in VIC2
+#define INT_UART1       52   // bit 20 in VIC2
+#define INT_UART2       54   // bit 22 in VIC2

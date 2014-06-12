@@ -5,11 +5,18 @@
 #include <types.h>
 #include <syscall.h>
 #include <util.h>
+#include <ts7200.h>
 
 #define FIFO_SIZE 16
 
 static int is_tid = -1;
 static int os_tid = -1;
+
+void enableUartInterrupts() {
+    int *uart2ctrl = (int*) (UART2_BASE + UART_CTLR_OFFSET);
+//    *uart2ctrl |= RIEN_MASK | TIEN_MASK;
+    *uart2ctrl |= RIEN_MASK;
+}
 
 char Getc(int channel) {
     UartRequest_t req;
@@ -47,7 +54,7 @@ int Putc(int channel, char ch) {
     return Send(os_tid, &req, sizeof(req), NULL, 0);
 }
 
-static void Uart0RCVHandler() {
+static void Uart1RCVHandler() {
     int result;
     UartRequest_t req = {0};
     int serverTid = MyParentTid();
@@ -57,7 +64,7 @@ static void Uart0RCVHandler() {
     req.len = 1;
 
     for (;;) {
-        result = AwaitEvent(UART0_RCV_INTERRUPT, NULL, 0);
+        result = AwaitEvent(UART1_RCV_INTERRUPT, NULL, 0);
 
         if (result < 0) {
             // bad stuff
@@ -68,7 +75,7 @@ static void Uart0RCVHandler() {
     }
 }
 
-static void Uart1RCVHandler() {
+static void Uart2RCVHandler() {
     int result;
     char buf[FIFO_SIZE];
     UartRequest_t req = {0};
@@ -78,7 +85,7 @@ static void Uart1RCVHandler() {
     req.channel = 1;
 
     for (;;) {
-        result = AwaitEvent(UART1_RCV_INTERRUPT, buf, FIFO_SIZE);
+        result = AwaitEvent(UART2_RCV_INTERRUPT, buf, FIFO_SIZE);
 
         if (result < 0) {
             // bad stuff
@@ -92,11 +99,11 @@ static void Uart1RCVHandler() {
     }
 }
 
-static void Uart0XMTHandler() {
+static void Uart1XMTHandler() {
 
 }
 
-static void Uart1XMTHandler() {
+static void Uart2XMTHandler() {
 }
 
 
@@ -105,7 +112,7 @@ void OutputServer() {
 }
 
 void InputServer() {
-    int uart0rcv, uart1rcv;
+    int uart1rcv, uart2rcv;
     int result, sender;
 
     UartRequest_t req;
@@ -121,8 +128,8 @@ void InputServer() {
         error("InputServer: Error: NameServer returned %d", result);
     }
 
-    uart0rcv = Create (15, Uart0RCVHandler);
     uart1rcv = Create (15, Uart1RCVHandler);
+    uart2rcv = Create (15, Uart2RCVHandler);
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
@@ -141,7 +148,7 @@ void InputServer() {
                 break;
             case WRITE:
                 Reply(sender, NULL, 0);
-                if (sender != uart0rcv && sender != uart1rcv) {
+                if (sender != uart1rcv && sender != uart2rcv) {
                     // only those 2 tasks are allowed to write
                     continue;
                 }
