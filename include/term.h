@@ -81,7 +81,7 @@
 #define TERMINAL_HEIGHT          63
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
-#define TOP_HALF                 1
+#define TOP_HALF                 3
 #define BOTTOM_HALF              20
 
 

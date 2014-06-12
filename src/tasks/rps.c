@@ -302,7 +302,7 @@ static void RPSPlayer() {
     }
 
     /* should always reach here */
-    printf("Game Over.  Returning to prompt.\r\n\r\n");
+    printf("Game Over.  Returning to prompt.\r\n");
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     UnRegister(name);

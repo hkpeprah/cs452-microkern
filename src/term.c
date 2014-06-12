@@ -13,5 +13,7 @@ void initDebug() {
         save_cursor();
     #else
         set_scroll(TOP_HALF, TERMINAL_HEIGHT);
+        move_cursor(0, TOP_HALF);
+        save_cursor();
     #endif
 }
