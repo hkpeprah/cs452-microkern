@@ -19,7 +19,10 @@ typedef unsigned int     size_t;
 
 typedef enum {
     CLOCK_INTERRUPT = 0,
-    UART_INTERRUPT,
+    UART0_XMT_INTERRUPT,
+    UART0_RCV_INTERRUPT,
+    UART1_XMT_INTERRUPT,
+    UART1_RCV_INTERRUPT,
     NUM_INTERRUPTS
 } InterruptType_t;
 
