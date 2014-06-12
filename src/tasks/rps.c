@@ -317,7 +317,7 @@ void RockPaperScissors() {
     if (WhoIs(RPS_SERVER) < 0) {
         /* check that the RPS Server exists */
         debug("RockPaperScissors called without RPSServer, creating.");
-        Create(14, RPSServer);
+        Create(5, RPSServer);
     }
 
     quit = false;

@@ -14,6 +14,8 @@ typedef struct {
 
 
 void testTask();
+void testTask2();
 void firstTask();
+void timerTask();
 
 #endif /* __UTASKS__ */

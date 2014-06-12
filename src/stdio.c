@@ -84,7 +84,47 @@ int atoin(const char *source, int *status) {
 }
 
 
-int scanformatted(const char *input, const char *format, va_list va) {
+void itoa(int num, char *buf) {
+    /*
+     * converts an integer into the string representation
+     * stores result into buf
+     */
+    if (num < 0) {
+        num = -num;
+        *buf++ = '-';
+    }
+    uitoa((unsigned int)num, 10, buf);
+}
+
+
+void uitoa(unsigned int num, unsigned int base, char *buf) {
+    /*
+     * converts an unsigned integer into the string representation
+     * stores result into buf
+     */
+    int n = 0;
+    int digit;
+    int d = 1;
+
+    while ((num / d) >= base) {
+        d *= base; /* Extract powers of 10 for digits */
+    }
+
+    while (d != 0) {
+        digit = num / d;  /* extract digit */
+        num %= d;         /* extract remainder */
+        d = d / base;
+
+        if (n || digit > 0 || d == 0) {
+            *buf++ = digit + (digit < 10 ? '0' : 'a' - 10);
+            ++n;
+        }
+    }
+    *buf = '\0';
+}
+
+
+int sscanformatted(const char *input, const char *format, va_list va) {
     char ch;
     int conv;
     char *tmp;
@@ -209,18 +249,94 @@ int sscanf(const char *src, const char *fmt, ...) {
     int retval;
 
     va_start(va, fmt);
-    retval = scanformatted(src, fmt, va);
+    retval = sscanformatted(src, fmt, va);
     va_end(va);
 
     return retval;
 }
 
 
-int bufputstr(int channel, char *str) {
-    return 0;
+void bufputstr(int channel, char *str) {
+    /* wrapper for send of a string to server */
 }
 
 
-int bufprintf(const char *format, ...) {
-    return 0;
+static void printformatted(int channel, char *format, va_list va) {
+    char ch;
+    unsigned int i;
+    unsigned int len = 14;
+    char *tmp;
+    char buffer[256];
+    char convert_buf[len];
+
+    for (i = 0; i < len; ++i) {
+        convert_buf[i] = '\0';
+    }
+
+    i = 0;
+    while ((ch = *format++)) {
+        if (ch != '%') {
+            buffer[i++] = ch;
+        } else {
+            ch = *(format++);
+            switch(ch) {
+                case '0':
+                    break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    ch = ch - '1';
+                    break;
+            }
+
+            switch(ch) {
+                case 'c':
+                    buffer[i++] = ch;
+                    break;
+                case 's':
+                    tmp = va_arg(va, char*);
+                    while (*tmp) {
+                        buffer[i++] = *(tmp++);
+                    }
+                    break;
+                case 'u':
+                    uitoa(va_arg(va, unsigned int), 10, convert_buf);
+                    break;
+                case 'd':
+                    itoa(va_arg(va, int), convert_buf);
+                    break;
+                case 'x':
+                    uitoa(va_arg(va, unsigned int), 16, convert_buf);
+                    break;
+                case '%':
+                    buffer[i++] = '%';
+                    break;
+            }
+
+            if (*convert_buf != '\0') {
+                /* if convert buffer is non-empty, we converted something */
+                tmp = convert_buf;
+                do {
+                    buffer[i++] = *tmp;
+                } while (*(++tmp) != '\0');
+            }
+        }
+    }
+
+    buffer[i++] = '\0';
+    bufputstr(channel, buffer);
+}
+
+
+void bufprintf(int channel, char *format, ...) {
+    va_list va;
+    va_start(va, format);
+    printformatted(channel, format, va);
+    va_end(va);
 }

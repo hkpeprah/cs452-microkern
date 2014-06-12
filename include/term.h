@@ -32,12 +32,13 @@
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
 #else
-#define printf(format, ...)      bufsprintf(format, ## __VA_ARGS__)
+#define printf(format, ...)      bufprintf(IO, format, ## __VA_ARGS__)
 #define puts(str)                bufputstr(IO, str)
 #define trputs(str)              bufputstr(TRAIN, str)
+#define trprintf(format, ...)    bufprintf(TRAIN, format, ##__VA_ARGS__)
 #endif
 #if DEBUG
-#define debug(format, ...)       {              \
+#define debug(format, ...)       {                  \
         move_to_debug();                            \
         printf("\r\n");                             \
         printf(format, ##__VA_ARGS__);              \

@@ -20,8 +20,10 @@ int atod(const char);
 int ctod(const char);
 int atoi(const char*, int*);
 int atoin(const char*, int*);
+void itoa(int, char*);
+void uitoa(unsigned int, unsigned int, char*);
 int sscanf(const char*, const char*, ...);
-int bufputstr(int, char*);
-int bufprintf(const char*, ...);
+void bufputstr(int, char*);
+void bufprintf(int, char*, ...);
 
 #endif /* __STDIO__ */
