@@ -140,6 +140,7 @@ void InputServer() {
                 }
                 break;
             case WRITE:
+                Reply(sender, NULL, 0);
                 if (sender != uart0rcv && sender != uart1rcv) {
                     // only those 2 tasks are allowed to write
                     continue;
