@@ -20,7 +20,7 @@ void initUart(short uart, int speed, bool fifo) {
     int *high, *low;
 
     base = 0;
-    switch(uart) {
+    switch (uart) {
         case COM1:
             base = UART1_BASE;
             break;
@@ -32,7 +32,7 @@ void initUart(short uart, int speed, bool fifo) {
     high = (int*)(base + UART_LCRM_OFFSET);
     low = (int*)(base + UART_LCRL_OFFSET);
 
-    switch(speed) {
+    switch (speed) {
         /* baud divisor rate */
         case 115200:
             *high = 0x0;

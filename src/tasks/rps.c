@@ -57,7 +57,7 @@ static void RPSServer() {
     /* register with the name server */
     RegisterAs(RPS_SERVER);
 
-    while(Receive(&callee, &req, sizeof(req))) {
+    while (Receive(&callee, &req, sizeof(req))) {
         switch(req.type) {
             case QUIT:
                 /* remove the respective player from the game */

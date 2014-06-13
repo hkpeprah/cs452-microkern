@@ -143,18 +143,17 @@ int sscanformatted(const char *input, const char *format, va_list va) {
     while (true) {
         if (!(ch = *format++)) {
             break;
-        } else if (isspace(ch)) {
-            while (isspace(*input) && len-- > 0) ++nread;
-            continue;
         } else if (len <= 0) {
             return -1;
+        } else if (isspace(ch)) {
+            while (*format && isspace(*format));
+            continue;
         }
 
         if (ch != '%') {
             if (*input != ch || len <= 0) {
                 return -1;
             }
-            len--;
             input++;
             nread++;
             continue;
@@ -162,39 +161,39 @@ int sscanformatted(const char *input, const char *format, va_list va) {
 
         nread++;
         ch = *format++;
+
         switch(ch) {
-        case 'd':
-            conversion_type = __INT;
-            base = 10;
-            break;
-        case 'X':
-        case 'x':
-        case 'p':
-            conversion_type = __HEX;
-            base = 16;
-            break;
-        case 's':
-            conversion_type = __STRING;
-            break;
-        case 'i':
-            conversion_type = __INT;
-            base = 10;
-            break;
-        case 'u':
-            conversion_type = __UINT;
-            base = 10;
-            break;
-        case 'c':
-            conversion_type = __CHAR;
-            break;
-        case 'l':
-            conversion_type = __LONG;
-            break;
-        default:
-            return -1;
+            case 'd':
+                conversion_type = __INT;
+                base = 10;
+                break;
+            case 'X':
+            case 'x':
+            case 'p':
+                conversion_type = __HEX;
+                base = 16;
+                break;
+            case 's':
+                conversion_type = __STRING;
+                break;
+            case 'i':
+                conversion_type = __INT;
+                base = 10;
+                break;
+            case 'u':
+                conversion_type = __UINT;
+                base = 10;
+                break;
+            case 'c':
+                conversion_type = __CHAR;
+                break;
+            case 'l':
+                conversion_type = __LONG;
+                break;
+            default:
+                return -1;
         }
 
-        i = 0;
         while (isspace(*input)) {
             ++input;
             --len;
@@ -206,7 +205,9 @@ int sscanformatted(const char *input, const char *format, va_list va) {
             buf[0] = *input++;
             --len;
         } else {
-            for (i = 0; !isspace(*input) && ((buf[i] = *input++)); ++i) --len;
+            for (i = 0; !isspace(*input) && ((buf[i] = *input++)); ++i) {
+                --len;
+            }
             buf[i] = 0;
         }
 
@@ -234,7 +235,7 @@ int sscanformatted(const char *input, const char *format, va_list va) {
         nassigned++;
     }
 
-    while(isspace(*input)) {
+    while (*input && isspace(*input)) {
         input++;
         --len;
     }

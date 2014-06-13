@@ -31,11 +31,13 @@
 #define puts(str)                bwputstr(IO, str)
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
+#define trputs(str)              trbwputs(str)
+#define trputch(ch)              trbwputc(ch)
 #else
 #define printf(format, ...)      bufprintf(IO, format, ## __VA_ARGS__)
 #define puts(str)                bufputstr(IO, str)
 #define trputs(str)              bufputstr(TRAIN, str)
-#define trprintf(format, ...)    bufprintf(TRAIN, format, ##__VA_ARGS__)
+#define trputch(ch)              bufputch(TRAIN, ch)
 #endif
 #if DEBUG
 #define debug(format, ...)       {                  \

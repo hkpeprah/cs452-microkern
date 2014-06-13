@@ -12,10 +12,16 @@ typedef struct {
     unsigned int complete : 8;
 } DelayMessage;
 
+typedef struct {
+    int *args;
+} TrainMessage;
+
 
 void testTask();
 void testTask2();
 void firstTask();
 void timerTask();
+void trainUserTask();
+void trainUserCourier();
 
 #endif /* __UTASKS__ */

@@ -108,7 +108,6 @@ void boot () {
     /* sequence of boot operations */
     cacheOn();
     initUart(IO, 115200, false);   /* TODO: enable FIFO */
-    initUart(TRAIN, 2400, false);
     clear_screen();                /* must be before debug */
     initDebug();
     initMem();
@@ -116,6 +115,7 @@ void boot () {
     initSWI();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
+    initUart(TRAIN, 2400, false);  /* should be last thing? */
 }
 
 
@@ -123,6 +123,7 @@ int shutdown() {
     /* sequence of shutdown operations */
     clearTasks();
     disableInterrupts();
+    /* TODO: Reset scroll */
     puts("\r\nExiting...\r\n");
     return 0;
 }
