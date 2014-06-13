@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <interrupt.h>
 #include <train.h>
+#include <uart.h>
 
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
@@ -107,7 +108,8 @@ static void initSWI() {
 void boot () {
     /* sequence of boot operations */
     cacheOn();
-    initUart(IO, 115200, false);   /* TODO: enable FIFO */
+    initUart(IO, 115200, true);
+    initUart(TRAIN, 2400, false);
     clear_screen();                /* must be before debug */
     initDebug();
     initMem();
@@ -115,7 +117,7 @@ void boot () {
     initSWI();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
-    initUart(TRAIN, 2400, false);  /* should be last thing? */
+    enableUartInterrupts();
 }
 
 

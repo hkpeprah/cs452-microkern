@@ -4,25 +4,26 @@
 #include <kernel.h>
 #include <interrupt.h>
 #include <uart.h>
+#include <server.h>
 #include <ts7200.h>
 #include <syscall.h>
 #include <k_syscall.h>
 
+static int RUN = 1;
+
 void looper() {
-    int *vicbase = (int*) VIC2_BASE;
-    int res;
+    char res;
 
     for (;;) {
-//        printf("fuck\n");
-//        vicbase[VICxSoftInt] = 1 << 22;
-        res = AwaitEvent(UART2_RCV_INTERRUPT, NULL, 0);
-        printf("got: %c", res);
+        res = Getc(COM2);
+
+        Putc(COM2, res);
     }
 }
 
 void null() {
 
-    for (;;) {
+    while (RUN) {
     }
 }
 
@@ -30,8 +31,10 @@ int main() {
     int tid;
 
     boot();
-    enableUartInterrupts();
 
+    sys_create(15, NameServer, &tid);
+    sys_create(10, InputServer, &tid);
+    sys_create(10, OutputServer, &tid);
     sys_create(1, looper, &tid);
     sys_create(0, null, &tid);
 

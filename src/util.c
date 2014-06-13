@@ -8,47 +8,47 @@ static inline uint32_t min3(uint32_t a, uint32_t b, uint32_t c) {
     return a;
 }
 
-static uint32_t diff(int from, int to) {
-    return (from < to) ? (to - from) : (BUFFER_SIZE - from + to);
+void initcb(CircularBuffer_t *cbuf) {
+    cbuf->head = 0;
+    cbuf->tail = 0;
+    cbuf->remaining = CBUFFER_SIZE;
 }
 
 int length(CircularBuffer_t *cbuf) {
-    return diff(cbuf->head, cbuf->tail);
+    return CBUFFER_SIZE - cbuf->remaining;
 }
 
 /* TODO: optimize these a-la memcpy */
 int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len) {
-
-    uint32_t remaining = diff(cbuf->tail, cbuf->head);
-
-    if (remaining < len) {
+    if (cbuf->remaining < len) {
         error("CircularBuffer: Insufficient space to copy message");
         return -1; // TODO: define this
     }
 
+    cbuf->remaining -= len;
 
     while (len --> 0) {
         cbuf->data[cbuf->tail++] = *buf++;
     }
 
 #if 0
-    printf("after write, head = %d, tail = %d, remaining = %d\n", cbuf->head, cbuf->tail, diff(cbuf->tail, cbuf->head));
+    debug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
 #endif
 
     return len;
 }
 
 int read(CircularBuffer_t *cbuf, char *buf, uint32_t len) {
-    int clen = 0;
+    int iremaining = cbuf->remaining;
 
-    while (len --> 0 && cbuf->head != cbuf->tail) {
+    while (len --> 0 && cbuf->remaining < CBUFFER_SIZE) {
         *buf++ = cbuf->data[cbuf->head++];
-        ++clen;
+        ++cbuf->remaining;
     }
 
 #if 0
-    printf("after read, head = %d, tail = %d, remaining = %d\n", cbuf->head, cbuf->tail, diff(cbuf->tail, cbuf->head));
+    debug("0x%x read, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
 #endif
 
-    return clen;
+    return cbuf->remaining - iremaining;
 }

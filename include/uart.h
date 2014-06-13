@@ -11,8 +11,8 @@ typedef enum {
 
 typedef struct {
     UartRequestType_t type;
-    int channel : 1;
-    int len : 15;
+    unsigned int channel : 1;
+    unsigned int len : 15;
     char *buf;
 } UartRequest_t;
 
