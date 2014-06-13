@@ -1,10 +1,9 @@
 #ifndef __TRAIN_H__
 #define __TRAIN_H__
 #include <ts7200.h>
+#include <types.h>
 
 #define TRAIN                COM1
-#define TRAIN_AUX_LIGHTS     0
-#define TRAIN_AUX_HORN       0
 #define TRAIN_SWITCH_COUNT   22     /* switches on the board, upper four are special */
 #define TRAIN_SENSOR_COUNT   16     /* number of sensors per module */
 #define TRAIN_MODULE_COUNT   5      /* number of sensor modules */
@@ -14,6 +13,8 @@
 #define TRAIN_LIGHT_OFFSET   16     /* offset for lights */
 #define TRAIN_HORN_OFFSET    17     /* offset for horn */
 
+
+struct __Train_t;
 
 typedef enum {
     TRAIN_NULL = 0,
@@ -25,22 +26,49 @@ typedef enum {
     TRAIN_RV,
     TRAIN_LI,
     TRAIN_HORN,
-    NUM_TRAIN_COMMANDS
+    TRAIN_ADD,
+    NUM_TRAIN_COMMANDS,
+    TRAIN_EVERYTHING = 99      /* DO NOT USE */
 } TrainCommands;
 
 
-void clearTrainSet();
+typedef struct __Train_t {
+    unsigned int id : 16;
+    unsigned int speed : 8;
+    unsigned int aux : 8;
+    unsigned int lastSensor : 16;
+    struct __Train_t *next;
+    /* TODO: Direction or nextSensor ? */
+} Train_t;
+
+
+typedef struct {
+    unsigned int id : 16;
+    char state;
+} Switch_t;
+
+
+typedef struct {
+    char module;
+    unsigned int id : 16;
+} Sensor_t;
+
+
 int trainSpeed(unsigned int, unsigned int);
 int trainAuxiliary(unsigned int, unsigned int);
 int trainReverse(unsigned int);
 int trainSwitch(unsigned int, int);
-void turnOnTrain();
-void turnOffTrain();
+void turnOnTrainSet();
+void turnOffTrainSet();
+void clearTrainSet();
 void turnOffSolenoid();
+Train_t *addTrain(unsigned int);
+Train_t *getTrain(unsigned int);
 
 /* Deprecated */
 void trbwputc(char);
 void trbwputs(char*);
+void trnbwputs(char*, unsigned int);
 char trbwflush();
 
 #endif /* __TRAIN_H__ */

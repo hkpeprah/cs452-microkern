@@ -22,6 +22,6 @@ void testTask2();
 void firstTask();
 void timerTask();
 void trainUserTask();
-void trainUserCourier();
+void trainSlave();
 
 #endif /* __UTASKS__ */

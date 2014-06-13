@@ -3,18 +3,38 @@
 #include <syscall.h>
 #include <clock.h>
 
-#define TRAIN_AUX_CURVE       34
-#define TRAIN_AUX_STRAIGHT    33
-#define TRAIN_AUX_SOLENOID    32
 #define TRAIN_AUX_REVERSE     15
+#define TRAIN_AUX_SOLENOID    32
+#define TRAIN_AUX_STRAIGHT    33
+#define TRAIN_AUX_CURVE       34
 #define TRAIN_AUX_GO          96
 #define TRAIN_AUX_STOP        97
 #define TRAIN_AUX_SNSRESET    192
 
 #define TRAIN_MAX_SPEED       14
+#define MAX_TRAINS            8
 
 
+static Train_t __trainSet[MAX_TRAINS];
+static Train_t *freeSet;
+static Train_t *trainSet;
 volatile int BW_MASK = 0xFFFFFFFF;
+
+
+Train_t *addTrain(unsigned int id) {
+    Train_t *tmp;
+
+    if (freeSet != NULL && id > 0 && id <= 80) {
+        tmp = trainSet;
+        trainSet = freeSet;
+        freeSet = freeSet->next;
+        trainSet->next = tmp;
+        trainSet->id = id;
+        return trainSet;
+    }
+
+    return NULL;
+}
 
 
 void clearTrainSet() {
@@ -26,7 +46,7 @@ void clearTrainSet() {
     for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
         if (i >= TRAIN_SWITCH_COUNT - 4) {
             buf[0] = (i % 2 == 0 ? TRAIN_AUX_CURVE : TRAIN_AUX_STRAIGHT);
-            buf[1] = MULTI_SWITCH_OFFSET + (TRAIN_SWITCH_COUNT - i);
+            buf[1] = (i + MULTI_SWITCH_OFFSET) - (TRAIN_SWITCH_COUNT - 4);
         } else {
             buf[0] = (i == 13 ? TRAIN_AUX_STRAIGHT : TRAIN_AUX_CURVE);
             buf[1] = i + 1;
@@ -37,30 +57,69 @@ void clearTrainSet() {
     Delay(4);
     turnOffSolenoid();
     trputch(TRAIN_AUX_SNSRESET);
+    trainSet = NULL;
+    freeSet = NULL;
+
+    for (i = 0; i < MAX_TRAINS; ++i) {
+        __trainSet[i].next = freeSet;
+        freeSet = &__trainSet[i];
+        freeSet->speed = 0;
+        freeSet->aux = 0;
+    }
+
     debug("Switches set.  Train Controller setup complete.");
 }
 
 
-void turnOnTrain() {
+void turnOnTrainSet() {
+    char buf[2];
     BW_MASK = 0xFFFFFFFF;
-    trputch(TRAIN_AUX_GO);
-    trputch(TRAIN_AUX_GO);
+
+    buf[0] = TRAIN_AUX_GO;
+    buf[1] = TRAIN_AUX_GO;
+    trputs(buf);
 }
 
 
-void turnOffTrain() {
-    trputch(TRAIN_AUX_STOP);
+void turnOffTrainSet() {
+    Train_t *tmp;
+    char buf[2];
+
+    buf[0] = TRAIN_AUX_STOP;
+    buf[1] = TRAIN_AUX_STOP;
+    trputs(buf);
+
+    while (trainSet != NULL) {
+        trainSpeed(trainSet->id, 0);
+        tmp = freeSet;
+        freeSet = trainSet;
+        trainSet = trainSet->next;
+        freeSet->next = tmp;
+    }
+}
+
+
+Train_t *getTrain(unsigned int tr) {
+    Train_t *train;
+    train = trainSet;
+    while (train && train->id != tr) {
+        train = train->next;
+    }
+    return train;
 }
 
 
 int trainSpeed(unsigned int tr, unsigned int sp) {
     char buf[2];
+    Train_t *train;
 
-    /* TODO: Check train exists */
-    if (sp <= TRAIN_MAX_SPEED) {
-        buf[0] = sp;
+    train = getTrain(tr);
+    if (train != NULL && sp <= TRAIN_MAX_SPEED) {
+        train->speed = sp;
+        buf[0] = sp + train->aux;
         buf[1] = tr;
-        trputs(buf);
+        debug("TrainSpeed: Bytes: %d %d", buf[0], buf[1]);
+        trnputs(buf, 2);
         return 0;
     }
     return 1;
@@ -69,23 +128,36 @@ int trainSpeed(unsigned int tr, unsigned int sp) {
 
 int trainAuxiliary(unsigned int tr, unsigned int ax) {
     char buf[2];
+    Train_t *train;
 
-    /* TODO: Check train exists */
-    buf[0] = ax;
-    buf[1] = tr;
-    trputs(buf);
-    return 0;
+    if ((train = getTrain(tr)) && ax >= 16 && ax < 32) {
+        if (train->aux >= ax) {
+            train->aux -= ax;
+        } else {
+            train->aux = ax;
+        }
+        buf[0] = train->aux + train->speed;
+        buf[1] = tr;
+        debug("TrainAuxiliary: Bytes: %d %d", buf[0], buf[1]);
+        trputs(buf);
+        return 0;
+    }
+    return 1;
 }
 
 
 int trainReverse(unsigned int tr) {
     char buf[2];
+    Train_t *train;
 
-    /* TODO: Check train exists */
-    buf[0] = TRAIN_AUX_REVERSE;
-    buf[1] = tr;
-    trputs(buf);
-    return 0;
+    if ((train = getTrain(tr))) {
+        buf[0] = TRAIN_AUX_REVERSE;
+        buf[1] = tr;
+        debug("TrainReverse: Bytes: %d %d", buf[0], buf[1]);
+        trputs(buf);
+        return 0;
+    }
+    return 1;
 }
 
 
@@ -104,10 +176,10 @@ int trainSwitch(unsigned int sw, int c) {
             break;
     }
 
-    /* TODO: Check switch exists */
-    if (buf[0] != '\0') {
+    if (buf[0] != 0  && sw >= 0 && sw <= 255) {
         buf[1] = sw;
-        trputs(buf);
+        debug("TrainSwitch: Bytes: %d %d", buf[0], buf[1]);
+        trnputs(buf, 2);
         return 0;
     }
     return 1;
@@ -140,8 +212,14 @@ void trbwputc(char ch) {
 
 void trbwputs(char *str) {
     while (*str) {
-        trbwputc(*str);
-        str++;
+        trbwputc(*str++);
+    }
+}
+
+
+void trnbwputs(char *str, unsigned int len) {
+    while (len-- > 0) {
+        trbwputc(*str++);
     }
 }
 

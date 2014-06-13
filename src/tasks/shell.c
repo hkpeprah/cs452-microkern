@@ -16,7 +16,7 @@
 #define FOREVER            for (;;)
 
 
-static int SHELL_EXITED = 0;
+volatile int SHELL_EXITED = 0;
 
 
 void NullTask() {
@@ -25,7 +25,7 @@ void NullTask() {
     int currentTime = 0;
     int timeNotInNull = 0;
 
-    while (!SHELL_EXITED) {
+    while (SHELL_EXITED == 0) {
         lastTime = Time();
         Pass();
         currentTime = Time();
@@ -41,6 +41,7 @@ void NullTask() {
         }
     }
 
+    notice("NullTask: Exiting");
     Exit();
 }
 
@@ -62,6 +63,7 @@ void Shell() {
         "rv TRAIN         -   Reverse the specified train\r\n"
         "li TRAIN         -   Turn on/off the lights on the specified train\r\n"
         "ho TRAIN         -   Signal the horn on the specified train\r\n"
+        "cmdtest TRAIN    -   Run through the auxiliary functions supported by the train\r\n"
         "?                -   Display this help dialog\r\n";
     char *parser[] = {"", "%u", "%u %u", "%u %c"};
     char *tmp;
@@ -81,6 +83,8 @@ void Shell() {
     insert_ht(&commands, "li", TRAIN_LI);
     insert_ht(&commands, "sw", TRAIN_SWITCH);
     insert_ht(&commands, "ho", TRAIN_HORN);
+    insert_ht(&commands, "add", TRAIN_ADD);
+    insert_ht(&commands, "cmdtest", TRAIN_EVERYTHING);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -91,6 +95,7 @@ void Shell() {
 
     i = 0;
     TrainController = WhoIs("TrainHandler");
+    SHELL_EXITED = 0;
 
     FOREVER {
         ch = getchar();
@@ -116,6 +121,9 @@ void Shell() {
                 break;
             } else if (strcmp(buf, "?") == 0) {
                 puts(help);
+            } else if (strcmp(buf, "time") == 0) {
+                i = Time();
+                printf("%d:%d:%d\r\n", i / 6000, (i / 100) % 60, i % 100);
             } else {
                 tmp = &buf[i];
                 while (!isspace(*tmp) && *tmp) tmp++;
@@ -131,6 +139,8 @@ void Shell() {
                         case TRAIN_RV:
                         case TRAIN_LI:
                         case TRAIN_HORN:
+                        case TRAIN_ADD:
+                        case TRAIN_EVERYTHING:
                             i = 1;
                             break;
                         case TRAIN_SPEED:
@@ -151,9 +161,6 @@ void Shell() {
                             args[0] = command;
                             tr.args = args;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
-                            if (status < 0) {
-                                printf("Error: Invalid train command.\r\n");
-                            }
                         }
                     } else {
                         /* this command spawns a user task */
@@ -180,5 +187,6 @@ void Shell() {
     }
 
     SHELL_EXITED = 1;
+    notice("Shell: Exiting");
     Exit();
 }

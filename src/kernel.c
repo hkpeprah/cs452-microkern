@@ -121,10 +121,14 @@ void boot () {
 
 int shutdown() {
     /* sequence of shutdown operations */
+    turnOffTrainSet();
     clearTasks();
     disableInterrupts();
-    /* TODO: Reset scroll */
+
     puts("\r\nExiting...\r\n");
+    save_cursor();
+    set_scroll(0, TERMINAL_HEIGHT);
+    restore_cursor();
     return 0;
 }
 

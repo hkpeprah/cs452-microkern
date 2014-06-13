@@ -32,6 +32,7 @@
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
 #define trputs(str)              trbwputs(str)
+#define trnputs(str, n)          trnbwputs(str, n)
 #define trputch(ch)              trbwputc(ch)
 #else
 #define printf(format, ...)      bufprintf(IO, format, ## __VA_ARGS__)
@@ -55,6 +56,11 @@
         change_color(RED);                                        \
         debug(format, ## __VA_ARGS__);                            \
         end_color();                                              \
+    }
+#define notice(format, ...)      {              \
+        change_color(CYAN);                     \
+        debug(format, ## __VA_ARGS__);          \
+        end_color();                            \
     }
 
 #define restore_cursor()         puts("\033[u")
