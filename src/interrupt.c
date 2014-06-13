@@ -11,7 +11,9 @@
 #include <clock.h>
 
 #define INTERRUPT_HANDLER    0x38
-#define TIMER_INTERRUPT      19
+#define TIMER_INTERRUPT      (TC3OI - 32)
+#define UART1_INTERRUPT      (INT_UART1 - 32)
+#define UART2_INTERRUPT      (INT_UART2 - 32)
 #define EXTRACT_BIT(n, k)    ((n & (1 << k)) >> k)
 
 typedef struct {
@@ -48,7 +50,8 @@ void enableInterrupts() {
     vic = (unsigned int*)VIC2_BASE;
     vic[VICxIntSelect] = 0;                        /* IRQ */
     vic[VICxIntEnClear] = 0;                       /* clear interrupts */
-    vic[VICxIntEnable] = 1 << TIMER_INTERRUPT;     /* enable interrupt */
+    vic[VICxIntEnable] = (1 << TIMER_INTERRUPT) | (1 << UART2_INTERRUPT) | (1 << UART1_INTERRUPT);
+    //debug("Interrupt: Enabling interrupts.");
 }
 
 
@@ -71,19 +74,50 @@ int handleInterrupt() {
      * Does not return anything.
      */
 
-    uint32_t vic1, vic2;
+    int *vic1base, *vic2base;
+    uint32_t vic1, vic2, status;
     int result = 0;
+    int intr = 0;
     InterruptType_t type;
     Task_t *task = NULL;
 
+    // TODO: refactor code using these ptrs
+    vic1base = (int*) VIC1_BASE;
+    vic2base = (int*) VIC2_BASE;
+
     vic1 = ((uint32_t*)VIC1_BASE)[VICxIRQStatus];
     vic2 = ((uint32_t*)VIC2_BASE)[VICxIRQStatus];
+
+//    printf("vic2: 0x%x\n", vic2);
 
     if (EXTRACT_BIT(vic2, TIMER_INTERRUPT)) {
         type = CLOCK_INTERRUPT;
         task = interruptTable[CLOCK_INTERRUPT].blockedTask;
         *((uint32_t*)TIMER_CLEAR) = 0;
         result = 1;
+    } else if (EXTRACT_BIT(vic2, UART1_INTERRUPT)) {
+        status = *((int*) (UART1_BASE + UART_FLAG_OFFSET));
+        printf("uart 1 flag: 0x%x\n", status & 0xFF);
+        status = *((int*) (UART1_BASE + UART_INTR_OFFSET));
+        printf("uart 1 intr: 0x%x\n", status & 0xF);
+
+    } else if (EXTRACT_BIT(vic2, UART2_INTERRUPT)) {
+        // which interrupt is triggered?
+        intr = *((int*) (UART2_BASE + UART_INTR_OFFSET));
+
+        if (intr & RIS_MASK) {
+            result = *((int*) (UART2_BASE + UART_DATA_OFFSET)) & DATA_MASK;
+            task = interruptTable[UART2_RCV_INTERRUPT].blockedTask;
+        } else if (intr & TIS_MASK) {
+            // disable xmit interrupt
+            *((int*) (UART2_BASE + UART_CTLR_OFFSET)) &= ~(TIEN_MASK);
+            task = interruptTable[UART2_XMT_INTERRUPT].blockedTask;
+            result = 1;
+        } else if (intr & MIS_MASK) {
+
+        } else if (intr & RTIS_MASK) {
+
+        }
     }
 
     if (task) {
@@ -114,6 +148,13 @@ int addInterruptListener(int eventType, Task_t *t, void *buf, int buflen) {
     if (taskEntry->blockedTask) {
         error("Interrupt: Error: Task already waiting.");
         return -2;
+    }
+
+    // something waiting on XMT, so enable those interrupts
+    if (eventType == UART1_XMT_INTERRUPT) {
+        *((int*) (UART1_BASE + UART_CTLR_OFFSET)) |= TIEN_MASK;
+    } else if (eventType == UART2_XMT_INTERRUPT) {
+        *((int*) (UART2_BASE + UART_CTLR_OFFSET)) |= TIEN_MASK;
     }
 
     taskEntry->blockedTask = t;
