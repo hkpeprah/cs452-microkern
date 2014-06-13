@@ -14,6 +14,8 @@ static int RUN = 1;
 void looper() {
     char res;
 
+    printf("starting looper");
+
     for (;;) {
         res = Getc(COM2);
 

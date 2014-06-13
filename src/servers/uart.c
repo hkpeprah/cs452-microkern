@@ -43,19 +43,24 @@ char Getc(int channel) {
     return ch;
 }
 
-int Putc(int channel, char ch) {
+int Putcn(int channel, char *buf, int n) {
     UartRequest_t req;
 
     req.type = WRITE;
     req.channel = channel;
-    req.len = 1;
-    req.buf = &ch;
+    req.len = n;
+    req.buf = buf;
 
     if (os_tid < 0) {
-        os_tid = WhoIs(OS_NAME);
+        os_tid = WhoIs(IS_NAME);
     }
 
     return Send(os_tid, &req, sizeof(req), NULL, 0);
+}
+
+
+int Putc(int channel, char ch) {
+    return Putcn(channel, &ch, 1);
 }
 
 static void Uart1RCVHandler() {

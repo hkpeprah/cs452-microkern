@@ -23,7 +23,9 @@ typedef struct {
 
 void enableUartInterrupts();
 
+int Getcn(int channel, char *buf, int n);
 char Getc(int channel);
+int Putcn(int channel, char *buf, int n);
 int Putc(int channel, char ch);
 
 void OutputServer();

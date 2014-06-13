@@ -7,6 +7,7 @@
 #include <types.h>
 #include <vargs.h>
 #include <bwio.h>
+#include <uart.h>
 #define __INT             1
 #define __HEX             2
 #define __STRING          3
@@ -330,8 +331,8 @@ static void printformatted(int channel, char *format, va_list va) {
         }
     }
 
-    buffer[i++] = '\0';
-    bufputstr(channel, buffer);
+    buffer[i] = '\0';
+    Putcn(channel, buffer, i);
 }
 
 
