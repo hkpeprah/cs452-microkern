@@ -35,10 +35,14 @@
 #define trnputs(str, n)          trnbwputs(str, n)
 #define trputch(ch)              trbwputc(ch)
 #else
+#define putchar(ch)              Putc(IO, ch)
+#define getchar()                Getc(IO)
 #define printf(format, ...)      bufprintf(IO, format, ## __VA_ARGS__)
 #define puts(str)                bufputstr(IO, str)
-#define trputs(str)              bufputstr(TRAIN, str)
-#define trputch(ch)              bufputch(TRAIN, ch)
+#define trgetchar()              Getc(TRAIN)
+#define trputs(str)              trbwputs(str)
+#define trnputs(str, n)          trnbwputs(str, n)
+#define trputch(ch)              trbwputc(ch)
 #endif
 #if DEBUG
 #define debug(format, ...)       {                  \

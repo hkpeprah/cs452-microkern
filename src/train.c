@@ -199,13 +199,13 @@ void trbwputc(char ch) {
     mask = BW_MASK;
 
     while (true) {
+        trbwflush();
         if (*flags & mask && !(*flags & 0x8 || *flags & 0x40)) {
             data = (int*)(UART1_BASE + UART_DATA_OFFSET);
             *data = ch;
             BW_MASK = CTS_MASK;
             break;
         }
-        trbwflush();
     }
 }
 

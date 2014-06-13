@@ -258,7 +258,7 @@ int sscanf(const char *src, const char *fmt, ...) {
 
 
 void bufputstr(int channel, char *str) {
-    /* wrapper for send of a string to server */
+    Putcn(channel, str, strlen(str));
 }
 
 
