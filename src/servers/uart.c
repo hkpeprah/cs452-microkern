@@ -7,7 +7,7 @@
 #include <util.h>
 #include <ts7200.h>
 
-#define FIFO_SIZE 16
+#define FIFO_SIZE 8
 
 static int is_tid = -1;
 static int os_tid = -1;
@@ -131,7 +131,6 @@ static void Uart2XMTHandler() {
     req.buf = buf;
 
     for (;;) {
-        kdebug("UART2TMHandler: AwaitEvent");
         result = AwaitEvent(UART2_XMT_INTERRUPT, NULL, 0);
 
         if (result < 0) {
@@ -141,9 +140,7 @@ static void Uart2XMTHandler() {
         req.len = FIFO_SIZE;
         // reply will be same as req except the len parameter is changed to # bytes
         // written back
-        kdebug("UART2TMHandler: Sending.");
         result = Send(serverTid, &req, sizeof(req), &req, sizeof(req));
-        kdebug("UART2TMHandler: Received Reply.");
         if (result < 0) {
             continue;
         }

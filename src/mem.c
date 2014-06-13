@@ -4,11 +4,6 @@
 #include <mem.h>
 #include <types.h>
 
-// we can probably play around with these values
-#define MEM_BLOCK_SIZE       0x10000
-#define BLOCK_COUNT          64
-#define TOP_OF_STACK         0x00220000
-
 static MemBlock_t memBlocks[BLOCK_COUNT];
 static MemBlock_t *freeHead;
 

@@ -37,7 +37,7 @@ debug: upload
 profile: CFLAGS += -DPROFILE $(PROFILING)
 profile: upload
 
-test: CFLAGS += -DDEBUG -DTEST
+test: CFLAGS += -DTEST
 test: init
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
 	@$(MAKE) debug > /dev/null
