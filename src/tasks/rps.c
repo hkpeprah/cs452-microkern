@@ -22,6 +22,8 @@
 #include <random.h>
 #include <shell.h>
 #include <server.h>
+#include <uart.h>
+
 
 #define RPS_SERVER   "RPS_SERVER"
 

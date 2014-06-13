@@ -12,6 +12,7 @@
 #include <sl.h>
 #include <hash.h>
 #include <utasks.h>
+#include <uart.h>
 
 #define FOREVER            for (;;)
 

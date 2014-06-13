@@ -11,26 +11,28 @@
 
 static int RUN = 1;
 
+
 void looper() {
     char res;
 
-    printf("starting looper");
-
     for (;;) {
+        // printf("Looper: Waiting on character: ");
+        // debug("Looper: Waiting on character");
         res = Getc(COM2);
-
         Putc(COM2, res);
+        Putc(COM2, '\r');
+        Putc(COM2, '\n');
     }
 }
+
 
 void null() {
-
-    while (RUN) {
-    }
+    while (RUN);
 }
 
+
 int main() {
-    int tid;
+    unsigned int tid;
 
     boot();
 
@@ -41,7 +43,6 @@ int main() {
     sys_create(0, null, &tid);
 
     kernel_main();
-
 
     return 0;
 }

@@ -6,6 +6,7 @@
 #include <clock.h>
 #include <util.h>
 #include <syscall.h>
+#include <uart.h>
 
 
 static char *TRAIN1[] = {

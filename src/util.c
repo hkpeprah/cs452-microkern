@@ -31,10 +31,7 @@ int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len) {
         cbuf->data[cbuf->tail++] = *buf++;
     }
 
-#if 0
-    debug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
-#endif
-
+    kdebug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
     return len;
 }
 
@@ -46,9 +43,6 @@ int read(CircularBuffer_t *cbuf, char *buf, uint32_t len) {
         ++cbuf->remaining;
     }
 
-#if 0
     debug("0x%x read, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
-#endif
-
     return cbuf->remaining - iremaining;
 }

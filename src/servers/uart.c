@@ -12,10 +12,12 @@
 static int is_tid = -1;
 static int os_tid = -1;
 
+
 void enableUartInterrupts() {
     int *uart2ctrl = (int*) (UART2_BASE + UART_CTLR_OFFSET);
     *uart2ctrl |= RIEN_MASK | RTIEN_MASK;
 }
+
 
 int Getcn(int channel, char *buf, int n) {
     UartRequest_t req;
@@ -32,6 +34,7 @@ int Getcn(int channel, char *buf, int n) {
     return Send(is_tid, &req, sizeof(req), NULL, 0);
 }
 
+
 char Getc(int channel) {
     char ch;
     int result;
@@ -43,6 +46,7 @@ char Getc(int channel) {
     return ch;
 }
 
+
 int Putcn(int channel, char *buf, int n) {
     UartRequest_t req;
 
@@ -52,7 +56,7 @@ int Putcn(int channel, char *buf, int n) {
     req.buf = buf;
 
     if (os_tid < 0) {
-        os_tid = WhoIs(IS_NAME);
+        os_tid = WhoIs(OS_NAME);
     }
 
     return Send(os_tid, &req, sizeof(req), NULL, 0);
@@ -62,6 +66,7 @@ int Putcn(int channel, char *buf, int n) {
 int Putc(int channel, char ch) {
     return Putcn(channel, &ch, 1);
 }
+
 
 static void Uart1RCVHandler() {
     int result;
@@ -84,6 +89,7 @@ static void Uart1RCVHandler() {
     }
 }
 
+
 static void Uart2RCVHandler() {
     int result;
     char buf[FIFO_SIZE];
@@ -104,22 +110,14 @@ static void Uart2RCVHandler() {
 
         req.len = result;
         req.buf = buf;
-
-/*
-        printf("len: %d, data: ", result);
-        int i;
-        for (i = 0; i < result; ++i) {
-            putchar(buf[i]);
-        }
-        putchar('\n');
-*/
         result = Send(serverTid, &req, sizeof(req), NULL, 0);
     }
 }
 
-static void Uart1XMTHandler() {
 
+static void Uart1XMTHandler() {
 }
+
 
 static void Uart2XMTHandler() {
     int result, i;
@@ -133,25 +131,19 @@ static void Uart2XMTHandler() {
     req.buf = buf;
 
     for (;;) {
-//        debug("u2xmt Waiting on interrupt\n");
-
+        kdebug("UART2TMHandler: AwaitEvent");
         result = AwaitEvent(UART2_XMT_INTERRUPT, NULL, 0);
 
         if (result < 0) {
-            // bad stuff
-            continue;
+            continue; /* bad stuff */
         }
 
         req.len = FIFO_SIZE;
-
-//        debug("u2xmt Got interrupt, waiting on server now\n");
-
         // reply will be same as req except the len parameter is changed to # bytes
         // written back
+        kdebug("UART2TMHandler: Sending.");
         result = Send(serverTid, &req, sizeof(req), &req, sizeof(req));
-
-//        debug("u2xmt Got back from server! len: %d result: %d\n", req.len, result);
-
+        kdebug("UART2TMHandler: Received Reply.");
         if (result < 0) {
             continue;
         }
@@ -209,7 +201,7 @@ void OutputServer() {
                     req.len = result;
                     Reply(sender, &req, sizeof(req));
                 }
-            break;
+                break;
 
             case WRITE:
                 write(&cbuf[req.channel], req.buf, req.len);
@@ -225,10 +217,11 @@ void OutputServer() {
                 }
 
                 Reply(sender, NULL, 0);
-            break;
+                break;
         }
     }
 }
+
 
 void InputServer() {
     int i;
@@ -253,9 +246,8 @@ void InputServer() {
         return;
     }
 
-
-    uart1rcv = Create (15, Uart1RCVHandler);
-    uart2rcv = Create (15, Uart2RCVHandler);
+    uart1rcv = Create(15, Uart1RCVHandler);
+    uart2rcv = Create(15, Uart2RCVHandler);
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));

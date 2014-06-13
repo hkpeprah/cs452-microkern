@@ -96,7 +96,6 @@ void NameServer() {
         switch(lookup.type) {
             case REGISTER:
                 insert_ht(clients, lookup.name, callee);
-                debug("RegisterAs: %s registered.", lookup.name);
             case WHOIS:
                 if (exists_ht(clients, lookup.name)) {
                     lookup.tid = lookup_ht(clients, lookup.name);

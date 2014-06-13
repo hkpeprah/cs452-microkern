@@ -54,7 +54,7 @@ void enableInterrupts() {
     vic[VICxIntSelect] = 0;                        /* IRQ */
     vic[VICxIntEnClear] = 0;                       /* clear interrupts */
     vic[VICxIntEnable] = (1 << TIMER_INTERRUPT) | (1 << UART2_INTERRUPT) | (1 << UART1_INTERRUPT);
-    //debug("Interrupt: Enabling interrupts.");
+    kdebug("Interrupt: Enabling interrupts.");
 }
 
 

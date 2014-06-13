@@ -15,14 +15,17 @@
 #include <syscall.h>
 #include <shell.h>
 #include <train.h>
+#include <uart.h>
 
 
 void firstTask() {
     Create(15, NameServer);
+    Create(10, InputServer);
+    Create(10, OutputServer);
     Create(15, ClockServer);
     Create(0, NullTask);
     Create(1, Shell);
-    Create(5, trainUserTask);
+    Create(5, TrainUserTask);
 
     debug("FirstTask: Exiting");
     Exit();
@@ -112,7 +115,7 @@ void timerTask() {
 }
 
 
-void trainSlave() {
+void TrainSlave() {
     unsigned int ut, speed;
     TrainMessage msg;
     int status, callee, bytes;
@@ -152,7 +155,7 @@ void trainSlave() {
 }
 
 
-void trainUserTask() {
+void TrainUserTask() {
     TrainMessage t, msg;
     int cmd, callee, bytes;
     int status1, status2;
@@ -201,7 +204,7 @@ void trainUserTask() {
                 break;
             case TRAIN_SWITCH:
                 status1 = trainSwitch((unsigned int)t.args[1], (int)t.args[2]);
-                courier = Create(6, trainSlave);
+                courier = Create(6, TrainSlave);
                 Send(courier, &msg, sizeof(msg), &status2, sizeof(status2));
                 if (status1 == 0) {
                     debug("Toggling Switch %u to State %c", t.args[1], t.args[2]);
@@ -221,7 +224,7 @@ void trainUserTask() {
                 if (getTrain((unsigned int)t.args[1])) {
                     debug("Reversing train: %u", t.args[1]);
                     argument_buf[1] = t.args[1];
-                    courier = Create(6, trainSlave);
+                    courier = Create(6, TrainSlave);
                     Send(courier, &msg, sizeof(msg), &status2, sizeof(status2));
                 } else {
                     printf("Error: Invalid train.\r\n");

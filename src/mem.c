@@ -18,7 +18,7 @@ void initMem() {
     int i;
 
     // set each address pointer of the blocks, and link them to each other
-    for(i = 0; i < BLOCK_COUNT; ++i) {
+    for (i = 0; i < BLOCK_COUNT; ++i) {
         currentAddr += MEM_BLOCK_SIZE;
 
         memBlocks[i].addr = currentAddr;
@@ -31,7 +31,7 @@ void initMem() {
 }
 
 MemBlock_t* getMem () {
-    if(freeHead == NULL) {
+    if (freeHead == NULL) {
         return NULL;
     }
 

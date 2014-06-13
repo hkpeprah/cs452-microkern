@@ -110,7 +110,6 @@ void boot () {
     cacheOn();
     initUart(IO, 115200, true);
     initUart(TRAIN, 2400, false);
-    clear_screen();                /* must be before debug */
     initDebug();
     initMem();
     initTasks();
@@ -118,6 +117,7 @@ void boot () {
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
     enableUartInterrupts();
+    kdebug("Kernel: Booted");
 }
 
 

@@ -44,15 +44,28 @@
 #define trnputs(str, n)          trnbwputs(str, n)
 #define trputch(ch)              trbwputc(ch)
 #endif
+#define kprintf(format, ...)     bwprintf(IO, format, ## __VA_ARGS__)
+#define kputstr(str)             bwputstr(IO, str)
 #if DEBUG
 #define debug(format, ...)       {                  \
         move_to_debug();                            \
-        printf("\r\n");                             \
+        puts("\r\n");                               \
         printf(format, ##__VA_ARGS__);              \
         return_to_term();                           \
     }
+#define kdebug(format, ...)      {                               \
+        bwputstr(IO, SAVE_CURSOR);                               \
+        bwprintf(IO, SET_SCROLL, TOP_HALF, BOTTOM_HALF - 1);     \
+        bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF - 1, 0);           \
+        bwputstr(IO, NEW_LINE);                                  \
+        bwprintf(IO, format, ## __VA_ARGS__);                    \
+        bwprintf(IO, SET_SCROLL, BOTTOM_HALF + 1, TERMINAL_HEIGHT);   \
+        bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF + 1, 0);                \
+        bwputstr(IO, RESTORE_CURSOR);                                 \
+    }
 #else
 #define debug(format, ...)
+#define kdebug(format, ...)
 #endif
 #define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
 #define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
@@ -67,27 +80,45 @@
         end_color();                            \
     }
 
-#define restore_cursor()         puts("\033[u")
-#define save_cursor()            puts("\033[s")
-#define move_cursor(x, y)        printf("\033[%d;%dH", y, x)
-#define set_scroll(top, btm)     printf("\033[%d;%dr", top, btm)
-#define reset_scroll()           puts("\033[;r")
-#define scroll_up(x)             printf("\033[%dS", x)
-#define scroll_down(x)           printf("\033[%dT", x)
-#define backspace()              puts("\b \b")
-#define move_cur_up(x)           printf("\033[%dF", x)
-#define move_cur_down(x)         printf("\033[%dE", x)
-#define move_cur_left(x)         printf("\033[%dD", x)
-#define move_cur_right(x)        printf("\033[%dC", x)
-#define erase_screen()           puts("\033[2J\033[0;0H")
-#define erase_line()             puts("\033[2K")
+#define RESTORE_CURSOR           "\033[u"
+#define SAVE_CURSOR              "\033[s"
+#define MOVE_CURSOR              "\033[%d;%dH"
+#define RESET_SCROLL             "\033[;r"
+#define SET_SCROLL               "\033[%d;%dr"
+#define SCROLL_UP                "\033[%dS"
+#define SCROLL_DOWN              "\033[%dT"
+#define BACKSPACE                "\b \b"
+#define MOVE_CUR_UP              "\033[%dF"
+#define MOVE_CUR_DOWN            "\033[%dE"
+#define MOVE_CUR_LEFT            "\033[%dD"
+#define MOVE_CUR_RIGHT           "\033[%dC"
+#define ERASE_SCREEN             "\033[2J\033[0;0H"
+#define ERASE_LINE               "\033[2K"
+#define CHANGE_COLOR             "\033[%dm"
+#define NEW_LINE                  "\r\n"
+#define SET_WINDOW               "\033]2;\"%s\"ST"
+
+#define restore_cursor()         puts(RESTORE_CURSOR)
+#define save_cursor()            puts(SAVE_CURSOR)
+#define move_cursor(x, y)        printf(MOVE_CURSOR, y, x)
+#define set_scroll(top, btm)     printf(SET_SCROLL, top, btm)
+#define reset_scroll()           puts(RESET_SCROLL)
+#define scroll_up(x)             printf(SCROLL_UP, x)
+#define scroll_down(x)           printf(SCROLL_DOWN, x)
+#define backspace()              puts(BACKSPACE)
+#define move_cur_up(x)           printf(MOVE_CUR_UP, x)
+#define move_cur_down(x)         printf(MOVE_CUR_DOWN, x)
+#define move_cur_left(x)         printf(MOVE_CUR_LEFT, x)
+#define move_cur_right(x)        printf(MOVE_CUR_RIGHT, x)
+#define erase_screen()           puts(ERASE_SCREEN)
+#define erase_line()             puts(ERASE_LINE)
 #define erase_line_forward()     puts("\033[0K")
 #define clear_screen()           erase_screen()
-#define change_color(x)          printf("\033[%dm", x)
-#define end_color()              puts("\033[0m")
-#define newline()                puts("\r\n")
+#define change_color(x)          printf(CHANGE_COLOR, x)
+#define end_color()              printf(CHANGE_COLOR, 0)
+#define newline()                puts(NEW_LINE)
 #define set_line_wrap(col)       printf("\033[7;%dh", col)
-#define set_window(name)         printf("\033]2;\"%s\"ST", name)
+#define set_window(name)         printf(SET_WINDOW, name)
 
 #define TERMINAL_WIDTH           120
 #define TERMINAL_HEIGHT          63
