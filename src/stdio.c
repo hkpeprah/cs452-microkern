@@ -125,7 +125,7 @@ void uitoa(unsigned int num, unsigned int base, char *buf) {
 }
 
 
-int sscanformatted(const char *input, const char *format, va_list va) {
+int sscanformatted(const char *input, const char *fmt, va_list va) {
     char ch;
     int conv;
     char *tmp;
@@ -142,12 +142,12 @@ int sscanformatted(const char *input, const char *format, va_list va) {
     nassigned = 0;
 
     while (true) {
-        if (!(ch = *format++)) {
+        if (!(ch = *fmt++)) {
             break;
         } else if (len <= 0) {
             return -1;
         } else if (isspace(ch)) {
-            while (*format && isspace(*format));
+            while (*fmt && isspace(*fmt));
             continue;
         }
 
@@ -161,7 +161,7 @@ int sscanformatted(const char *input, const char *format, va_list va) {
         }
 
         nread++;
-        ch = *format++;
+        ch = *fmt++;
 
         switch(ch) {
             case 'd':
@@ -263,7 +263,7 @@ void bufputstr(int channel, char *str) {
 }
 
 
-int stringformat(char *format, char *buffer, va_list va) {
+int format(const char *fmt, va_list va, char *buffer) {
     char ch;
     unsigned int i;
     unsigned int len = 14;
@@ -275,11 +275,11 @@ int stringformat(char *format, char *buffer, va_list va) {
     }
 
     i = 0;
-    while ((ch = *format++)) {
+    while ((ch = *fmt++)) {
         if (ch != '%') {
             buffer[i++] = ch;
         } else {
-            ch = *(format++);
+            ch = *(fmt++);
             switch(ch) {
                 case '0':
                     break;
@@ -335,18 +335,23 @@ int stringformat(char *format, char *buffer, va_list va) {
 }
 
 
-void printformatted(int channel, char *format, va_list va) {
+void printformatted(int channel, char *fmt, va_list va) {
     char buffer[256];
     unsigned int len;
 
-    len = stringformat(format, buffer, va);
+    len = format(fmt, va, buffer);
     Putcn(channel, buffer, len);
 }
 
 
-void bufprintf(int channel, char *format, ...) {
+void bufprintf(int channel, char *fmt, ...) {
+    int len;
+    char buffer[256];
     va_list va;
-    va_start(va, format);
-    printformatted(channel, format, va);
+
+    va_start(va, fmt);
+    len = format(fmt, va, buffer);
     va_end(va);
+
+    Putcn(channel, buffer, len);
 }

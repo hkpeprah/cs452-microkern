@@ -6,6 +6,9 @@
 #define UNION_CAST(x, destType)  (((union {__typeof__(x) a; destType b;}) x).b)
 
 
+#define MIN(x, y) (x < y ? x : y)
+#define MAX(x, y) (x > y ? x : y)
+
 void *memcpy(void*, const void*, size_t);
 void initUart(short, int, bool);
 

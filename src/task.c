@@ -150,7 +150,7 @@ void addTask(Task_t *t) {
     availableQueues |= 1 << t->priority;
     highestTaskPriority = t->priority > highestTaskPriority ? t->priority : highestTaskPriority;
     #if DEBUG_KERNEL
-        debug("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
+        kdebug("Added task with priority %d\t New availableQueues: %x\t New highestTaskPriority: %d",
                t->priority, availableQueues, highestTaskPriority);
     #endif
 }

@@ -7,10 +7,11 @@
 
 void initDebug() {
     kputstr(ERASE_SCREEN);
+    kprintf(CHANGE_COLOR, 0);
     #if DEBUG
         unsigned int i;
         kprintf(MOVE_CURSOR, BOTTOM_HALF, 0);
-        /* print seperator */
+        /* print seperator for debug/command halves */
         for (i = 0; i < TERMINAL_WIDTH; ++i) {
             kputstr("=");
         }
@@ -22,44 +23,19 @@ void initDebug() {
     #else
         kprintf(SET_SCROLL, TOP_HALF, TERMINAL_HEIGHT);
         kprintf(MOVE_CURSOR, TOP_HALF, 0);
-        kprintf(MOVE_CURSOR, 0, TOP_HALF);
         kputstr(SAVE_CURSOR);
     #endif
 }
 
 
-#if DEBUG
-    static void debugformat(char *src, char *dst, ...) {
-        va_list va;
-        va_start(va, dst);
-        stringformat(src, dst, va);
-        va_end(va);
-    }
-#endif
-
-
-void debug(char *format, ...) {
+void debug(char *fmt, ...) {
     #if DEBUG
-        char buffer[128];
-        char *tmp, *term_move, *debug_move;
         va_list va;
-
-        tmp = buffer;
-        term_move = TERM_MOVE;
-        debug_move = DEBUG_MOVE;
-
-        while ((*tmp++ = *debug_move++));
-        *tmp++ = '%';
-        *tmp++ = 's';
-        while ((*tmp++ = *term_move++));
-
-        debugformat(buffer, buffer, TOP_HALF, BOTTOM_HALF - 1, 0, BOTTOM_HALF - 1,
-                    format, BOTTOM_HALF + 1, TERMINAL_HEIGHT, 0, BOTTOM_HALF + 1);
-
-        kprintf("\r\nLength: %u\r\n", strlen(buffer));
-
-        va_start(va, format);
-        printformatted(IO, buffer, va);
+        va_start(va, fmt);
+        move_to_debug();
+        newline();
+        printformatted(IO, fmt, va);
+        return_to_term();
         va_end(va);
     #endif
 }

@@ -12,5 +12,6 @@ int Receive(int*, void*, int);
 int Reply(int, void*, int);
 int AwaitEvent(int, void*, int);
 int WaitTid(unsigned int);
+int Log(const char *fmt, ...);
 
 #endif /* __SYSCALL__ */

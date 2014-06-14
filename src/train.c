@@ -77,6 +77,7 @@ void turnOnTrainSet() {
 
     buf[0] = TRAIN_AUX_GO;
     buf[1] = TRAIN_AUX_GO;
+    kprintf("    \b\b\b\b");   /* so hacky, wtf */
     trputs(buf);
 }
 
@@ -118,7 +119,6 @@ int trainSpeed(unsigned int tr, unsigned int sp) {
         train->speed = sp;
         buf[0] = sp + train->aux;
         buf[1] = tr;
-        debug("TrainSpeed: Bytes: %d %d", buf[0], buf[1]);
         trnputs(buf, 2);
         return 0;
     }
@@ -138,7 +138,6 @@ int trainAuxiliary(unsigned int tr, unsigned int ax) {
         }
         buf[0] = train->aux + train->speed;
         buf[1] = tr;
-        debug("TrainAuxiliary: Bytes: %d %d", buf[0], buf[1]);
         trputs(buf);
         return 0;
     }
@@ -153,7 +152,6 @@ int trainReverse(unsigned int tr) {
     if ((train = getTrain(tr))) {
         buf[0] = TRAIN_AUX_REVERSE;
         buf[1] = tr;
-        debug("TrainReverse: Bytes: %d %d", buf[0], buf[1]);
         trputs(buf);
         return 0;
     }
@@ -178,7 +176,6 @@ int trainSwitch(unsigned int sw, int c) {
 
     if (buf[0] != 0  && sw >= 0 && sw <= 255) {
         buf[1] = sw;
-        debug("TrainSwitch: Bytes: %d %d", buf[0], buf[1]);
         trnputs(buf, 2);
         return 0;
     }
@@ -200,7 +197,7 @@ void trbwputc(char ch) {
 
     while (true) {
         trbwflush();
-        if (*flags & mask && !(*flags & 0x8 || *flags & 0x40)) {
+        if (*flags & mask && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
             data = (int*)(UART1_BASE + UART_DATA_OFFSET);
             *data = ch;
             BW_MASK = CTS_MASK;
@@ -231,10 +228,10 @@ char trbwflush() {
     flags = (int*)(UART1_BASE + UART_FLAG_OFFSET);
     data = (int*)(UART1_BASE + UART_DATA_OFFSET);
 
-    if ((*flags & RXFF_MASK) || *flags & RXFE_MASK) {
-        ch = *data;
-        return ch;
+    if (!(*flags & RXFF_MASK) || *flags & RXFE_MASK) {
+        return -1;
     }
 
-    return -1;
+    ch = *data;
+    return ch;
 }

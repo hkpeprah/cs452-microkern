@@ -3,6 +3,7 @@
  */
 #include <term.h>
 #include <string.h>
+#include <stdlib.h>
 #include <clock.h>
 #include <util.h>
 #include <syscall.h>

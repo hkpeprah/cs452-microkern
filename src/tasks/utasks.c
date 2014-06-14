@@ -137,7 +137,7 @@ void TrainSlave() {
                     trainSpeed(train->id, 0);           /* deramp train speed */
                     Delay(speed + 10);                  /* pulling this number out our asses */
                     trainReverse(train->id);
-                    Delay(speed + 10);
+                    Delay(speed + 30);
                     trainSpeed(train->id, speed);       /* ramp up again */
                     debug("Train reverse completed.");
                 }

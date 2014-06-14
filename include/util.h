@@ -1,12 +1,11 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 #include <types.h>
-
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
-
 #define BUFFER_BITS 10
 #define CBUFFER_SIZE (1 << BUFFER_BITS)
+
 
 typedef struct {
     char data[CBUFFER_SIZE];

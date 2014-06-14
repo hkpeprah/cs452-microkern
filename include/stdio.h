@@ -3,7 +3,6 @@
 #include <types.h>
 #include <ts7200.h>
 #include <vargs.h>
-
 #define BUF_LEN      80
 #define IO           COM2
 
@@ -25,8 +24,8 @@ int atoin(const char*, int*);
 void itoa(int, char*);
 void uitoa(unsigned int, unsigned int, char*);
 int sscanf(const char*, const char*, ...);
-int stringformat(char*, char*, va_list);
 void printformatted(int, char*, va_list);
+int format(const char*, va_list, char*);
 void bufputstr(int, char*);
 void bufprintf(int, char*, ...);
 

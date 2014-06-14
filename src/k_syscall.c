@@ -66,6 +66,11 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
         return TASK_DOES_NOT_EXIST;
     }
 
+    if (target == currentTask) {
+        kprintf("Error: Send: Sending to self");
+        return TASK_ID_IMPOSSIBLE;
+    }
+
     if (target->state == SEND_BL && target->outbox != NULL) {
         /*
          * case 1: target already blocked on receive, so directly copy to it

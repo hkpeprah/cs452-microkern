@@ -8,23 +8,32 @@
 #include <ts7200.h>
 #include <syscall.h>
 #include <k_syscall.h>
+#include <logger.h>
+#include <clock.h>
 
 static int RUN = 1;
-
 
 void looper() {
     char res;
 
-    printf("Looper: Waiting on characters: \r\n");
-    for (;;) {
+    while (1) {
+        // debug("Looper: Waiting on character");
         res = Getc(COM2);
+
+        if(res == 'q') {
+            RUN = 0;
+            break;
+        }
+
         Putc(COM2, res);
     }
 }
 
 
 void null() {
-    while (RUN);
+    while (RUN) {
+        Pass();
+    }
 }
 
 
@@ -40,6 +49,8 @@ int main() {
     sys_create(0, null, &tid);
 
     kernel_main();
+
+    dumpLog();
 
     return 0;
 }

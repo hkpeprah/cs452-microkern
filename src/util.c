@@ -1,6 +1,8 @@
 #include <util.h>
 #include <stdlib.h>
 #include <term.h>
+#include <logger.h>
+
 
 static inline uint32_t min3(uint32_t a, uint32_t b, uint32_t c) {
     a = (b < a) ? b : a;
@@ -8,15 +10,18 @@ static inline uint32_t min3(uint32_t a, uint32_t b, uint32_t c) {
     return a;
 }
 
+
 void initcb(CircularBuffer_t *cbuf) {
     cbuf->head = 0;
     cbuf->tail = 0;
     cbuf->remaining = CBUFFER_SIZE;
 }
 
+
 int length(CircularBuffer_t *cbuf) {
     return CBUFFER_SIZE - cbuf->remaining;
 }
+
 
 /* TODO: optimize these a-la memcpy */
 int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len) {
@@ -31,11 +36,10 @@ int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len) {
         cbuf->data[cbuf->tail++] = *buf++;
     }
 
-    #if 0
-        kdebug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
-    #endif
+    sys_log_f("0x%x write, head = %d, tail = %d, remaining = %d\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
     return len;
 }
+
 
 int read(CircularBuffer_t *cbuf, char *buf, uint32_t len) {
     int iremaining = cbuf->remaining;
@@ -45,8 +49,6 @@ int read(CircularBuffer_t *cbuf, char *buf, uint32_t len) {
         ++cbuf->remaining;
     }
 
-    #if 0
-        kdebug("0x%x read, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
-    #endif
+    sys_log_f("0x%x read, head = %d, tail = %d, remaining = %d\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
     return cbuf->remaining - iremaining;
 }
