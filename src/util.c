@@ -27,22 +27,26 @@ int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len) {
 
     cbuf->remaining -= len;
 
-    while (len --> 0) {
+    while (len-- > 0) {
         cbuf->data[cbuf->tail++] = *buf++;
     }
 
-    kdebug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+    #if 0
+        kdebug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+    #endif
     return len;
 }
 
 int read(CircularBuffer_t *cbuf, char *buf, uint32_t len) {
     int iremaining = cbuf->remaining;
 
-    while (len --> 0 && cbuf->remaining < CBUFFER_SIZE) {
+    while (len-- > 0 && cbuf->remaining < CBUFFER_SIZE) {
         *buf++ = cbuf->data[cbuf->head++];
         ++cbuf->remaining;
     }
 
-    debug("0x%x read, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+    #if 0
+        kdebug("0x%x read, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+    #endif
     return cbuf->remaining - iremaining;
 }

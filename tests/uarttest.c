@@ -16,12 +16,8 @@ void looper() {
     char res;
 
     for (;;) {
-        // printf("Looper: Waiting on character: ");
-        // debug("Looper: Waiting on character");
         res = Getc(COM2);
         Putc(COM2, res);
-        Putc(COM2, '\r');
-        Putc(COM2, '\n');
     }
 }
 

@@ -22,24 +22,8 @@ volatile int SHELL_EXITED = 0;
 
 void NullTask() {
     /* sits on the kernel passing */
-    int lastTime = 0;
-    int currentTime = 0;
-    int timeNotInNull = 0;
-
     while (SHELL_EXITED == 0) {
-        lastTime = Time();
         Pass();
-        currentTime = Time();
-
-        if (currentTime != lastTime) {
-            timeNotInNull += currentTime - lastTime;
-            save_cursor();
-            move_cursor(RIGHT_HALF, 0);
-            change_color(MAGENTA);
-            printf("Time Not Idle: %d milliseconds\n", 100 - ((timeNotInNull * 100) / currentTime));
-            end_color();
-            restore_cursor();
-        }
     }
 
     notice("NullTask: Exiting");
@@ -89,8 +73,7 @@ void Shell() {
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    puts("\r\nCS452 Real-Time Microkernel (Version 0.1.1001)");
-    newline();
+    puts("\r\nCS452 Real-Time Microkernel (Version 0.1.1001)\r\n");
     puts("Copyright <c> Max Chen, Ford Peprah.  All rights reserved.\r\n> ");
     save_cursor();
 

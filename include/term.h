@@ -31,6 +31,7 @@
 #define puts(str)                bwputstr(IO, str)
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
+#define trgetchar()              bwgetc(TRAIN)
 #define trputs(str)              trbwputs(str)
 #define trnputs(str, n)          trnbwputs(str, n)
 #define trputch(ch)              trbwputc(ch)
@@ -47,12 +48,6 @@
 #define kprintf(format, ...)     bwprintf(IO, format, ## __VA_ARGS__)
 #define kputstr(str)             bwputstr(IO, str)
 #if DEBUG
-#define debug(format, ...)       {                  \
-        move_to_debug();                            \
-        puts("\r\n");                               \
-        printf(format, ##__VA_ARGS__);              \
-        return_to_term();                           \
-    }
 #define kdebug(format, ...)      {                               \
         bwputstr(IO, SAVE_CURSOR);                               \
         bwprintf(IO, SET_SCROLL, TOP_HALF, BOTTOM_HALF - 1);     \
@@ -63,12 +58,6 @@
         bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF + 1, 0);                \
         bwputstr(IO, RESTORE_CURSOR);                                 \
     }
-#else
-#define debug(format, ...)
-#define kdebug(format, ...)
-#endif
-#define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
-#define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
 #define error(format, ...)       {                                \
         change_color(RED);                                        \
         debug(format, ## __VA_ARGS__);                            \
@@ -79,6 +68,13 @@
         debug(format, ## __VA_ARGS__);          \
         end_color();                            \
     }
+#else
+#define kdebug(format, ...)
+#define notice(format, ...)
+#define error(format, ...)
+#endif
+#define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
+#define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
 
 #define RESTORE_CURSOR           "\033[u"
 #define SAVE_CURSOR              "\033[s"
@@ -129,5 +125,6 @@
 
 
 void initDebug();
+void debug(char*, ...);
 
 #endif /* __TERM__ */

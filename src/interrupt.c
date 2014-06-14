@@ -165,14 +165,14 @@ int addInterruptListener(int eventType, Task_t *t, void *buf, int buflen) {
     AwaitTask_t *taskEntry = NULL;
 
     if (eventType >= NUM_INTERRUPTS) {
-        error("Interrupt: Error: Invalid interrupt %d given.", eventType);
+        kdebug("Interrupt: Error: Invalid interrupt %d given.", eventType);
         return -1;
     }
 
     taskEntry = &interruptTable[eventType]; 
 
     if (taskEntry->blockedTask) {
-        error("Interrupt: Error: Task already waiting (tid=%d).", taskEntry->blockedTask->tid);
+        kdebug("Interrupt: Error: Task already waiting (tid=%d).", taskEntry->blockedTask->tid);
         return -2;
     }
 

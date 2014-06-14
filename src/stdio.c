@@ -263,12 +263,11 @@ void bufputstr(int channel, char *str) {
 }
 
 
-static void printformatted(int channel, char *format, va_list va) {
+int stringformat(char *format, char *buffer, va_list va) {
     char ch;
     unsigned int i;
     unsigned int len = 14;
     char *tmp;
-    char buffer[256];
     char convert_buf[len];
 
     for (i = 0; i < len; ++i) {
@@ -332,7 +331,16 @@ static void printformatted(int channel, char *format, va_list va) {
     }
 
     buffer[i] = '\0';
-    Putcn(channel, buffer, i);
+    return i;
+}
+
+
+void printformatted(int channel, char *format, va_list va) {
+    char buffer[256];
+    unsigned int len;
+
+    len = stringformat(format, buffer, va);
+    Putcn(channel, buffer, len);
 }
 
 

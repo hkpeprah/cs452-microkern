@@ -5,7 +5,7 @@
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
 
-#define BUFFER_BITS 6
+#define BUFFER_BITS 10
 #define CBUFFER_SIZE (1 << BUFFER_BITS)
 
 typedef struct {

@@ -127,10 +127,7 @@ int shutdown() {
     clearTasks();
     disableInterrupts();
 
-    puts("\r\nExiting...\r\n");
-    save_cursor();
-    set_scroll(0, TERMINAL_HEIGHT);
-    restore_cursor();
+    kprintf("%s\033[%d;%dr\r\nExiting...\r\n%s", SAVE_CURSOR, 0, TERMINAL_HEIGHT, RESTORE_CURSOR);
     return 0;
 }
 

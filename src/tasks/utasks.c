@@ -20,14 +20,13 @@
 
 void firstTask() {
     Create(15, NameServer);
+    Create(15, ClockServer);
     Create(10, InputServer);
     Create(10, OutputServer);
-    Create(15, ClockServer);
     Create(0, NullTask);
     Create(1, Shell);
     Create(5, TrainUserTask);
 
-    debug("FirstTask: Exiting");
     Exit();
 }
 
