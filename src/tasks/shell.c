@@ -24,19 +24,19 @@ void NullTask() {
     /* sits on the kernel passing */
     int lastTime = 0;
     int currentTime = 0;
-    int timeNotInNull = 0;
+    int nullTick = 0;
 
     while (SHELL_EXITED == 0) {
-        lastTime = Time();
-        Pass();
         currentTime = Time();
 
         if (currentTime != lastTime) {
-            timeNotInNull += currentTime - lastTime;
+            ++nullTick;
+            lastTime = currentTime;
+
             save_cursor();
             move_cursor(RIGHT_HALF, 0);
             change_color(MAGENTA);
-            printf("Time Not Idle: %d milliseconds\n", 100 - ((timeNotInNull * 100) / currentTime));
+            printf("Idle%: %d\n", 100 - ((nullTick * 100) / currentTime));
             end_color();
             restore_cursor();
         }

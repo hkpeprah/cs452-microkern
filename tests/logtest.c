@@ -9,15 +9,48 @@
 #include <syscall.h>
 #include <k_syscall.h>
 #include <logger.h>
+#include <clock.h>
+
+static int RUN = 1;
+
+void looper() {
+    char res;
+
+    while (1) {
+        // debug("Looper: Waiting on character");
+        res = Getc(COM2);
+
+        if(res == 'q') {
+            RUN = 0;
+            break;
+        }
+
+        Putc(COM2, res);
+    }
+}
+
+
+void null() {
+    while (RUN) {
+        Pass();
+    }
+}
 
 
 int main() {
-    boot();
-    initLogger();
+    unsigned int tid;
 
-    log_f("hello world!");
-    log_f("i am the best %d", 55);
-    printLogger(0);
+    boot();
+
+    sys_create(15, NameServer, &tid);
+    sys_create(10, InputServer, &tid);
+    sys_create(10, OutputServer, &tid);
+    sys_create(1, looper, &tid);
+    sys_create(0, null, &tid);
+
+    kernel_main();
+
+    dumpLog();
 
     return 0;
 }

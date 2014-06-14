@@ -1,4 +1,5 @@
 #include <logger.h>
+#include <util.h>
 #include <mem.h>
 #include <vargs.h>
 #include <stdio.h>
@@ -13,14 +14,29 @@ void initLogger() {
     tail = 0;
 }
 
-void printLogger(int start) {
-    while(start < tail) {
+void printLog(uint32_t start, uint32_t end) {
+    while(start < MIN(end, tail)) {
         bwputc(COM2, logp[start++]);
     }
 }
 
+void dumpLog() {
+    printLog(0, tail);
+}
 
-void log_f(const char *fmt, ...) {
+
+int sys_log(const char *buf, int len) {
+    if (tail + len > (MEM_BLOCK_SIZE - 4)) {
+        bwprintf(COM2, "Oh noes out of space");
+        return OUT_OF_SPACE;
+    }
+
+    memcpy(&(logp[tail]), buf, len);
+    tail += len;
+    return 0;
+}
+
+int sys_log_f(const char *fmt, ...) {
     int len;
     char buffer[256];
     va_list va;
@@ -29,7 +45,5 @@ void log_f(const char *fmt, ...) {
     len = format(fmt, va, buffer);
     va_end(va);
 
-    memcpy(&(logp[tail]), buffer, len);
-    tail += len;
+    return sys_log(buffer, len);
 }
-

@@ -1,6 +1,7 @@
 #include <util.h>
 #include <stdlib.h>
 #include <term.h>
+#include <logger.h>
 
 static inline uint32_t min3(uint32_t a, uint32_t b, uint32_t c) {
     a = (b < a) ? b : a;
@@ -31,7 +32,7 @@ int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len) {
         cbuf->data[cbuf->tail++] = *buf++;
     }
 
-    //kdebug("0x%x write, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+    sys_log_f("0x%x write, head = %d, tail = %d, remaining = %d\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
     return len;
 }
 
@@ -43,6 +44,6 @@ int read(CircularBuffer_t *cbuf, char *buf, uint32_t len) {
         ++cbuf->remaining;
     }
 
-    //kdebug("0x%x read, head = %d, tail = %d, remaining = %d", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+    sys_log_f("0x%x read, head = %d, tail = %d, remaining = %d\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
     return cbuf->remaining - iremaining;
 }

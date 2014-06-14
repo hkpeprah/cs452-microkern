@@ -10,6 +10,7 @@
 #include <interrupt.h>
 #include <train.h>
 #include <uart.h>
+#include <logger.h>
 
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
@@ -87,6 +88,9 @@ static int handleRequest(Args_t *args) {
         case SYS_WAITTID:
             errno = sys_waittid(args->a0);
             break;
+        case SYS_LOG:
+            errno = sys_log((const char *)args->a0, args->a1);
+            break;
         default:
             break;
     }
@@ -114,6 +118,7 @@ void boot () {
     initMem();
     initTasks();
     initSWI();
+    initLogger();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
     enableUartInterrupts();
