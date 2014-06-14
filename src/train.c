@@ -159,11 +159,11 @@ int trainReverse(unsigned int tr) {
 }
 
 
-int trainSwitch(unsigned int sw, int c) {
+int trainSwitch(unsigned int sw, int ch) {
     char buf[2];
 
     buf[0] = 0;
-    switch (c) {
+    switch (ch) {
         case 'C':
         case 'c':
             buf[0] = TRAIN_AUX_CURVE;

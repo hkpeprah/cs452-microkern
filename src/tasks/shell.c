@@ -26,7 +26,6 @@ void NullTask() {
         Pass();
     }
 
-    notice("NullTask: Exiting");
     Exit();
 }
 
@@ -59,7 +58,7 @@ void Shell() {
 
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors);
-    insert_ht(&commands, "sl", (int)SteamLocomotive);
+    // insert_ht(&commands, "sl", (int)SteamLocomotive);
     insert_ht(&commands, "go", TRAIN_GO);
     insert_ht(&commands, "stop", TRAIN_STOP);
     insert_ht(&commands, "tr", TRAIN_SPEED);
@@ -171,6 +170,5 @@ void Shell() {
     }
 
     SHELL_EXITED = 1;
-    notice("Shell: Exiting");
     Exit();
 }

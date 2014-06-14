@@ -16,6 +16,7 @@
 #include <shell.h>
 #include <train.h>
 #include <uart.h>
+#include <stdlib.h>
 
 
 void firstTask() {
@@ -139,6 +140,7 @@ void TrainSlave() {
                     trainReverse(train->id);
                     Delay(speed + 30);
                     trainSpeed(train->id, speed);       /* ramp up again */
+                    trainSpeed(train->id, speed);
                     debug("Train reverse completed.");
                 }
                 break;
@@ -206,7 +208,7 @@ void TrainUserTask() {
                 courier = Create(6, TrainSlave);
                 Send(courier, &msg, sizeof(msg), &status2, sizeof(status2));
                 if (status1 == 0) {
-                    debug("Toggling Switch %u to State %c", t.args[1], t.args[2]);
+                    debug("Toggling Switch %u to State %c", t.args[1], toUpperCase(t.args[2]));
                 } else {
                     printf("Error: Invalid state or switch.\r\n");
                 }

@@ -58,16 +58,8 @@
         bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF + 1, 0);                \
         bwputstr(IO, RESTORE_CURSOR);                                 \
     }
-#define error(format, ...)       {                                \
-        change_color(RED);                                        \
-        debug(format, ## __VA_ARGS__);                            \
-        end_color();                                              \
-    }
-#define notice(format, ...)      {              \
-        change_color(CYAN);                     \
-        debug(format, ## __VA_ARGS__);          \
-        end_color();                            \
-    }
+#define error(format, ...)       debugc(format, RED, ## __VA_ARGS__)
+#define notice(format, ...)      debugc(format, CYAN, ## __VA_ARGS__)
 #else
 #define kdebug(format, ...)
 #define notice(format, ...)
@@ -111,12 +103,12 @@
 #define erase_line_forward()     puts("\033[0K")
 #define clear_screen()           erase_screen()
 #define change_color(x)          printf(CHANGE_COLOR, x)
-#define end_color()              printf(CHANGE_COLOR, 0)
+#define end_color()              change_color(0)
 #define newline()                puts(NEW_LINE)
 #define set_line_wrap(col)       printf("\033[7;%dh", col)
 #define set_window(name)         printf(SET_WINDOW, name)
 
-#define TERMINAL_WIDTH           120
+#define TERMINAL_WIDTH           80
 #define TERMINAL_HEIGHT          63
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
@@ -126,5 +118,6 @@
 
 void initDebug();
 void debug(char*, ...);
+void debugc(char*, unsigned int, ...);
 
 #endif /* __TERM__ */

@@ -39,3 +39,17 @@ void debug(char *fmt, ...) {
         va_end(va);
     #endif
 }
+
+void debugc(char *fmt, unsigned int color, ...) {
+    #if DEBUG
+        va_list va;
+        va_start(va, color);
+        change_color(color);
+        move_to_debug();
+        newline();
+        printformatted(IO, fmt, va);
+        return_to_term();
+        end_color();
+        va_end(va);
+    #endif
+}

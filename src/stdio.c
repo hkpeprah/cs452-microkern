@@ -163,7 +163,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
         nread++;
         ch = *fmt++;
 
-        switch(ch) {
+        switch (ch) {
             case 'd':
                 conversion_type = __INT;
                 base = 10;
@@ -204,6 +204,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
             return -1;
         } else if (conversion_type == __CHAR) {
             buf[0] = *input++;
+            buf[1] = 0;
             --len;
         } else {
             for (i = 0; !isspace(*input) && ((buf[i] = *input++)); ++i) {
@@ -212,7 +213,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
             buf[i] = 0;
         }
 
-        switch(conversion_type) {
+        switch (conversion_type) {
             case __INT:
                 *va_arg(va, int*) = atoin(buf, &conv);
                 if (conv == 0) return -1;
@@ -280,7 +281,7 @@ int format(const char *fmt, va_list va, char *buffer) {
             buffer[i++] = ch;
         } else {
             ch = *(fmt++);
-            switch(ch) {
+            switch (ch) {
                 case '0':
                     break;
                 case '1':
@@ -296,9 +297,9 @@ int format(const char *fmt, va_list va, char *buffer) {
                     break;
             }
 
-            switch(ch) {
+            switch (ch) {
                 case 'c':
-                    buffer[i++] = ch;
+                    buffer[i++] = va_arg(va, char);
                     break;
                 case 's':
                     tmp = va_arg(va, char*);
@@ -326,6 +327,7 @@ int format(const char *fmt, va_list va, char *buffer) {
                 do {
                     buffer[i++] = *tmp;
                 } while (*(++tmp) != '\0');
+                *convert_buf = '\0';
             }
         }
     }
