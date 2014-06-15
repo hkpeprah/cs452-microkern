@@ -118,8 +118,9 @@ void timerTask() {
 
 void TrainSlave() {
     unsigned int ut, speed;
+    unsigned int id;
     TrainMessage msg;
-    int status, callee, bytes;
+    int type, status, callee, bytes;
     Train_t *train;
 
     ut = MyParentTid();
@@ -130,11 +131,13 @@ void TrainSlave() {
         error("TrainUserCourier: Got send %d from Task %d", bytes, callee);
     }
 
+    type = msg.args[0];
+    id = msg.args[1];
     Reply(callee, &status, sizeof(status));
     if (ut == callee && bytes > 0) {
-        switch (msg.args[0]) {
+        switch (type) {
             case TRAIN_RV:
-                if ((train = getTrain(msg.args[1]))) {
+                if ((train = getTrain(id))) {
                     speed = train->speed;
                     trainSpeed(train->id, 0);           /* deramp train speed */
                     Delay(speed + 30);                  /* pulling this number out our asses */

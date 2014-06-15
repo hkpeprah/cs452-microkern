@@ -53,7 +53,7 @@ void clearTrainSet() {
             buf[0] = (i == 13 ? TRAIN_AUX_STRAIGHT : TRAIN_AUX_CURVE);
             buf[1] = i + 1;
         }
-        trputs(buf);
+        trnputs(buf, 2);
     }
 
     Delay(4);
@@ -76,8 +76,7 @@ void clearTrainSet() {
 
 void turnOnTrainSet() {
     BW_MASK = 0xFFFFFFFF;
-
-    bwputc(COM1, TRAIN_AUX_GO);
+    bwputc(TRAIN, TRAIN_AUX_GO);
 }
 
 
