@@ -20,13 +20,14 @@
 
 
 void firstTask() {
-    Create(15, NameServer);
-    Create(15, ClockServer);
-    Create(10, InputServer);
-    Create(10, OutputServer);
-    Create(0, NullTask);
-    Create(1, Shell);
-    Create(5, TrainUserTask);
+    int id;
+    id = Create(15, NameServer);
+    id = Create(15, ClockServer);
+    id = Create(14, InputServer);
+    id = Create(14, OutputServer);
+    id = Create(0, NullTask);
+    id = Create(1, Shell);
+    id = Create(5, TrainUserTask);
 
     Exit();
 }
@@ -136,11 +137,10 @@ void TrainSlave() {
                 if ((train = getTrain(msg.args[1]))) {
                     speed = train->speed;
                     trainSpeed(train->id, 0);           /* deramp train speed */
-                    Delay(speed + 10);                  /* pulling this number out our asses */
+                    Delay(speed + 30);                  /* pulling this number out our asses */
                     trainReverse(train->id);
                     Delay(speed + 30);
                     trainSpeed(train->id, speed);       /* ramp up again */
-                    trainSpeed(train->id, speed);
                     debug("Train reverse completed.");
                 }
                 break;

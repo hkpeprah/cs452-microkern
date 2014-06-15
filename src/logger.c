@@ -16,11 +16,13 @@ void initLogger() {
 
 void printLog(uint32_t start, uint32_t end) {
     while(start < MIN(end, tail)) {
-        bwputc(COM2, logp[start++]);
+        char c = logp[start++];
+        bwputc(COM2, c);
     }
 }
 
 void dumpLog() {
+    bwprintf(COM2, "Log at: 0x%x of length: %d\n", logp, tail);
     printLog(0, tail);
 }
 

@@ -94,6 +94,15 @@ int WaitTid(unsigned int tid) {
     return swi_call(0, &args);
 }
 
+int Logn(const char *str, int n) {
+    Args_t args;
+    args.code = SYS_LOG;
+    args.a0 = (uint32_t) str;
+    args.a1 = n;
+
+    return swi_call(0, &args);
+}
+
 int Log(const char *fmt, ...) {
     int len;
     char buffer[256];
@@ -103,10 +112,5 @@ int Log(const char *fmt, ...) {
     len = format(fmt, va, buffer);
     va_end(va);
 
-    Args_t args;
-    args.code = SYS_LOG;
-    args.a0 = (uint32_t) buffer;
-    args.a1 = len;
-
-    return swi_call(0, &args);
+    return Logn(buffer, len);
 }

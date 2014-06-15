@@ -2,6 +2,7 @@
 #include <term.h>
 #include <syscall.h>
 #include <clock.h>
+#include <uart.h>
 
 #define TRAIN_AUX_REVERSE     15
 #define TRAIN_AUX_SOLENOID    32
@@ -41,6 +42,7 @@ void clearTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i;
     char buf[2];
+/*
 
     debug("Setting the state of switches.");
     for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
@@ -57,6 +59,7 @@ void clearTrainSet() {
     Delay(4);
     turnOffSolenoid();
     trputch(TRAIN_AUX_SNSRESET);
+*/
     trainSet = NULL;
     freeSet = NULL;
 
@@ -72,23 +75,16 @@ void clearTrainSet() {
 
 
 void turnOnTrainSet() {
-    char buf[2];
     BW_MASK = 0xFFFFFFFF;
 
-    buf[0] = TRAIN_AUX_GO;
-    buf[1] = TRAIN_AUX_GO;
-    kprintf("    \b\b\b\b");   /* so hacky, wtf */
-    trputs(buf);
+    bwputc(COM1, TRAIN_AUX_GO);
 }
 
 
 void turnOffTrainSet() {
     Train_t *tmp;
-    char buf[2];
 
-    buf[0] = TRAIN_AUX_STOP;
-    buf[1] = TRAIN_AUX_STOP;
-    trputs(buf);
+    trputch(TRAIN_AUX_STOP);
 
     while (trainSet != NULL) {
         trainSpeed(trainSet->id, 0);
@@ -138,7 +134,7 @@ int trainAuxiliary(unsigned int tr, unsigned int ax) {
         }
         buf[0] = train->aux + train->speed;
         buf[1] = tr;
-        trputs(buf);
+        trnputs(buf, 2);
         return 0;
     }
     return 1;
@@ -152,7 +148,7 @@ int trainReverse(unsigned int tr) {
     if ((train = getTrain(tr))) {
         buf[0] = TRAIN_AUX_REVERSE;
         buf[1] = tr;
-        trputs(buf);
+        trnputs(buf, 2);
         return 0;
     }
     return 1;

@@ -41,9 +41,9 @@
 #define printf(format, ...)      bufprintf(IO, format, ## __VA_ARGS__)
 #define puts(str)                bufputstr(IO, str)
 #define trgetchar()              Getc(TRAIN)
-#define trputs(str)              trbwputs(str)
-#define trnputs(str, n)          trnbwputs(str, n)
-#define trputch(ch)              trbwputc(ch)
+#define trputs(str)              bufputstr(TRAIN, str)
+#define trnputs(str, n)          Putcn(TRAIN, str, n)
+#define trputch(ch)              Putc(TRAIN, ch)
 #endif
 #define kprintf(format, ...)     bwprintf(IO, format, ## __VA_ARGS__)
 #define kputstr(str)             bwputstr(IO, str)

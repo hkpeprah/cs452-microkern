@@ -65,6 +65,12 @@ void disableInterrupts() {
     *(uint32_t*)TIMER_CONTROL = 0;
     *(uint32_t*)TIMER_CLEAR = 0;
 
+    int *uart1ctrl = (int*) (UART1_BASE + UART_CTLR_OFFSET);
+    *uart1ctrl = 1;
+
+    int *uart2ctrl = (int*) (UART2_BASE + UART_CTLR_OFFSET);
+    *uart2ctrl = 1;
+
     vic = (unsigned int*)VIC2_BASE;
     vic[VICxIntEnable] = 0;
 }
@@ -78,24 +84,22 @@ int handleInterrupt() {
      */
 
     int *vic1base, *vic2base;
-    int i;
-    uint32_t vic1, vic2, status;
+    uint32_t vic1, vic2;
     int result = 0;
     char *buf;
     int buflen;
-    InterruptType_t type;
-    AwaitTask_t *awaitTask;
+    InterruptType_t type = NUM_INTERRUPTS;
     Task_t *task = NULL;
 
-    int *u1int = (int*) (UART1_BASE + UART_INTR_OFFSET);
-    int *u1flag = (int*) (UART1_BASE + UART_FLAG_OFFSET);
-    int *u1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
-    int *u1ctlr = (int*) (UART1_BASE + UART_CTLR_OFFSET);
+    volatile int *u1int = (int*) (UART1_BASE + UART_INTR_OFFSET);
+    volatile int *u1flag = (int*) (UART1_BASE + UART_FLAG_OFFSET);
+    volatile int *u1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
+    volatile int *u1ctlr = (int*) (UART1_BASE + UART_CTLR_OFFSET);
 
-    int *u2int = (int*) (UART2_BASE + UART_INTR_OFFSET);
-    int *u2flag = (int*) (UART2_BASE + UART_FLAG_OFFSET);
-    int *u2data = (int*) (UART2_BASE + UART_DATA_OFFSET);
-    int *u2ctlr = (int*) (UART2_BASE + UART_CTLR_OFFSET);
+    volatile int *u2int = (int*) (UART2_BASE + UART_INTR_OFFSET);
+    volatile int *u2flag = (int*) (UART2_BASE + UART_FLAG_OFFSET);
+    volatile int *u2data = (int*) (UART2_BASE + UART_DATA_OFFSET);
+    volatile int *u2ctlr = (int*) (UART2_BASE + UART_CTLR_OFFSET);
 
     // TODO: refactor code using these ptrs
     vic1base = (int*) VIC1_BASE;
@@ -110,7 +114,36 @@ int handleInterrupt() {
         *((uint32_t*)TIMER_CLEAR) = 0;
         result = 1;
     } else if (EXTRACT_BIT(vic2, UART1_INTERRUPT)) {
-        // TODO: deal with this later
+        if (*u1int & RIS_MASK) {
+            type = UART1_RCV_INTERRUPT;
+            task = interruptTable[type].blockedTask;
+
+            if (task) {
+                result = *u1data & DATA_MASK;
+            } else {
+                // TODO: no waiting task, should send stop control bit
+                *u1ctlr &= ~(RIEN_MASK);
+            }
+        } else if (*u1int & TIS_MASK) {
+            type = UART1_XMT_INTERRUPT;
+            *u1ctlr &= ~(TIEN_MASK);
+            task = interruptTable[type].blockedTask;
+            result = 1;
+        } else if (*u1int & MIS_MASK) {
+            type = UART1_MOD_INTERRUPT;
+            task = interruptTable[type].blockedTask;
+            result = 1;
+
+            if (task) {
+                *u1int = 0;
+                if (!(*u1flag & CTS_MASK)) {
+                    result = -1;
+                }
+            } else {
+                // TODO: no waiting task, mask intr
+                *u1ctlr &= ~(MSIEN_MASK);
+            }
+        }
 
     } else if (EXTRACT_BIT(vic2, UART2_INTERRUPT)) {
 
@@ -123,12 +156,11 @@ int handleInterrupt() {
                 buflen = interruptTable[type].buflen;
                 result = 0;
 
-                // bug - this only goes up to 8, why?
                 while (!(*(u2flag) & RXFE_MASK) && buflen --> 0) {
                     buf[result++] = *u2data & DATA_MASK;
                 }
             } else {
-                // no waiting task -> input is faster than we are reading
+                // TODO: no waiting task -> input is faster than we are reading
                 // should mask interrupt, send stop bit to sender
                 *u2ctlr &= ~(RIEN_MASK);
             }
@@ -184,8 +216,11 @@ int addInterruptListener(int eventType, Task_t *t, void *buf, int buflen) {
         case UART1_XMT_INTERRUPT:
             *U1_CTLR |= TIEN_MASK;
             break;
+        case UART1_MOD_INTERRUPT:
+            *U1_CTLR |= MSIEN_MASK;
+            break;
         case UART2_RCV_INTERRUPT:
-            *U2_CTLR |= RIEN_MASK;
+            *U2_CTLR |= RIEN_MASK | RTIEN_MASK;
             break;
         case UART2_XMT_INTERRUPT:
             *U2_CTLR |= TIEN_MASK;

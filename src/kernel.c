@@ -121,16 +121,17 @@ void boot () {
     initLogger();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
-    enableUartInterrupts();
     kdebug("Kernel: Booted");
 }
 
 
 int shutdown() {
     /* sequence of shutdown operations */
-    turnOffTrainSet();
+//    turnOffTrainSet();
+
     clearTasks();
     disableInterrupts();
+    dumpLog();
 
     kprintf("%s\033[0;%dr%s\r\nExiting...\r\n", SAVE_CURSOR, TERMINAL_HEIGHT, RESTORE_CURSOR);
     return 0;

@@ -14,6 +14,9 @@ static int os_tid = -1;
 
 
 void enableUartInterrupts() {
+    int *uart1ctrl = (int*) (UART1_BASE + UART_CTLR_OFFSET);
+    *uart1ctrl |= RIEN_MASK | MSIEN_MASK;
+
     int *uart2ctrl = (int*) (UART2_BASE + UART_CTLR_OFFSET);
     *uart2ctrl |= RIEN_MASK | RTIEN_MASK;
 }
@@ -116,6 +119,37 @@ static void Uart2RCVHandler() {
 
 
 static void Uart1XMTHandler() {
+    int result;
+    char ch;
+    int *uart1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
+    volatile int *flags = (int*) (UART1_BASE + UART_FLAG_OFFSET);
+    UartRequest_t req = {0};
+    int serverTid = MyParentTid();
+
+    req.type = READ;
+    req.channel = COM1;
+    req.buf = &ch;
+    req.len = 1;
+
+    for (;;) {
+        result = AwaitEvent(UART1_XMT_INTERRUPT, NULL, 0);
+
+        if (result < 0) {
+            continue;
+        }
+
+        do {
+            result = AwaitEvent(UART1_MOD_INTERRUPT, NULL, 0);
+        } while (result == -1);
+
+        result = Send(serverTid, &req, sizeof(req), &req, sizeof(req));
+
+        if (result < 0) {
+            continue;
+        }
+
+        *uart1data = ch;
+    }
 }
 
 
