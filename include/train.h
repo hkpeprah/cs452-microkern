@@ -27,8 +27,9 @@ typedef enum {
     TRAIN_LI,
     TRAIN_HORN,
     TRAIN_ADD,
+    TRAIN_GET_SENSOR,
+    TRAIN_POLL_SENSORS,
     NUM_TRAIN_COMMANDS,
-    TRAIN_EVERYTHING = 99      /* DO NOT USE */
 } TrainCommands;
 
 
@@ -49,7 +50,7 @@ typedef struct {
 
 
 typedef struct {
-    char module;
+    unsigned int module : 4;
     unsigned int id : 16;
 } Sensor_t;
 
@@ -61,9 +62,12 @@ int trainSwitch(unsigned int, int);
 void turnOnTrainSet();
 void turnOffTrainSet();
 void clearTrainSet();
+void pollSensors();
 void turnOffSolenoid();
 Train_t *addTrain(unsigned int);
 Train_t *getTrain(unsigned int);
+Switch_t *getSwitch(unsigned int);
+Sensor_t *getSensor(char, unsigned int);
 
 /* Deprecated */
 void trbwputc(char);

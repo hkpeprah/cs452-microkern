@@ -50,7 +50,7 @@
 #if DEBUG
 #define kdebug(format, ...)      {                               \
         bwputstr(IO, SAVE_CURSOR);                               \
-        bwprintf(IO, SET_SCROLL, TOP_HALF, BOTTOM_HALF - 1);     \
+        bwprintf(IO, SET_SCROLL, 0, BOTTOM_HALF - 1);     \
         bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF - 1, 0);           \
         bwputstr(IO, NEW_LINE);                                  \
         bwprintf(IO, format, ## __VA_ARGS__);                    \
@@ -65,7 +65,7 @@
 #define notice(format, ...)
 #define error(format, ...)
 #endif
-#define move_to_debug()          (save_cursor(), set_scroll(TOP_HALF, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
+#define move_to_debug()          (save_cursor(), set_scroll(0, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
 #define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
 
 #define RESTORE_CURSOR           "\033[u"
@@ -85,6 +85,8 @@
 #define CHANGE_COLOR             "\033[%dm"
 #define NEW_LINE                  "\r\n"
 #define SET_WINDOW               "\033]2;\"%s\"ST"
+#define SET_COLS_80              "\033[?3l"
+#define SET_COLS_132             "\033[?3h"
 
 #define restore_cursor()         puts(RESTORE_CURSOR)
 #define save_cursor()            puts(SAVE_CURSOR)
@@ -112,12 +114,15 @@
 #define TERMINAL_HEIGHT          63
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
-#define TOP_HALF                 3
+#define TOP_HALF                 0
 #define BOTTOM_HALF              20
 
 
 void initDebug();
 void debug(char*, ...);
 void debugc(char*, unsigned int, ...);
+void displayInfo();
+void printSwitch(unsigned int, char);
+void printSensor(char, unsigned int);
 
 #endif /* __TERM__ */

@@ -122,7 +122,7 @@ static void Uart1XMTHandler() {
     int result;
     char ch;
     int *uart1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
-    volatile int *flags = (int*) (UART1_BASE + UART_FLAG_OFFSET);
+    // volatile int *flags = (int*) (UART1_BASE + UART_FLAG_OFFSET);
     UartRequest_t req = {0};
     int serverTid = MyParentTid();
 

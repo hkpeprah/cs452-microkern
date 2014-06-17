@@ -6,7 +6,7 @@ test             = $(testdir)/a.out
 XCC              = gcc
 AS               = as
 LD               = ld
-CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O2 -DBUFFEREDIO
+CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O3 -DBUFFEREDIO
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture

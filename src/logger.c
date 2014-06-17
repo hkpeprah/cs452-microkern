@@ -22,7 +22,7 @@ void printLog(uint32_t start, uint32_t end) {
 }
 
 void dumpLog() {
-    bwprintf(COM2, "Log at: 0x%x of length: %d\n", logp, tail);
+    bwprintf(COM2, "\r\nLog at: 0x%x of length: %d\n", logp, tail);
     printLog(0, tail);
 }
 

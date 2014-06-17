@@ -17,15 +17,16 @@
 #define FOREVER            for (;;)
 
 
-volatile int SHELL_EXITED = 0;
+static volatile int SHELL_EXITED = 0;
 
 
 void NullTask() {
     /* sits on the kernel passing */
+    notice("NullTask: Entering.");
     while (SHELL_EXITED == 0) {
         Pass();
     }
-
+    notice("NullTask: Exiting.");
     Exit();
 }
 
@@ -58,7 +59,6 @@ void Shell() {
 
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors);
-    // insert_ht(&commands, "sl", (int)SteamLocomotive);
     insert_ht(&commands, "go", TRAIN_GO);
     insert_ht(&commands, "stop", TRAIN_STOP);
     insert_ht(&commands, "tr", TRAIN_SPEED);
@@ -68,17 +68,18 @@ void Shell() {
     insert_ht(&commands, "sw", TRAIN_SWITCH);
     insert_ht(&commands, "ho", TRAIN_HORN);
     insert_ht(&commands, "add", TRAIN_ADD);
-    insert_ht(&commands, "cmdtest", TRAIN_EVERYTHING);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
-    puts("\r\nCS452 Real-Time Microkernel (Version 0.1.1001)\r\n");
-    puts("Copyright <c> Max Chen, Ford Peprah.  All rights reserved.\r\n> ");
-    save_cursor();
-
     i = 0;
-    TrainController = WhoIs("TrainHandler");
+    tr.args = args;
+    args[0] = TRAIN_NULL;
     SHELL_EXITED = 0;
+    TrainController = WhoIs("TrainHandler");
+    Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
+    debug("Shell: Tid %d", MyTid());
+    puts("> ");
+    save_cursor();
 
     FOREVER {
         ch = getchar();
@@ -123,7 +124,6 @@ void Shell() {
                         case TRAIN_LI:
                         case TRAIN_HORN:
                         case TRAIN_ADD:
-                        case TRAIN_EVERYTHING:
                             i = 1;
                             break;
                         case TRAIN_SPEED:
@@ -142,7 +142,6 @@ void Shell() {
                         ++tmp;
                         if (sscanf(tmp, parser[i], &args[1], &args[2]) != -1) {
                             args[0] = command;
-                            tr.args = args;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
                         }
                     } else {
@@ -169,6 +168,8 @@ void Shell() {
         }
     }
 
+    args[0] = TRAIN_STOP;
+    Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
     SHELL_EXITED = 1;
     Exit();
 }

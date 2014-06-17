@@ -17,6 +17,8 @@
 
 
 static Train_t __trainSet[MAX_TRAINS];
+static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
+static Sensor_t trainSensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
 static Train_t *freeSet;
 static Train_t *trainSet;
 volatile int BW_MASK = 0xFFFFFFFF;
@@ -38,11 +40,15 @@ Train_t *addTrain(unsigned int id) {
 }
 
 
+void pollSensors() {
+    trputch((char)(TRAIN_MODULE_BASE + TRAIN_MODULE_COUNT));
+}
+
+
 void clearTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i;
     char buf[2];
-/*
 
     debug("Setting the state of switches.");
     for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
@@ -53,13 +59,14 @@ void clearTrainSet() {
             buf[0] = (i == 13 ? TRAIN_AUX_STRAIGHT : TRAIN_AUX_CURVE);
             buf[1] = i + 1;
         }
+        trainSwitches[i].id = (unsigned int)buf[1];
+        trainSwitches[i].state = (buf[0] == TRAIN_AUX_STRAIGHT ? 'S' : 'C');
         trnputs(buf, 2);
     }
 
     Delay(4);
     turnOffSolenoid();
     trputch(TRAIN_AUX_SNSRESET);
-*/
     trainSet = NULL;
     freeSet = NULL;
 
@@ -68,6 +75,11 @@ void clearTrainSet() {
         freeSet = &__trainSet[i];
         freeSet->speed = 0;
         freeSet->aux = 0;
+    }
+
+    for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
+        trainSensors[i].id = (i % TRAIN_SENSOR_COUNT) + 1;
+        trainSensors[i].module = i / TRAIN_SENSOR_COUNT;
     }
 
     debug("Switches set.  Train Controller setup complete.");
@@ -102,6 +114,27 @@ Train_t *getTrain(unsigned int tr) {
         train = train->next;
     }
     return train;
+}
+
+
+Switch_t *getSwitch(unsigned int id) {
+    if (id >= MULTI_SWITCH_OFFSET) {
+        id -= MULTI_SWITCH_OFFSET;
+    }
+
+    if (id < TRAIN_SWITCH_COUNT) {
+        return &trainSwitches[id];
+    }
+    return NULL;
+}
+
+
+Sensor_t *getSensor(char module, unsigned int id) {
+    id += (module - 'A');
+    if (id < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
+        return &trainSensors[id];
+    }
+    return NULL;
 }
 
 

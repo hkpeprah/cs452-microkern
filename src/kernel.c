@@ -127,13 +127,11 @@ void boot () {
 
 int shutdown() {
     /* sequence of shutdown operations */
-//    turnOffTrainSet();
-
     clearTasks();
     disableInterrupts();
     dumpLog();
 
-    kprintf("%s\033[0;%dr%s\r\nExiting...\r\n", SAVE_CURSOR, TERMINAL_HEIGHT, RESTORE_CURSOR);
+    kprintf("%s\033[0;0r%s\r\nExiting...\r\n", SAVE_CURSOR, RESTORE_CURSOR);
     return 0;
 }
 

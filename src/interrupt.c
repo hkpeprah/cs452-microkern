@@ -9,12 +9,12 @@
 #include <term.h>
 #include <ts7200.h>
 #include <clock.h>
+#include <stdlib.h>
 
 #define INTERRUPT_HANDLER    0x38
 #define TIMER_INTERRUPT      (TC3OI - 32)
 #define UART1_INTERRUPT      (INT_UART1 - 32)
 #define UART2_INTERRUPT      (INT_UART2 - 32)
-#define EXTRACT_BIT(n, k)    ((n & (1 << k)) >> k)
 
 typedef struct {
     Task_t *blockedTask;
