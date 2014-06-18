@@ -121,6 +121,8 @@ void boot () {
     initLogger();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
+    turnOnTrainSet();
+    clearTrainSet();
     kdebug("Kernel: Booted");
 }
 

@@ -22,6 +22,5 @@ void testTask2();
 void firstTask();
 void timerTask();
 void TrainUserTask();
-void TrainSlave();
 
 #endif /* __UTASKS__ */

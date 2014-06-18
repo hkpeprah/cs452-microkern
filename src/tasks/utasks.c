@@ -117,76 +117,20 @@ void timerTask() {
 }
 
 
-void TrainSlave() {
-    unsigned int ut, speed;
-    unsigned int id;
-    TrainMessage msg;
-    int type, status, callee, bytes;
-    Train_t *train;
-
-    ut = MyParentTid();
-    status = 1;
-
-    while (true) {
-        bytes = Receive(&callee, &msg, sizeof(msg));
-        if (bytes < 0) {
-            error("TrainUserCourier: Got send %d from Task %d", bytes, callee);
-        } else {
-            type = msg.args[0];
-            id = msg.args[1];
-            if (ut == callee && bytes > 0) {
-                switch (type) {
-                    case TRAIN_RV:
-                        if ((train = getTrain(id))) {
-                            speed = train->speed;
-                            trainSpeed(train->id, 0);           /* deramp train speed */
-                            Delay(speed + 30);                  /* pulling this number out our asses */
-                            trainReverse(train->id);
-                            Delay(speed + 30);
-                            trainSpeed(train->id, speed);       /* ramp up again */
-                            debug("Train reverse completed.");
-                        }
-                        break;
-                    case TRAIN_SWITCH:
-                        Delay(30);                          /* solenoid must be turned off after atleast 150ms have passed */
-                        turnOffSolenoid();
-                        debug("Solenoid turned off.");
-                        break;
-                }
-            }
-        }
-        Reply(callee, &status, sizeof(status));
-    }
-    Exit();
-}
-
-
-void TrainSensorSlave() {
+static void TrainSensorSlave() {
     TrainMessage t;
-    int byte1, byte2, callee;
+    int byte1, byte2;
     unsigned int i, j, parent;
     bool bit;
-    bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
+    bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
     int args[2];
 
     parent = MyParentTid();
 
-    for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
-        sensors[i] = (bool)0;
-    }
-
     debug("TrainSensorSlave: Tid %d", MyTid());
-    Receive(&callee, &t, sizeof(t));
     t.args = args;
     args[0] = TRAIN_POLL_SENSORS;
     args[1] = (int)&sensors;
-
-    if (callee != parent) {
-        error("Error: TrainSensorSlave: Received request not from parent.");
-        Exit();
-    } else {
-        Reply(parent, &t, sizeof(t));
-    }
 
     while (true) {
         pollSensors();
@@ -207,8 +151,8 @@ void TrainSensorSlave() {
                 sensors[i + j] = (bool)(bit & 1);
             }
         }
-        debug("TrainSensorSlave: Sending updated sensor data to Parent Task %d.", parent);
         Send(parent, &t, sizeof(i), &i, sizeof(i));
+        resetSensors();
     }
 
     Exit();
@@ -216,54 +160,52 @@ void TrainSensorSlave() {
 
 
 void TrainUserTask() {
-    TrainMessage t, msg;
+    TrainMessage t;
     int cmd, callee, bytes;
-    int status1, status2;
-    int argument_buf[3];
+    int status, speed;
+    Train_t *train;
     unsigned int i;
-    unsigned int courier, sensorCourier;
+    unsigned int courier;
     bool *sensors;
     bool sigkill;
 
     RegisterAs("TrainHandler");
-    turnOnTrainSet();
-    clearTrainSet();
     displayInfo();
-    courier = Create(6, TrainSlave);
-    sensorCourier = Create(6, TrainSensorSlave);
-    Send(sensorCourier, &t, sizeof(t), &t, sizeof(t));
-    sensors = (bool*)t.args[1];
+    courier = Create(6, TrainSensorSlave);
+    sensors = NULL;
     sigkill = false;
-    status2 = 0;
-    msg.args = argument_buf;
+
     while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));
         cmd = t.args[0];
-        argument_buf[0] = cmd;
         /* switches on the command and validates it */
-        status1 = 0;
+        status = 0;
         switch (cmd) {
             case TRAIN_GET_SENSOR:
-                if (t.args[1] >= 'A' && t.args[1] <= 'A' + TRAIN_MODULE_COUNT - 1) {
-                    if (t.args[2] >= 0 && t.args[2] <= TRAIN_SENSOR_COUNT) {
-                        status1 = sensors[t.args[1] - 'A' + t.args[2]];
-                    } else {
-                        status1 = -2;
-                    }
+                if (sensors == NULL) {
+                    status = -3;
                 } else {
-                    status1 = -1;
+                    if (t.args[1] >= 'A' && t.args[1] <= 'A' + TRAIN_MODULE_COUNT - 1) {
+                        if (t.args[2] >= 0 && t.args[2] <= TRAIN_SENSOR_COUNT) {
+                            status = sensors[t.args[1] - 'A' + t.args[2]];
+                        } else {
+                            status = -2;
+                        }
+                    } else {
+                        status = -1;
+                    }
                 }
                 break;
             case TRAIN_POLL_SENSORS:
                 /* new sensor data */
-                if (callee == sensorCourier) {
+                if (callee == courier) {
                     /* validate callee actually child */
+                    sensors = (bool*)t.args[1];
                     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
                         if (sensors[i]) {
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A', i % 16);
                         }
                     }
-                    status1 = status2;
                 }
                 break;
             case TRAIN_GO:
@@ -276,51 +218,58 @@ void TrainUserTask() {
                 sigkill = true;
                 break;
             case TRAIN_SPEED:
-                status1 = trainSpeed((unsigned int)t.args[1], (unsigned int)t.args[2]);
-                if (status1 == 0) {
+                status = trainSpeed((unsigned int)t.args[1], (unsigned int)t.args[2]);
+                if (status == 0) {
                     debug("Setting Train %u at Speed %u", t.args[1], t.args[2]);
                 } else {
                     printf("Error: Invalid train or speed.\r\n");
                 }
                 break;
             case TRAIN_SWITCH:
-                status1 = trainSwitch((unsigned int)t.args[1], (int)t.args[2]);
-                Send(courier, &msg, sizeof(msg), &status2, sizeof(status2));
-                printSwitch((unsigned int)t.args[1], (char)t.args[2]);
-                if (status1 == 0) {
+                status = trainSwitch((unsigned int)t.args[1], (int)t.args[2]);
+                if (status == 0) {
+                    printSwitch((unsigned int)t.args[1], (char)t.args[2]);
                     debug("Toggling Switch %u to State %c", t.args[1], toUpperCase(t.args[2]));
+                    Delay(30);
+                    turnOffSolenoid();
                 } else {
                     printf("Error: Invalid state or switch.\r\n");
                 }
                 break;
             case TRAIN_AUX:
-                status1 = trainAuxiliary((unsigned int)t.args[1], (unsigned int)t.args[2]);
-                if (status1 == 0) {
+                status = trainAuxiliary((unsigned int)t.args[1], (unsigned int)t.args[2]);
+                if (status == 0) {
                     debug("Toggling auxiliary function %u for Train %u", t.args[1], t.args[2]);
                 } else {
                     printf("Error: Invalid train or auxiliary function.\r\n");
                 }
                 break;
             case TRAIN_RV:
-                if (getTrain((unsigned int)t.args[1])) {
+                if ((train = getTrain((unsigned int)t.args[1]))) {
                     debug("Reversing train: %u", t.args[1]);
-                    argument_buf[1] = t.args[1];
-                    Send(courier, &msg, sizeof(msg), &status2, sizeof(status2));
+                    speed = train->speed;
+                    trainSpeed(train->id, 0);
+                    Delay(speed + 30);
+                    trainReverse(train->id);
+                    Delay(speed + 30);
+                    trainSpeed(train->id, speed);
+                    status = 0;
                 } else {
                     printf("Error: Invalid train.\r\n");
+                    status = -1;
                 }
                 break;
             case TRAIN_LI:
-                status1 = trainAuxiliary((unsigned int)t.args[1], TRAIN_LIGHT_OFFSET);
-                if (status1 == 0) {
+                status = trainAuxiliary((unsigned int)t.args[1], TRAIN_LIGHT_OFFSET);
+                if (status == 0) {
                     debug("Turning on/off the lights on train: %u", t.args[1]);
                 } else {
                     printf("Error: Invalid train.\r\n");
                 }
                 break;
             case TRAIN_HORN:
-                status1 = trainAuxiliary((unsigned int)t.args[1], TRAIN_HORN_OFFSET);
-                if (status1 == 0) {
+                status = trainAuxiliary((unsigned int)t.args[1], TRAIN_HORN_OFFSET);
+                if (status == 0) {
                     debug("Turning on/off horn on train: %u", t.args[1]);
                 } else {
                     printf("Error: Invalid train.\r\n");
@@ -332,7 +281,7 @@ void TrainUserTask() {
                 }
                 break;
         }
-        Reply(callee, &status1, sizeof(status1));
+        Reply(callee, &status, sizeof(status));
     }
 
     Exit();

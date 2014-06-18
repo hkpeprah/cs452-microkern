@@ -45,12 +45,17 @@ void pollSensors() {
 }
 
 
+void resetSensors() {
+    trputch((char)TRAIN_AUX_SNSRESET);
+}
+
+
 void clearTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i;
     char buf[2];
 
-    debug("Setting the state of switches.");
+    kdebug("Setting the state of switches.");
     for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
         if (i >= TRAIN_SWITCH_COUNT - 4) {
             buf[0] = (i % 2 == 0 ? TRAIN_AUX_CURVE : TRAIN_AUX_STRAIGHT);
@@ -61,12 +66,12 @@ void clearTrainSet() {
         }
         trainSwitches[i].id = (unsigned int)buf[1];
         trainSwitches[i].state = (buf[0] == TRAIN_AUX_STRAIGHT ? 'S' : 'C');
-        trnputs(buf, 2);
+        bwputc(TRAIN, buf[0]);
+        bwputc(TRAIN, buf[1]);
     }
 
-    Delay(4);
-    turnOffSolenoid();
-    trputch(TRAIN_AUX_SNSRESET);
+    bwputc(TRAIN, TRAIN_AUX_SOLENOID);
+    bwputc(TRAIN, TRAIN_AUX_SNSRESET);
     trainSet = NULL;
     freeSet = NULL;
 
@@ -82,7 +87,7 @@ void clearTrainSet() {
         trainSensors[i].module = i / TRAIN_SENSOR_COUNT;
     }
 
-    debug("Switches set.  Train Controller setup complete.");
+    kdebug("Switches set.  Train Controller setup complete.");
 }
 
 

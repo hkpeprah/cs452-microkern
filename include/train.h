@@ -63,6 +63,7 @@ void turnOnTrainSet();
 void turnOffTrainSet();
 void clearTrainSet();
 void pollSensors();
+void resetSensors();
 void turnOffSolenoid();
 Train_t *addTrain(unsigned int);
 Train_t *getTrain(unsigned int);
