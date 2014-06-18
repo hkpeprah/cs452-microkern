@@ -164,7 +164,6 @@ void TrainSlave() {
 void TrainSensorSlave() {
     TrainMessage t;
     int byte1, byte2, callee;
-    int response;
     unsigned int i, j, parent;
     bool bit;
     bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
@@ -189,8 +188,7 @@ void TrainSensorSlave() {
         Reply(parent, &t, sizeof(t));
     }
 
-    response = 0;
-    while (response != -3) {
+    while (true) {
         pollSensors();
         debug("TrainSensorSlave: Polled sensors.");
         for (i = 0; i < TRAIN_MODULE_COUNT; ++i) {
@@ -210,7 +208,7 @@ void TrainSensorSlave() {
             }
         }
         debug("TrainSensorSlave: Sending updated sensor data to Parent Task %d.", parent);
-        Send(parent, &t, sizeof(response), &i, sizeof(response));
+        Send(parent, &t, sizeof(i), &i, sizeof(i));
     }
 
     Exit();
@@ -225,6 +223,7 @@ void TrainUserTask() {
     unsigned int i;
     unsigned int courier, sensorCourier;
     bool *sensors;
+    bool sigkill;
 
     RegisterAs("TrainHandler");
     turnOnTrainSet();
@@ -234,10 +233,10 @@ void TrainUserTask() {
     sensorCourier = Create(6, TrainSensorSlave);
     Send(sensorCourier, &t, sizeof(t), &t, sizeof(t));
     sensors = (bool*)t.args[1];
-
+    sigkill = false;
     status2 = 0;
     msg.args = argument_buf;
-    while (true) {
+    while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));
         cmd = t.args[0];
         argument_buf[0] = cmd;
@@ -273,8 +272,8 @@ void TrainUserTask() {
                 break;
             case TRAIN_STOP:
                 turnOffTrainSet();
-                status2 = -3;
                 debug("Stopping Train Controller");
+                sigkill = true;
                 break;
             case TRAIN_SPEED:
                 status1 = trainSpeed((unsigned int)t.args[1], (unsigned int)t.args[2]);

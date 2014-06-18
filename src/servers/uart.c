@@ -121,8 +121,8 @@ static void Uart2RCVHandler() {
 static void Uart1XMTHandler() {
     int result;
     char ch;
-    int *uart1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
-    // volatile int *flags = (int*) (UART1_BASE + UART_FLAG_OFFSET);
+    volatile int *uart1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
+    volatile int *flags = (int*) (UART1_BASE + UART_FLAG_OFFSET);
     UartRequest_t req = {0};
     int serverTid = MyParentTid();
 
@@ -156,7 +156,7 @@ static void Uart1XMTHandler() {
 static void Uart2XMTHandler() {
     int result, i;
     char buf[FIFO_SIZE];
-    int *uart2data = (int*) (UART2_BASE + UART_DATA_OFFSET);
+    volatile int *uart2data = (int*) (UART2_BASE + UART_DATA_OFFSET);
     UartRequest_t req = {0};
     int serverTid = MyParentTid();
 
