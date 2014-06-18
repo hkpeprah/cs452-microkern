@@ -22,7 +22,7 @@ void enableUartInterrupts() {
 }
 
 
-int Getcn(int channel, char *buf, int n) {
+int Getcn(int channel, volatile char *buf, int n) {
     UartRequest_t req;
 
     req.type = READ;
@@ -50,7 +50,7 @@ char Getc(int channel) {
 }
 
 
-int Putcn(int channel, char *buf, int n) {
+int Putcn(int channel, volatile char *buf, int n) {
     UartRequest_t req;
 
     req.type = WRITE;
@@ -73,6 +73,7 @@ int Putc(int channel, char ch) {
 
 static void Uart1RCVHandler() {
     int result;
+    char buf;
     UartRequest_t req = {0};
     int serverTid = MyParentTid();
 
@@ -88,7 +89,10 @@ static void Uart1RCVHandler() {
             continue;
         }
 
-        result = Send(serverTid, &result, sizeof(result), NULL, 0);
+        buf = result;
+        req.buf = &buf;
+
+        result = Send(serverTid, &req, sizeof(req), NULL, 0);
     }
 }
 
@@ -138,9 +142,9 @@ static void Uart1XMTHandler() {
             continue;
         }
 
-        do {
+        while (!(*flags & CTS_MASK)) {
             result = AwaitEvent(UART1_MOD_INTERRUPT, NULL, 0);
-        } while (result == -1);
+        }
 
         result = Send(serverTid, &req, sizeof(req), &req, sizeof(req));
 
@@ -149,6 +153,9 @@ static void Uart1XMTHandler() {
         }
 
         *uart1data = ch;
+#if LOG
+        Log("x1: 0x%x\n", ch);
+#endif
     }
 }
 
@@ -205,7 +212,7 @@ void OutputServer() {
 
     result = RegisterAs(OS_NAME);
     if (result < 0) {
-        error("InputServer: Error: NameServer returned %d", result);
+        error("OutputServer: Error: NameServer returned %d", result);
         return;
     }
 
@@ -214,6 +221,10 @@ void OutputServer() {
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
+        if (result != sizeof(req)) {
+            error("Incorrect message received");
+            continue;
+        }
 
         switch(req.type) {
             case READ:
@@ -280,6 +291,10 @@ void InputServer() {
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
+        if (result != sizeof(req)) {
+            error("Incorrect message received");
+            continue;
+        }
 
         switch(req.type) {
             case READ:

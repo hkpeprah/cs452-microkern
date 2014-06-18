@@ -16,7 +16,7 @@ typedef struct {
 
 void initcb(CircularBuffer_t *cbuf);
 inline int length(CircularBuffer_t *cbuf);
-int write(CircularBuffer_t *cbuf, const char *buf, uint32_t len);
-int read(CircularBuffer_t *cbuf, char *buf, uint32_t len);
+int write(CircularBuffer_t *cbuf, const volatile char *buf, uint32_t len);
+int read(CircularBuffer_t *cbuf, volatile char *buf, uint32_t len);
 
 #endif /* __UTIL_H__ */
