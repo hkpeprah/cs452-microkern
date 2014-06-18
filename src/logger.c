@@ -11,7 +11,6 @@ static uint32_t *tail;
 
 void initLogger() {
     logp = (char*) (getMem()->addr - MEM_BLOCK_SIZE + 8);
-    bwprintf(COM2, "\r\nLog at: 0x%x\n", logp);
     tail = (uint32_t*) logp - 4;
     *tail = 0;
 }

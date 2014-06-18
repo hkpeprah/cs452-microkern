@@ -126,12 +126,9 @@ static void TrainSensorSlave() {
 
     while (true) {
         pollSensors();
-        debug("TrainSensorSlave: Polled sensors.");
         for (i = 0; i < TRAIN_MODULE_COUNT; ++i) {
             byte1 = trgetchar();
-            debug("Byte 1: %c\r\n", byte1);
             byte2 = trgetchar();
-            debug("Byte 2: %c\r\n", byte1);
             for (j = 0; j < TRAIN_SENSOR_COUNT; ++j) {
                 if (i < TRAIN_SENSOR_COUNT / 2) {
                     /* first byte corresponds to sensors 1 - 8 */
@@ -144,7 +141,7 @@ static void TrainSensorSlave() {
             }
         }
         Send(parent, &t, sizeof(i), &i, sizeof(i));
-        Delay(10);
+        Delay(50);
         resetSensors();
     }
 
