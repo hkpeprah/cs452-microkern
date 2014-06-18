@@ -23,9 +23,7 @@ static volatile int SHELL_EXITED = 0;
 void NullTask() {
     /* sits on the kernel passing */
     notice("NullTask: Entering.");
-    while (SHELL_EXITED == 0) {
-        Pass();
-    }
+    while (SHELL_EXITED == 0);
     notice("NullTask: Exiting.");
     Exit();
 }
@@ -162,6 +160,7 @@ void Shell() {
                 buf[i] = ch;
             }
 
+            // Log("PutChar called with: %c", ch);
             putchar(ch);
             i++;
             save_cursor();

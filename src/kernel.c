@@ -11,6 +11,8 @@
 #include <train.h>
 #include <uart.h>
 #include <logger.h>
+#include <shell.h>
+#include <idle.h>
 
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
@@ -91,6 +93,9 @@ static int handleRequest(Args_t *args) {
         case SYS_LOG:
             errno = sys_log((const char *)args->a0, args->a1);
             break;
+        case SYS_IDLE:
+            sys_idle(&result);
+            break;
         default:
             break;
     }
@@ -123,6 +128,7 @@ void boot () {
     enableInterrupts();            /* enable interrupts */
     turnOnTrainSet();
     clearTrainSet();
+    displayInfo();
     kdebug("Kernel: Booted");
 }
 
@@ -141,15 +147,27 @@ int shutdown() {
 void kernel_main() {
     int taskSP;
     int result;
+    int status;
+    uint32_t tid;
     Args_t *args;
     Args_t defaultArg = {.code = SYS_INTERRUPT};
     Task_t *task = NULL;
 
+    status = sys_create(0, NullTask, &tid);
+    cpuIdle(false);
+
     FOREVER {
         task = schedule();
 
-        // nothing left to run
-        if (task == NULL) break;
+        if (task == NULL) {
+            // nothing left to run
+            break;
+        } else if (task->tid == tid) {
+            // switching to the null task, cpu is idle
+            cpuIdle(true);
+        } else {
+            cpuIdle(false);
+        }
 
         // default to interrupt, ie. if not swi then the pointer is not modified and we know
         // it is an interrupt that needs to be handled

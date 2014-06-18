@@ -114,3 +114,10 @@ int Log(const char *fmt, ...) {
 
     return Logn(buffer, len);
 }
+
+
+int CpuIdle() {
+    Args_t args;
+    args.code = SYS_IDLE;
+    return swi_call(0, &args);
+}

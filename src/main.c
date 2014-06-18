@@ -5,7 +5,7 @@
 #include <k_syscall.h>
 #include <kernel.h>
 
-#define FIRST_PRIORITY     13
+#define FIRST_PRIORITY     11
 
 
 int main() {
@@ -26,8 +26,8 @@ int main() {
         /* something went wrong creating the first user task */
         return -1;
     }
-    
-    kernel_main();
+
+    kernel_main(tid);
 
     // should reach here after all work has been done
     shutdown();

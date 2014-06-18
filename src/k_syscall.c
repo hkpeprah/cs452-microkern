@@ -7,6 +7,7 @@
 #include <term.h>
 #include <util.h>
 #include <interrupt.h>
+#include <idle.h>
 
 #define INIT_SPSR   0x10
 #define REGS_SAVE   13
@@ -251,4 +252,9 @@ int sys_waittid(uint32_t tid) {
     target->waitQueue = currentTask;
 
     return tid;
+}
+
+
+void sys_idle(uint32_t *retval) {
+    *retval = getIdleTime();
 }

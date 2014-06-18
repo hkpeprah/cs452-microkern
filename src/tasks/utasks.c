@@ -23,11 +23,11 @@ void firstTask() {
     int id;
     id = Create(15, NameServer);
     id = Create(15, ClockServer);
-    id = Create(14, InputServer);
-    id = Create(14, OutputServer);
-    id = Create(0, NullTask);
+    id = Create(12, InputServer);
+    id = Create(12, OutputServer);
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
+    id = Create(13, TimerTask);
 
     debug("FirstTask: Exiting.");
     Exit();
@@ -94,23 +94,15 @@ void testTask2() {
 }
 
 
-void timerTask() {
+void TimerTask() {
     unsigned int count;
-
-    save_cursor();
-    move_cursor(0, 0);
-    change_color(GREEN);
-    printf("Time: ");
-    end_color();
-    restore_cursor();
+    unsigned int cpuUsage;
 
     while (true) {
-        Delay(1);
+        Delay(10);
         count = Time();
-        save_cursor();
-        move_cursor(7, 0);
-        printf("%d:%d:%d", count / 6000, (count / 100) % 60, count % 100);
-        restore_cursor();
+        cpuUsage = CpuIdle();
+        updateTime(count, cpuUsage);
     }
 
     Exit();
@@ -152,6 +144,7 @@ static void TrainSensorSlave() {
             }
         }
         Send(parent, &t, sizeof(i), &i, sizeof(i));
+        Delay(10);
         resetSensors();
     }
 
@@ -170,7 +163,6 @@ void TrainUserTask() {
     bool sigkill;
 
     RegisterAs("TrainHandler");
-    displayInfo();
     courier = Create(6, TrainSensorSlave);
     sensors = NULL;
     sigkill = false;
@@ -203,7 +195,7 @@ void TrainUserTask() {
                     sensors = (bool*)t.args[1];
                     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
                         if (sensors[i]) {
-                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A', i % 16);
+                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A', i % TRAIN_SENSOR_COUNT);
                         }
                     }
                 }

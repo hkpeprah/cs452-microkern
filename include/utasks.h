@@ -20,7 +20,7 @@ typedef struct {
 void testTask();
 void testTask2();
 void firstTask();
-void timerTask();
+void TimerTask();
 void TrainUserTask();
 
 #endif /* __UTASKS__ */

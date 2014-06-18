@@ -124,5 +124,6 @@ void debugc(char*, unsigned int, ...);
 void displayInfo();
 void printSwitch(unsigned int, char);
 void printSensor(char, unsigned int);
+void updateTime(unsigned int, unsigned int);
 
 #endif /* __TERM__ */

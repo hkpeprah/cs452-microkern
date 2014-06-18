@@ -28,10 +28,10 @@ void initDebug() {
         TERM_OFFSET = TOP_HALF;
         kprintf(MOVE_CURSOR, TOP_HALF, 0);
     #endif
-    kputstr(SAVE_CURSOR);
-    kputstr("CS452 Real-Time Microkernel (Version 0.1.1001)\r\n");
-    kputstr("Copyright <c> Max Chen, Ford Peprah.  All rights reserved.\r\n");
-    TERM_OFFSET += 3;
+    kputstr("\033[37mCS452 Real-Time Microkernel (Version 0.1.9)\r\n");
+    kputstr("Copyright <c> Max Chen (mqchen), Ford Peprah (hkpeprah).  All rights reserved.\033[0m\r\n");
+    kputstr("\033[32mTime:           \033[35mCPU Idle:\033[0m\r\n\r\n");
+    TERM_OFFSET += 5;
 }
 
 
@@ -89,7 +89,7 @@ void printSensor(char module, unsigned int id) {
     buf[index + 1] = (id / 10) + '0';
     buf[index + 2] = (id % 10) + '0';
     printf("%s\r\n", buf);
-    printf("%s\033[%d;0H%s%s", SAVE_CURSOR, TERM_OFFSET + 5 , buf, RESTORE_CURSOR);
+    printf("%s\033[%d;%dH%s%s", SAVE_CURSOR, TERM_OFFSET + 5, index * 5, buf, RESTORE_CURSOR);
     index = (index + 5) % 25;
 }
 
@@ -99,22 +99,36 @@ void displayInfo() {
     unsigned int count;
     Switch_t *swtch;
 
-    erase_line();
     count = TRAIN_SWITCH_COUNT;
-    puts("====Switches===\r\n");
+    kputstr("====Switches===\r\n");
     while (count > 0) {
         for (i = 0; i < MIN(count, 9); ++i) {
             swtch = getSwitch(TRAIN_SWITCH_COUNT - count + i);
             if (swtch->id < 10) {
-                puts("00");
+                kputstr("00");
             } else if (swtch->id < 100) {
-                puts("0");
+                kputstr("0");
             }
-            printf("%d: %c    ", swtch->id, swtch->state);
+            kprintf("%d: %c    ", swtch->id, swtch->state);
         }
         count -= MIN(9, count);
-        puts(NEW_LINE);
+        kputstr(NEW_LINE);
     }
-    puts("\r\n====Sensors====\r\n\r\n\r\n");
-    puts(SAVE_CURSOR);
+    kputstr("\r\n====Sensors====\r\n\r\n\r\n");
+    kputstr(SAVE_CURSOR);
+    kprintf(SET_SCROLL, TERM_OFFSET + 9, TERMINAL_HEIGHT);
+    kputstr(RESTORE_CURSOR);
+}
+
+
+void updateTime(unsigned int count, unsigned int cpu) {
+    unsigned int minutes;
+    unsigned int seconds;
+    unsigned int t_seconds;
+
+    minutes = count / 6000;
+    seconds = (count / 100) % 60;
+    t_seconds = count % 100;
+    printf("\033[s\033[%d;7H%d%d:%d%d:%d%d \033[11C%d%% \033[u", TERM_OFFSET - 2, minutes / 10, minutes % 10,
+           seconds / 10, seconds % 10, t_seconds / 10, t_seconds % 10, cpu);
 }

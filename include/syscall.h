@@ -14,5 +14,6 @@ int AwaitEvent(int, void*, int);
 int WaitTid(unsigned int);
 int Logn(const char *str, int n);
 int Log(const char *fmt, ...);
+int CpuIdle();
 
 #endif /* __SYSCALL__ */
