@@ -82,15 +82,15 @@ void printSwitch(unsigned int id, char state) {
 
 
 void printSensor(char module, unsigned int id) {
-    static char buf[26] = {0};
+    static char buf[20] = {0};
     static int index = 0;
 
     buf[index] = module;
     buf[index + 1] = (id / 10) + '0';
     buf[index + 2] = (id % 10) + '0';
-    printf("%s\r\n", buf);
-    printf("%s\033[%d;%dH%s%s", SAVE_CURSOR, TERM_OFFSET + 5, index * 5, buf, RESTORE_CURSOR);
-    index = (index + 5) % 25;
+    buf[index + 3] = 0;
+    printf("\033[s\033[%d;%dH%s\033[u", TERM_OFFSET + 6, index + 2, &buf[index]);
+    index = (index + 4) % 20;
 }
 
 
@@ -129,6 +129,6 @@ void updateTime(unsigned int count, unsigned int cpu) {
     minutes = count / 6000;
     seconds = (count / 100) % 60;
     t_seconds = count % 100;
-    printf("\033[s\033[%d;7H%d%d:%d%d:%d%d \033[11C%d%% \033[u", TERM_OFFSET - 2, minutes / 10, minutes % 10,
+    printf("\033[s\033[%d;7H%d%d:%d%d:%d%d \033[11C%d%%            \033[u", TERM_OFFSET - 2, minutes / 10, minutes % 10,
            seconds / 10, seconds % 10, t_seconds / 10, t_seconds % 10, cpu);
 }

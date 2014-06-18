@@ -4,7 +4,7 @@
 #include <term.h>
 
 static volatile unsigned int idle = 0;
-static volatile unsigned int count = 0;
+static volatile unsigned int count = 1;
 
 
 void cpuIdle(bool isIdle) {
