@@ -3,8 +3,8 @@
 #include <clock.h>
 #include <term.h>
 
-static unsigned int idle = 0;
-static unsigned int count = 0;
+static volatile unsigned int idle = 0;
+static volatile unsigned int count = 0;
 
 
 void cpuIdle(bool isIdle) {
@@ -23,17 +23,20 @@ void cpuIdle(bool isIdle) {
         if ((*timerLow / 9380) - count >= 1) {
             ticks = (*timerLow / 9380) - count;
             count += ticks;
-            if (wasIdle > 0 && !isIdle) {
-                idle += (count - wasIdle);
-                wasIdle = 0;
-            } else if (isIdle && wasIdle == 0) {
-                wasIdle = count;
-            }
+        }
+
+        if (wasIdle > 0 && !isIdle) {
+            idle += (count - wasIdle);
+            wasIdle = 0;
+        }
+
+        if (isIdle && wasIdle == 0) {
+            wasIdle = count;
         }
     }
 }
 
 
 int getIdleTime() {
-    return idle / count;
+    return ((double)idle / count) * 100;
 }
