@@ -223,11 +223,12 @@ int sys_await(int eventType, void *buf, int buflen) {
      */
     int errno;
     Task_t *target = getCurrentTask();
-    target->state = EVENT_BL;
     errno = addInterruptListener(eventType, target, buf, buflen);
 
     if (errno < 0) {
         error("AwaitEvent: Error: Got %d adding task %d", errno, target->tid);
+    } else {
+        target->state = EVENT_BL;
     }
 
     return errno;

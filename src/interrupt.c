@@ -10,6 +10,7 @@
 #include <ts7200.h>
 #include <clock.h>
 #include <stdlib.h>
+#include <logger.h>
 
 #define INTERRUPT_HANDLER    0x38
 #define TIMER_INTERRUPT      (TC3OI - 32)
@@ -26,8 +27,15 @@ typedef struct {
 extern void irq_handler();
 static AwaitTask_t interruptTable[NUM_INTERRUPTS];
 
-static int *U1_CTLR = (int*) (UART1_BASE + UART_CTLR_OFFSET);
-static int *U2_CTLR = (int*) (UART2_BASE + UART_CTLR_OFFSET);
+static volatile int *u1int = (int*) (UART1_BASE + UART_INTR_OFFSET);
+static volatile int *u1flag = (int*) (UART1_BASE + UART_FLAG_OFFSET);
+static volatile int *u1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
+static volatile int *u1ctlr = (int*) (UART1_BASE + UART_CTLR_OFFSET);
+
+static volatile int *u2int = (int*) (UART2_BASE + UART_INTR_OFFSET);
+static volatile int *u2flag = (int*) (UART2_BASE + UART_FLAG_OFFSET);
+static volatile int *u2data = (int*) (UART2_BASE + UART_DATA_OFFSET);
+static volatile int *u2ctlr = (int*) (UART2_BASE + UART_CTLR_OFFSET);
 
 static void clearEntry(InterruptType_t i) {
     interruptTable[i].blockedTask = NULL;
@@ -65,11 +73,8 @@ void disableInterrupts() {
     *(uint32_t*)TIMER_CONTROL = 0;
     *(uint32_t*)TIMER_CLEAR = 0;
 
-    int *uart1ctrl = (int*) (UART1_BASE + UART_CTLR_OFFSET);
-    *uart1ctrl = 1;
-
-    int *uart2ctrl = (int*) (UART2_BASE + UART_CTLR_OFFSET);
-    *uart2ctrl = 1;
+    *u1ctlr = 1;
+    *u2ctlr = 1;
 
     vic = (unsigned int*)VIC2_BASE;
     vic[VICxIntEnable] = 0;
@@ -91,22 +96,12 @@ int handleInterrupt() {
     InterruptType_t type = NUM_INTERRUPTS;
     Task_t *task = NULL;
 
-    volatile int *u1int = (int*) (UART1_BASE + UART_INTR_OFFSET);
-    volatile int *u1flag = (int*) (UART1_BASE + UART_FLAG_OFFSET);
-    volatile int *u1data = (int*) (UART1_BASE + UART_DATA_OFFSET);
-    volatile int *u1ctlr = (int*) (UART1_BASE + UART_CTLR_OFFSET);
-
-    volatile int *u2int = (int*) (UART2_BASE + UART_INTR_OFFSET);
-    volatile int *u2flag = (int*) (UART2_BASE + UART_FLAG_OFFSET);
-    volatile int *u2data = (int*) (UART2_BASE + UART_DATA_OFFSET);
-    volatile int *u2ctlr = (int*) (UART2_BASE + UART_CTLR_OFFSET);
-
     // TODO: refactor code using these ptrs
     vic1base = (int*) VIC1_BASE;
     vic2base = (int*) VIC2_BASE;
 
-    vic1 = ((uint32_t*)VIC1_BASE)[VICxIRQStatus];
-    vic2 = ((uint32_t*)VIC2_BASE)[VICxIRQStatus];
+    vic1 = vic1base[VICxIRQStatus];
+    vic2 = vic2base[VICxIRQStatus];
 
     if (EXTRACT_BIT(vic2, TIMER_INTERRUPT)) {
         type = CLOCK_INTERRUPT;
@@ -136,9 +131,6 @@ int handleInterrupt() {
 
             if (task) {
                 *u1int = 0;
-                if (!(*u1flag & CTS_MASK)) {
-                    result = -1;
-                }
             } else {
                 // TODO: no waiting task, mask intr
                 *u1ctlr &= ~(MSIEN_MASK);
@@ -173,10 +165,11 @@ int handleInterrupt() {
             *u2ctlr &= ~(TIEN_MASK);
             task = interruptTable[type].blockedTask;
             result = 1;
-        } else if (*u2int & MIS_MASK) {
-
         }
     }
+#if LOG 
+    sys_log_f("got intr of type %d, task: %d\n", type, task == NULL ? 0 : task->tid);
+#endif
 
     if (task) {
         addTask(task);
@@ -211,21 +204,25 @@ int addInterruptListener(int eventType, Task_t *t, void *buf, int buflen) {
     // something waiting on XMT, so enable those interrupts
     switch (eventType) {
         case UART1_RCV_INTERRUPT:
-            *U1_CTLR |= RIEN_MASK;
+            *u1ctlr |= RIEN_MASK;
             break;
         case UART1_XMT_INTERRUPT:
-            *U1_CTLR |= TIEN_MASK;
+            *u1ctlr |= TIEN_MASK;
             break;
         case UART1_MOD_INTERRUPT:
-            *U1_CTLR |= MSIEN_MASK;
+            *u1ctlr |= MSIEN_MASK;
             break;
         case UART2_RCV_INTERRUPT:
-            *U2_CTLR |= RIEN_MASK | RTIEN_MASK;
+            *u2ctlr |= RIEN_MASK | RTIEN_MASK;
             break;
         case UART2_XMT_INTERRUPT:
-            *U2_CTLR |= TIEN_MASK;
+            *u2ctlr |= TIEN_MASK;
             break;
     }
+
+#if LOG
+    sys_log_f("task %d reg for event %d\n", t->tid, eventType);
+#endif
 
     taskEntry->blockedTask = t;
     taskEntry->buf = buf;

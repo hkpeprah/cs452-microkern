@@ -40,7 +40,7 @@ profile: upload
 test: CFLAGS += -DTEST
 test: init
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
-	@$(MAKE) debug > /dev/null
+	@$(MAKE) > /dev/null
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
 	@$(AS) $(ASFLAGS) $(builddir)/main.s -o $(builddir)/main.o

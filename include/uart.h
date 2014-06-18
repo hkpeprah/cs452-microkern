@@ -13,7 +13,7 @@ typedef struct {
     UartRequestType_t type;
     unsigned int channel : 1;
     unsigned int len : 15;
-    char *buf;
+    volatile char *buf;
 } UartRequest_t;
 
 typedef struct {
@@ -23,9 +23,9 @@ typedef struct {
 
 void enableUartInterrupts();
 
-int Getcn(int channel, char *buf, int n);
+int Getcn(int channel, volatile char *buf, int n);
 char Getc(int channel);
-int Putcn(int channel, char *buf, int n);
+int Putcn(int channel, volatile char *buf, int n);
 int Putc(int channel, char ch);
 
 void OutputServer();
