@@ -142,7 +142,8 @@ static void Uart1XMTHandler() {
             continue;
         }
 
-        while (!(*flags & CTS_MASK)) {
+        // wait for cts to assert
+        if (!(*flags & CTS_MASK)) {
             result = AwaitEvent(UART1_MOD_INTERRUPT, NULL, 0);
         }
 
@@ -156,6 +157,11 @@ static void Uart1XMTHandler() {
 #if LOG
         Log("x1: 0x%x\n", ch);
 #endif
+
+        // wait for cts to desert if necessary
+        if (*flags & CTS_MASK) {
+            AwaitEvent(UART1_MOD_INTERRUPT, NULL, 0);
+        }
     }
 }
 
