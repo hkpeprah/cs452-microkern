@@ -82,14 +82,10 @@ void printSwitch(unsigned int id, char state) {
 
 
 void printSensor(char module, unsigned int id) {
-    static char buf[20] = {0};
-    static int index = 0;
+    static volatile int index = 0;
 
-    buf[index] = module;
-    buf[index + 1] = (id / 10) + '0';
-    buf[index + 2] = (id % 10) + '0';
-    buf[index + 3] = 0;
-    printf("\033[s\033[%d;%dH%s\033[u", TERM_OFFSET + 6, index + 2, &buf[index]);
+    printf("\033[s\033[%d;%dH%s%c%c%c\033[u", TERM_OFFSET + 6, index,
+           (index == 0 ? ERASE_LINE : ""), module, (id / 10) + '0', (id % 10) + '0');
     index = (index + 4) % 20;
 }
 

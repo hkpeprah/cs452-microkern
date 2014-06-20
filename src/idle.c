@@ -33,6 +33,13 @@ void cpuIdle(bool isIdle) {
         if (isIdle && wasIdle == 0) {
             wasIdle = count;
         }
+
+        if (idle > count) {
+            /*
+             * TODO: Figure out why we need this, some race conditioning
+             */
+            idle = 0;
+        }
     }
 }
 

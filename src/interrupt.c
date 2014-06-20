@@ -103,6 +103,9 @@ int handleInterrupt() {
     vic1 = vic1base[VICxIRQStatus];
     vic2 = vic2base[VICxIRQStatus];
 
+    // Stop complaints about unused variable
+    (void)u1flag;
+
     if (EXTRACT_BIT(vic2, TIMER_INTERRUPT)) {
         type = CLOCK_INTERRUPT;
         task = interruptTable[CLOCK_INTERRUPT].blockedTask;

@@ -111,18 +111,17 @@ void TimerTask() {
 
 static void TrainSensorSlave() {
     TrainMessage t;
-    int byte1, byte2;
-    unsigned int i, j, parent;
     bool bit;
-    bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-    int args[2];
+    int status, byte1, byte2, args[2];
+    unsigned int i, j, parent;
+    volatile bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
     parent = MyParentTid();
 
     debug("TrainSensorSlave: Tid %d", MyTid());
     t.args = args;
     args[0] = TRAIN_POLL_SENSORS;
-    args[1] = (int)&sensors;
+    args[1] = (int)sensors;
 
     while (true) {
         pollSensors();
@@ -130,17 +129,17 @@ static void TrainSensorSlave() {
             byte1 = trgetchar();
             byte2 = trgetchar();
             for (j = 0; j < TRAIN_SENSOR_COUNT; ++j) {
-                if (i < TRAIN_SENSOR_COUNT / 2) {
+                if (j < TRAIN_SENSOR_COUNT / 2) {
                     /* first byte corresponds to sensors 1 - 8 */
-                    bit = EXTRACT_BIT(byte1, TRAIN_SENSOR_COUNT / 2 - i);
+                    bit = EXTRACT_BIT(byte1, (TRAIN_SENSOR_COUNT / 2) - j);
                 } else {
                     /* lower byte corresponds to sensors 8 - 16 */
-                    bit = EXTRACT_BIT(byte2, TRAIN_SENSOR_COUNT - i);
+                    bit = EXTRACT_BIT(byte2, TRAIN_SENSOR_COUNT - j);
                 }
-                sensors[i + j] = (bool)(bit & 1);
+                sensors[(i * TRAIN_SENSOR_COUNT) + j] = (bool)(bit & 1);
             }
         }
-        Send(parent, &t, sizeof(i), &i, sizeof(i));
+        Send(parent, &t, sizeof(t), &status, sizeof(status));
         Delay(50);
         resetSensors();
     }
@@ -150,14 +149,12 @@ static void TrainSensorSlave() {
 
 
 void TrainUserTask() {
-    TrainMessage t;
-    int cmd, callee, bytes;
-    int status, speed;
     Train_t *train;
-    unsigned int i;
-    unsigned int courier;
-    bool *sensors;
-    bool sigkill;
+    TrainMessage t;
+    int status, speed;
+    int cmd, callee, bytes;
+    bool sigkill, *sensors;
+    unsigned int i, courier;
 
     RegisterAs("TrainHandler");
     courier = Create(6, TrainSensorSlave);
@@ -192,7 +189,8 @@ void TrainUserTask() {
                     sensors = (bool*)t.args[1];
                     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
                         if (sensors[i]) {
-                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A', i % TRAIN_SENSOR_COUNT);
+                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
+                                        (i % TRAIN_SENSOR_COUNT));          // index in module
                         }
                     }
                 }
