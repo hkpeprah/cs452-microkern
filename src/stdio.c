@@ -268,6 +268,7 @@ char *gets(int channel, char *buf, uint32_t len) {
     nread = 0;
     while (nread < len && (ch = Getc(channel))) {
         if (ch == LF || ch == CR || ch == EOF) {
+            Putc(IO, '\n');
             break;
         } else if (ch == BS) {
             if (nread > 0) {

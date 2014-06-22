@@ -25,15 +25,14 @@ void PiggyBack() {
     gets(IO, buf, 50);
     n = atoin(buf, &status);
     if (n != 0 && (train = addTrain(n))) {
-        printf("\r\nEnter first sensor: ");
+        printf("Enter first sensor: ");
         gets(IO, buf, 50);
         if (sscanf(buf, fmt, &module1, &id1)) {
-            printf("\r\nEnter second sensor: ");
+            printf("Enter second sensor: ");
             gets(IO, buf, 50);
             if (sscanf(buf, fmt, &module2, &id2)) {
                 trainSpeed(train->id, 10);
                 trainAuxiliary(train->id, TRAIN_LIGHT_OFFSET);
-                puts("\r\n");
                 for (i = 0; i < 10; i++) {
                     puts("Moving towards Sensor 1\r\n");
                     WaitOnSensor(module1, id1);
@@ -44,13 +43,13 @@ void PiggyBack() {
                 }
                 trainSpeed(train->id, 0);
             } else {
-                printf("\r\nFailed to parse Sensor 2");
+                printf("Failed to parse Sensor 2");
             }
         } else {
-            printf("\r\nFailed to parse Sensor 1");
+            printf("Failed to parse Sensor 1");
         }
     } else {
-        printf("\r\nTrain doesn't exist or not an integer.");
+        printf("Train doesn't exist or not an integer.");
     }
     puts("\r\n");
     SigTerm();
