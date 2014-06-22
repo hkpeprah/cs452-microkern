@@ -148,12 +148,12 @@ void kernel_main() {
     int taskSP;
     int result;
     int status;
-    uint32_t tid;
+    uint32_t nullTaskTid;
     Args_t *args;
     Args_t defaultArg = {.code = SYS_INTERRUPT};
     Task_t *task = NULL;
 
-    status = sys_create(0, NullTask, &tid);
+    status = sys_create(0, NullTask, &nullTaskTid);
     cpuIdle(false);
 
     FOREVER {
@@ -162,7 +162,7 @@ void kernel_main() {
         if (task == NULL) {
             // nothing left to run
             break;
-        } else if (task->tid == tid) {
+        } else if (task->tid == nullTaskTid) {
             // switching to the null task, cpu is idle
             cpuIdle(true);
         } else {

@@ -66,8 +66,8 @@ void printSwitch(unsigned int id, char state) {
     unsigned int lines;
 
     lines = TERM_OFFSET + 1;
-    if (id >= MULTI_SWITCH_OFFSET) {
-        id -= (MULTI_SWITCH_OFFSET - 1);
+    if (id >= MULTI_SWITCH_OFFSET + TRAIN_SWITCH_COUNT - 4) {
+        id -= (MULTI_SWITCH_OFFSET + TRAIN_SWITCH_COUNT - 4);
         lines += 2;
     } else {
         while (id > 9) {

@@ -15,6 +15,9 @@
 #define TRAIN_MAX_SPEED       14
 #define MAX_TRAINS            8
 
+#define SWITCH_INDEX_TO_ID(x) ((x >= TRAIN_SWITCH_COUNT - 4 ? x + MULTI_SWITCH_OFFSET : x) + 1)
+#define SWITCH_ID_TO_INDEX(x) ((unsigned int)(TRAIN_SWITCH_COUNT + MULTI_SWITCH_OFFSET - x) < 4 ? x - MULTI_SWITCH_OFFSET - 1 : x)
+
 
 static Train_t __trainSet[MAX_TRAINS];
 static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
@@ -49,29 +52,36 @@ void resetSensors() {
     trputch((char)TRAIN_AUX_SNSRESET);
 }
 
+static inline void setTrainSwitchState(int index, int state, char statech) {
+    int id = SWITCH_INDEX_TO_ID(index);
+
+    trainSwitches[index].id = id;
+    trainSwitches[index].state = statech;
+
+    trbwputc(id);
+    trbwputc(state);
+}
 
 void clearTrainSet() {
     /* resets the entire state of the train controller */
-    unsigned int i;
-    char buf[2];
+    unsigned int i, index;
+    char straight[] = {13, 19, 21};
+    char curved[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20};
 
     kdebug("Setting the state of switches.");
-    for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
-        if (i >= TRAIN_SWITCH_COUNT - 4) {
-            buf[0] = (i % 2 == 0 ? TRAIN_AUX_CURVE : TRAIN_AUX_STRAIGHT);
-            buf[1] = (i + MULTI_SWITCH_OFFSET) - (TRAIN_SWITCH_COUNT - 4);
-        } else {
-            buf[0] = (i == 13 ? TRAIN_AUX_STRAIGHT : TRAIN_AUX_CURVE);
-            buf[1] = i + 1;
-        }
-        trainSwitches[i].id = (unsigned int)buf[1];
-        trainSwitches[i].state = (buf[0] == TRAIN_AUX_STRAIGHT ? 'S' : 'C');
-        bwputc(TRAIN, buf[0]);
-        bwputc(TRAIN, buf[1]);
+
+    for (i = 0; i < sizeof(straight) / sizeof(straight[0]); ++i) {
+        index = straight[i];
+        setTrainSwitchState(index, TRAIN_AUX_STRAIGHT, 'S');
     }
 
-    bwputc(TRAIN, TRAIN_AUX_SOLENOID);
-    bwputc(TRAIN, TRAIN_AUX_SNSRESET);
+    for (i = 0; i < sizeof(curved) / sizeof(curved[0]); ++i) {
+        index = curved[i];
+        setTrainSwitchState(index, TRAIN_AUX_CURVE, 'C');
+    }
+
+    trbwputc(TRAIN_AUX_SOLENOID);
+    trbwputc(TRAIN_AUX_SNSRESET);
     trainSet = NULL;
     freeSet = NULL;
 
@@ -93,7 +103,7 @@ void clearTrainSet() {
 
 void turnOnTrainSet() {
     BW_MASK = 0xFFFFFFFF;
-    bwputc(TRAIN, TRAIN_AUX_GO);
+    bwputc(COM1, TRAIN_AUX_GO);
 }
 
 
@@ -123,13 +133,12 @@ Train_t *getTrain(unsigned int tr) {
 
 
 Switch_t *getSwitch(unsigned int id) {
-    if (id >= MULTI_SWITCH_OFFSET) {
-        id -= MULTI_SWITCH_OFFSET;
-    }
+    id = SWITCH_ID_TO_INDEX(id);
 
     if (id < TRAIN_SWITCH_COUNT) {
         return &trainSwitches[id];
     }
+
     return NULL;
 }
 

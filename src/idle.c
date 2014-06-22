@@ -45,5 +45,5 @@ void cpuIdle(bool isIdle) {
 
 
 int getIdleTime() {
-    return ((double)idle / count) * 100;
+    return (idle * 100) / count;
 }

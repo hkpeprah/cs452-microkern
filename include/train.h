@@ -9,7 +9,7 @@
 #define TRAIN_MODULE_COUNT   5      /* number of sensor modules */
 #define TRAIN_MODULE_BASE    128    /* base addr for sensor modules */
 #define TRAIN_SENSOR_BASE    192    /* sensor base addr */
-#define MULTI_SWITCH_OFFSET  153    /* we have four multi switches */
+#define MULTI_SWITCH_OFFSET  134    /* we have four multi switches */
 #define TRAIN_LIGHT_OFFSET   16     /* offset for lights */
 #define TRAIN_HORN_OFFSET    17     /* offset for horn */
 

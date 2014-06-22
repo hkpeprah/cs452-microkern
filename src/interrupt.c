@@ -109,6 +109,9 @@ int handleInterrupt() {
     if (EXTRACT_BIT(vic2, TIMER_INTERRUPT)) {
         type = CLOCK_INTERRUPT;
         task = interruptTable[CLOCK_INTERRUPT].blockedTask;
+        if (!task) {
+            error("FATAL: missed clock tick");
+        }
         *((uint32_t*)TIMER_CLEAR) = 0;
         result = 1;
     } else if (EXTRACT_BIT(vic2, UART1_INTERRUPT)) {
