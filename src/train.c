@@ -212,7 +212,7 @@ int trainReverse(unsigned int tr) {
 }
 
 
-int trainSwitch(unsigned int sw, int ch) {
+int trainSwitch(unsigned int sw, char ch) {
     char buf[2];
 
     buf[0] = 0;

@@ -21,22 +21,19 @@ void looper() {
     int i;
 
     while (1) {
-        // debug("Looper: Waiting on character");
         res = Getc(COM2);
 
         if(res == 'q') {
             RUN = 0;
             break;
         } else if (res == 'p') {
-            //res = Putc(COM1, 133);
             res = Putc(COM1, 133);
-            printf("sensor returned: %d\n", res);
             Getcn(COM1, sensor, 10);
 
+            printf("Sensors:\n");
             for (i = 0; i < 10; ++i) {
-                printf("0x%x ", sensor[i]);
+                printf("0x%x\n", sensor[i]);
             }
-            printf("\n");
 
         } else if (res == 's') {
             Putcn(COM1, s, 2);

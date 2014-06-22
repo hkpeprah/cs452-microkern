@@ -37,8 +37,6 @@ static void TrainSensorSlave() {
             }
         }
         Send(parent, &t, sizeof(t), &status, sizeof(status));
-        Delay(1);
-        // resetSensors();
     }
 
     Exit();

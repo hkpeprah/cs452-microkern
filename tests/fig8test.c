@@ -12,22 +12,60 @@
 #include <term.h>
 #include <utasks.h>
 #include <train.h>
+#include <controller.h>
 
 
 void Fig8() {
-    // start train
+    int result;
+    int tr;
+    char buf[4];
 
+    printf("Enter Train Number: ");
+    gets(IO, buf, 4);
+    tr = atoin(buf, &result);
+
+    trainSwitch(14, 'c');
+    addTrain(tr);
+    trainSpeed(tr, 8);
+    
     while (true) {
-        // wait till e16 triggers
-        // flip switch: 153 = s, 154 = c
-        // wait till e3 triggers
-        // flip switch: 153 = c, 154 = s
+        result = WaitOnSensor('E', 16);
+        if (result == 1) {
+            printf("got e16\n");
+            trainSwitch(153, 's');
+            trainSwitch(154, 'c');
+        } else {
+            printf("got %d\n", result);
+        }
+
+        result = WaitOnSensor('B', 14);
+        if (result == 1) {
+            printf("got b14\n");
+        } else {
+            printf("got %d\n", result);
+        }
+
+        result = WaitOnSensor('E', 3);
+        if (result == 1) {
+            printf("got e3\n");
+            trainSwitch(153, 'c');
+            trainSwitch(154, 's');
+        } else {
+            printf("got %d\n", result);
+        }
+
+        result = WaitOnSensor('C', 1);
+        if (result == 1) {
+            printf("got c1\n");
+        } else {
+            printf("got %d\n", result);
+        }
     }
 }
 
 
 int main() {
-    int tid;
+    unsigned int tid;
 
     boot();
 
@@ -38,6 +76,7 @@ int main() {
     sys_create(5, TrainUserTask, &tid);
     sys_create(13, TimerTask, &tid);
     sys_create(1, Fig8, &tid);
+    sys_create(10, TrainController, &tid);
 
     kernel_main();
 
