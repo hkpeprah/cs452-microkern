@@ -27,16 +27,29 @@ volatile int BW_MASK = 0xFFFFFFFF;
 Train_t *addTrain(unsigned int id) {
     Train_t *tmp;
 
-    if (freeSet != NULL && id > 0 && id <= 80) {
-        tmp = trainSet;
-        trainSet = freeSet;
-        freeSet = freeSet->next;
-        trainSet->next = tmp;
-        trainSet->id = id;
-        return trainSet;
+    tmp = trainSet;
+    while (tmp != NULL) {
+        if (tmp->id == id) {
+            return tmp;
+        }
+        tmp = tmp->next;
     }
 
-    return NULL;
+    if (freeSet != NULL && id > 0 && id <= 80) {
+        tmp = freeSet;
+        freeSet = freeSet->next;
+        tmp->next = trainSet;
+        tmp->id = id;
+        trainSet = tmp;
+        trainSpeed(id, 0);
+    }
+
+    return tmp;
+}
+
+
+int sensorToInt(char module, unsigned int id) {
+    return (module - 'A') * TRAIN_SENSOR_COUNT + id;
 }
 
 
@@ -181,11 +194,17 @@ int trainAuxiliary(unsigned int tr, unsigned int ax) {
 int trainReverse(unsigned int tr) {
     char buf[2];
     Train_t *train;
+    unsigned int speed;
 
     if ((train = getTrain(tr))) {
+        speed = train->speed;
+        trainSpeed(train->id, 0);
+        Delay(speed + 30);
         buf[0] = TRAIN_AUX_REVERSE;
         buf[1] = tr;
         trnputs(buf, 2);
+        Delay(speed + 30);
+        trainSpeed(train->id, speed);
         return 0;
     }
     return 1;

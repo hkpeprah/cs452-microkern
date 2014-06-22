@@ -17,6 +17,7 @@
 #include <train.h>
 #include <uart.h>
 #include <stdlib.h>
+#include <controller.h>
 
 
 void firstTask() {
@@ -28,6 +29,7 @@ void firstTask() {
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
     id = Create(13, TimerTask);
+    id = Create(10, TrainController);
 
     debug("FirstTask: Exiting.");
     Exit();
@@ -110,14 +112,18 @@ void TimerTask() {
 
 
 void TrainUserTask() {
+    bool sigkill;
     Train_t *train;
     TrainMessage t;
-    int status, speed;
-    int cmd, callee, bytes;
-    bool sigkill;
+    int status, cmd, callee, bytes;
 
-    RegisterAs("TrainHandler");
     sigkill = false;
+    RegisterAs("TrainHandler");
+
+    /* TODO: Are there more trains ? */
+    addTrain(50);
+    addTrain(45);
+    addTrain(40);
 
     while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));
@@ -125,6 +131,13 @@ void TrainUserTask() {
         /* switches on the command and validates it */
         status = 0;
         switch (cmd) {
+            case TRAIN_WAIT:
+                if (WaitOnSensor(t.args[1], t.args[2]) > 0) {
+                    printf("Sensor Triggered: %c%u\r\n", t.args[1], t.args[2]);
+                } else {
+                    printf("Error: Invalid sensor passed.\r\n");
+                }
+                break;
             case TRAIN_GO:
                 turnOnTrainSet();
                 debug("Starting Train Controller");
@@ -164,12 +177,7 @@ void TrainUserTask() {
             case TRAIN_RV:
                 if ((train = getTrain((unsigned int)t.args[1]))) {
                     debug("Reversing train: %u", t.args[1]);
-                    speed = train->speed;
-                    trainSpeed(train->id, 0);
-                    Delay(speed + 30);
                     trainReverse(train->id);
-                    Delay(speed + 30);
-                    trainSpeed(train->id, speed);
                     status = 0;
                 } else {
                     printf("Error: Invalid train.\r\n");

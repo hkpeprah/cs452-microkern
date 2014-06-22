@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <clock.h>
 
+static unsigned int train_controller_tid = -1;
+
 
 static void TrainSensorSlave() {
     bool bit;
@@ -18,7 +20,7 @@ static void TrainSensorSlave() {
 
     debug("TrainSensorSlave: Tid %d", MyTid());
     t.type = SENSOR_RETURNED;
-    t.sensor = (uint32_t*)sensors;
+    t.sensor = (uint32_t)sensors;
 
     while (true) {
         pollSensors();
@@ -52,11 +54,12 @@ void TrainController() {
     TrainQueue bank[TRAIN_SENSOR_COUNT];
     TrainQueue *free, *tmp;
     TrainQueue *sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-    unsigned int bytes, notifier, maxId;
+    unsigned int bytes, notifier, maxId, *sensors;
 
     (void)reply; /* TODO: May use this in future */
 
     RegisterAs("TrainController");
+    train_controller_tid = MyTid();
     notifier = Create(13, TrainSensorSlave);
 
     free = NULL;
@@ -72,40 +75,67 @@ void TrainController() {
             error("TrainController: Failed to receive message from Task %d with status %d", callee, bytes);
         }
 
-        status = -1;
         switch (req.type) {
             case SENSOR_WAIT:
-                if (free != NULL && *req.sensor < maxId) {
+                if (free != NULL && req.sensor < maxId) {
                     status = 0;
                     tmp = free;
                     free = free->next;
                     tmp->tid = callee;
-                    tmp->next = sensorQueue[*req.sensor];
-                    sensorQueue[*req.sensor] =  tmp;
+                    tmp->next = sensorQueue[req.sensor];
+                    sensorQueue[req.sensor] =  tmp;
+                } else {
+                    status = 0;
+                    Reply(callee, &status, sizeof(status));
                 }
                 break;
             case SENSOR_RETURNED:
                 /* TODO: Would be optimal if knew which train triggered ? */
                 if (callee == notifier) {
                     status = 1;
+                    sensors = (uint32_t*)req.sensor;
                     for (i = 0; i < maxId; ++i) {
-                        if (req.sensor[i]) {
+                        if (sensors[i]) {
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
                                         (i % TRAIN_SENSOR_COUNT));          // index in module 
-                            if (sensorQueue[i] != NULL) {
-                                while (sensorQueue[i] != NULL) {
-                                    tmp = sensorQueue[i];
-                                    sensorQueue[i] = tmp->next;
-                                    Reply(tmp->tid, &status, sizeof(status));
-                                }
+                            while (sensorQueue[i] != NULL) {
+                                tmp = sensorQueue[i];
+                                sensorQueue[i] = tmp->next;
+                                Reply(tmp->tid, &status, sizeof(status));
                             }
                         }
                     }
+                } else {
+                    status = -1;
                 }
+                Reply(callee, &status, sizeof(status));
                 break;
         }
-        Reply(callee, &status, sizeof(status));
     }
 
     Exit();
+}
+
+
+int WaitOnSensor(char module, unsigned int id) {
+    /*
+     * interrupt a return value of 0 as the sensor not existing.
+     */
+    int errno, status;
+    TRequest_t wait;
+
+    if (train_controller_tid < 0) {
+        return -1;
+    }
+
+    wait.type = SENSOR_WAIT;
+    wait.sensor = sensorToInt(module, id);
+    errno = Send(train_controller_tid, &wait, sizeof(wait), &status, sizeof(status));
+
+    if (errno < 0) {
+        error("WaitOnSensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, train_controller_tid);
+        return -2;
+    }
+
+    return status;
 }

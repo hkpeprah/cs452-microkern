@@ -11,7 +11,7 @@ typedef enum {
 
 typedef struct {
     short type;
-    uint32_t *sensor;
+    uint32_t sensor;
 } TRequest_t;
 
 
@@ -22,5 +22,6 @@ typedef struct TrainQueue_t {
 
 
 void TrainController();
+int WaitOnSensor(char, unsigned int);
 
 #endif /* __TRAIN_CONTROLLER_H__ */

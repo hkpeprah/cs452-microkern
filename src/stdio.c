@@ -147,7 +147,9 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
         } else if (len <= 0) {
             return -1;
         } else if (isspace(ch)) {
-            while (*fmt && isspace(*fmt++));
+            while (*fmt && isspace(*fmt)) {
+                *fmt++;
+            }
             continue;
         }
 
@@ -229,7 +231,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
                 *va_arg(va, unsigned int*) = (unsigned int)atoi(buf, &conv);
                 if (conv == 0) return -1;
                 break;
-            case __STRING:
+            case __STR:
                 tmp = va_arg(va, char*);
                 while ((*tmp++ = *buf++));
                 break;
@@ -334,8 +336,6 @@ int format(const char *fmt, va_list va, char *buffer) {
                 case '%':
                     buffer[i++] = '%';
                     break;
-                default:
-                    buffer[i++] = ' ';
             }
 
             if (*convert_buf != '\0') {

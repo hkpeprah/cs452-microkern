@@ -18,11 +18,9 @@
 
 
 void Shell() {
-    char ch;
-    char buf[80];
-    int args[3];
-    unsigned int i;
-    unsigned int tid;
+    int args[4];
+    char ch, buf[80];
+    unsigned int i, tid;
     char *help =
         "sl               -   Steam locomotive\r\n"
         "rps              -   Play a game of Rock-Paper-Scissors\r\n"
@@ -36,8 +34,7 @@ void Shell() {
         "ho TRAIN         -   Signal the horn on the specified train\r\n"
         "cmdtest TRAIN    -   Run through the auxiliary functions supported by the train\r\n"
         "?                -   Display this help dialog\r\n";
-    char *parser[] = {"", "%u", "%u %u", "%u %c"};
-    char *tmp;
+    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u"};
     HashTable commands;
     int command, status;
     unsigned int TrainController;
@@ -54,6 +51,7 @@ void Shell() {
     insert_ht(&commands, "sw", TRAIN_SWITCH);
     insert_ht(&commands, "ho", TRAIN_HORN);
     insert_ht(&commands, "add", TRAIN_ADD);
+    insert_ht(&commands, "wait", TRAIN_WAIT);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -118,6 +116,8 @@ void Shell() {
                         case TRAIN_SWITCH:
                             i = 3;
                             break;
+                        case TRAIN_WAIT:
+                            i = 4;
                         default:
                             i = -1;
                     }
@@ -125,7 +125,7 @@ void Shell() {
                     if (i >= 0) {
                         /* this is a parser command */
                         ++tmp;
-                        if (sscanf(tmp, parser[i], &args[1], &args[2]) != -1) {
+                        if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3]) != -1) {
                             args[0] = command;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
                         }
@@ -134,6 +134,8 @@ void Shell() {
                         tid = Create(random_range(2, 3), (void*)command);
                         WaitTid(tid);
                     }
+                } else {
+                    printf("%s: command not found.\r\n", &buf[i]);
                 }
             }
 

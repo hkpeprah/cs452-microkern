@@ -11,19 +11,13 @@
 #include <clock.h>
 #include <utasks.h>
 
-static volatile int RUN = 1;
-
 
 void PiggyBack() {
     int status;
-    TRequest_t msg;
     Train_t *train;
-    char module, buf[50], *fmt = "%c%u";
-    unsigned int i, n;
-    unsigned int sensor1, sensor2, TrainController;
-
-    msg.type = SENSOR_WAIT;
-    module = 0;
+    char module1, module2;
+    unsigned int id1, id2, i, n;
+    char buf[50], *fmt = "%c%u";
 
     printf("Instructions\r\nPlace train between two sensors you want to check.\r\n"
            "Set train facing the direction you want it to run.\r\n");
@@ -33,29 +27,22 @@ void PiggyBack() {
     if (n != 0 && (train = addTrain(n))) {
         printf("\r\nEnter first sensor: ");
         gets(IO, buf, 50);
-        if (sscanf(buf, fmt, &module, &n)) {
-            sensor1 = module - 'A' + n;
+        if (sscanf(buf, fmt, &module1, &id1)) {
             printf("\r\nEnter second sensor: ");
             gets(IO, buf, 50);
-            if (sscanf(buf, fmt, &module, &n)) {
-                sensor2 = module - 'A' + n;
-                TrainController = WhoIs("TrainController");
+            if (sscanf(buf, fmt, &module2, &id2)) {
                 trainSpeed(train->id, 10);
                 trainAuxiliary(train->id, TRAIN_LIGHT_OFFSET);
-                for (i = 0; i < random() % 22; i++) {
-                    msg.sensor = &sensor1;
-                    Send(TrainController, &msg, sizeof(msg), &status, sizeof(status));
-                    if (status < 0) {
-                        printf("\r\nInvalid Sensor id: %d\r\nExiting.", sensor1);
-                    }
+                puts("\r\n");
+                for (i = 0; i < 10; i++) {
+                    puts("Moving towards Sensor 1\r\n");
+                    WaitOnSensor(module1, id1);
                     trainReverse(train->id);
-                    msg.sensor = &sensor2;
-                    Send(TrainController, &msg, sizeof(msg), &status, sizeof(status));
-                    if (status < 0) {
-                        printf("\r\nInvalid Sensor id: %d\r\nExiting.", sensor2);
-                    }
+                    puts("Moving towards Sensor 2\r\n");
+                    WaitOnSensor(module2, id2);
                     trainReverse(train->id);
                 }
+                trainSpeed(train->id, 0);
             } else {
                 printf("\r\nFailed to parse Sensor 2");
             }
@@ -66,7 +53,6 @@ void PiggyBack() {
         printf("\r\nTrain doesn't exist or not an integer.");
     }
     puts("\r\n");
-    RUN = 0;
     SigTerm();
     Exit();
 }
