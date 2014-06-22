@@ -3,6 +3,8 @@
 #include <syscall.h>
 #include <clock.h>
 #include <uart.h>
+#include <stdlib.h>
+#include <ts7200.h>
 
 #define TRAIN_AUX_REVERSE     15
 #define TRAIN_AUX_SOLENOID    32
@@ -51,7 +53,7 @@ Train_t *addTrain(unsigned int id) {
 
 
 int sensorToInt(char module, unsigned int id) {
-    return (module - 'A') * TRAIN_SENSOR_COUNT + id;
+    return (toUpperCase(module) - 'A') * TRAIN_SENSOR_COUNT + id - 1;
 }
 
 
@@ -121,7 +123,7 @@ void turnOnTrainSet() {
 
 
 void turnOffTrainSet() {
-    trbwputc(TRAIN_AUX_STOP);
+    bwputc(TRAIN, TRAIN_AUX_STOP);
 }
 
 

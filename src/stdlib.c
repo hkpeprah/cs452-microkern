@@ -69,5 +69,6 @@ void initUart(short uart, int speed, bool fifo) {
     if (!fifo) {
         *line = ((*line) & ~FEN_MASK);
     }
+
     flushUart(base);
 }

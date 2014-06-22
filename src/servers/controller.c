@@ -10,9 +10,8 @@ static unsigned int train_controller_tid = -1;
 
 
 static void TrainSensorSlave() {
-    bool bit;
     TRequest_t t;
-    int status, byte1, byte2;
+    int status, byte;
     unsigned int i, j, index, parent;
     volatile uint32_t sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
@@ -25,19 +24,16 @@ static void TrainSensorSlave() {
     while (true) {
         pollSensors();
         for (i = 0; i < TRAIN_MODULE_COUNT; ++i) {
-            byte1 = trgetchar();
-            byte2 = trgetchar();
-            for (j = 0; j < TRAIN_SENSOR_COUNT; ++j) {
-                if (j < TRAIN_SENSOR_COUNT / 2) {
-                    /* first byte corresponds to sensors 1 - 8 */
-                    bit = EXTRACT_BIT(byte1, (TRAIN_SENSOR_COUNT / 2) - j);
-                } else {
-                    /* lower byte corresponds to sensors 8 - 16 */
-                    bit = EXTRACT_BIT(byte2, TRAIN_SENSOR_COUNT - j);
-                }
-                bit = (bool)(bit & 1);
-                index = (i * TRAIN_SENSOR_COUNT) + j;
-                sensors[index] = bit;
+            index = i * TRAIN_SENSOR_COUNT;
+
+            byte = trgetchar();
+            for (j = 0; j < TRAIN_SENSOR_COUNT / 2; ++j) {
+                sensors[index++] = EXTRACT_BIT(byte, (TRAIN_SENSOR_COUNT / 2) - j - 1) & 1;
+            }
+
+            byte = trgetchar();
+            for (; j < TRAIN_SENSOR_COUNT; ++j) {
+                sensors[index++] = EXTRACT_BIT(byte, TRAIN_SENSOR_COUNT - j - 1) & 1;
             }
         }
         Send(parent, &t, sizeof(t), &status, sizeof(status));
@@ -55,8 +51,9 @@ void TrainController() {
     int callee, status;
     TrainQueue bank[TRAIN_SENSOR_COUNT];
     TrainQueue *free, *tmp;
+    unsigned int bytes, notifier, *sensors;
+    unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
     TrainQueue *sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-    unsigned int bytes, notifier, maxId, *sensors;
     volatile uint32_t lastPoll[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
     (void)reply; /* TODO: May use this in future */
@@ -66,7 +63,6 @@ void TrainController() {
     notifier = Create(13, TrainSensorSlave);
 
     free = NULL;
-    maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
     for (i = 0; i < TRAIN_SENSOR_COUNT; ++i) {
         bank[i].next = free;
         free = &bank[i];
@@ -100,7 +96,7 @@ void TrainController() {
                     for (i = 0; i < maxId; ++i) {
                         if (sensors[i] && !lastPoll[i]) {
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
-                                        (i % TRAIN_SENSOR_COUNT));          // index in module 
+                                        (i % TRAIN_SENSOR_COUNT) + 1);      // index in module
                             while (sensorQueue[i] != NULL) {
                                 tmp = sensorQueue[i];
                                 sensorQueue[i] = tmp->next;
