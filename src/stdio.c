@@ -263,13 +263,23 @@ int sscanf(const char *src, const char *fmt, ...) {
 
 char *gets(int channel, char *buf, uint32_t len) {
     int ch;
-    uint32_t count;
+    uint32_t nread;
 
-    count = 0;
-    while (count < len && (ch = Getc(channel))) {
-        if (ch == LF || ch == CR || ch == EOF) break;
-        *buf++ = ch;
-        Putc(IO, ch);
+    nread = 0;
+    while (nread < len && (ch = Getc(channel))) {
+        if (ch == LF || ch == CR || ch == EOF) {
+            break;
+        } else if (ch == BS) {
+            if (nread > 0) {
+                nread--;
+                *buf--;
+                bufputstr(IO, "\b \b");
+            }
+        } else {
+            *buf++ = ch;
+            nread++;
+            Putc(IO, ch);
+        }
     }
     *buf = 0;
     return buf;
