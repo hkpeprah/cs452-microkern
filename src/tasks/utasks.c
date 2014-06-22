@@ -123,7 +123,8 @@ void TrainUserTask() {
     /* TODO: Are there more trains ? */
     addTrain(50);
     addTrain(45);
-    addTrain(40);
+    addTrain(48);
+    addTrain(49);
 
     while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));

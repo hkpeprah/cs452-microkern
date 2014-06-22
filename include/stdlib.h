@@ -13,5 +13,6 @@
 
 void *memcpy(void*, const void*, size_t);
 void initUart(short, int, bool);
+void flushUart(int);
 
 #endif /* __STDLIB__ */

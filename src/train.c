@@ -24,7 +24,6 @@ static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
 static Sensor_t trainSensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
 static Train_t *freeSet;
 static Train_t *trainSet;
-volatile int BW_MASK = 0xFFFFFFFF;
 
 
 Train_t *addTrain(unsigned int id) {
@@ -65,15 +64,17 @@ void resetSensors() {
     trputch((char)TRAIN_AUX_SNSRESET);
 }
 
+
 static inline void setTrainSwitchState(int index, int state, char statech) {
     int id = SWITCH_INDEX_TO_ID(index);
 
     trainSwitches[index].id = id;
     trainSwitches[index].state = statech;
 
-    trbwputc(id);
     trbwputc(state);
+    trbwputc(id);
 }
+
 
 void clearTrainSet() {
     /* resets the entire state of the train controller */
@@ -115,23 +116,11 @@ void clearTrainSet() {
 
 
 void turnOnTrainSet() {
-    BW_MASK = 0xFFFFFFFF;
-    trbwputc(TRAIN_AUX_GO);
+    bwputc(TRAIN, TRAIN_AUX_GO);
 }
 
 
 void turnOffTrainSet() {
-    Train_t *tmp;
-
-    while (trainSet != NULL) {
-        trbwputc(0);
-        trbwputc(trainSet->id);
-        tmp = freeSet;
-        freeSet = trainSet;
-        trainSet = trainSet->next;
-        freeSet->next = tmp;
-    }
-
     trbwputc(TRAIN_AUX_STOP);
 }
 
@@ -251,21 +240,13 @@ void turnOffSolenoid() {
 
 
 void trbwputc(char ch) {
-    int *data, *flags;
-    unsigned int mask;
-
+    volatile int *data, *flags;
     flags = (int*)(UART1_BASE + UART_FLAG_OFFSET);
-    mask = BW_MASK;
 
-    while (true) {
-        trbwflush();
-        if (*flags & mask && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
-            data = (int*)(UART1_BASE + UART_DATA_OFFSET);
-            *data = ch;
-            BW_MASK = CTS_MASK;
-            break;
-        }
-    }
+    while (!(*flags & CTS_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)));
+
+    data = (int*)(UART1_BASE + UART_DATA_OFFSET);
+    *data = ch;
 }
 
 
@@ -284,13 +265,13 @@ void trnbwputs(char *str, unsigned int len) {
 
 
 int trbwflush() {
-    int *flags, *data;
+    volatile int *flags, *data;
     char ch;
 
     flags = (int*)(UART1_BASE + UART_FLAG_OFFSET);
     data = (int*)(UART1_BASE + UART_DATA_OFFSET);
 
-    if (!(*flags & RXFF_MASK) || *flags & RXFE_MASK) {
+    if (*flags & RXFE_MASK || !(*flags & RXFF_MASK)) {
         return -1;
     }
 

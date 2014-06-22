@@ -128,22 +128,28 @@ void boot () {
     initTasks();
     initSWI();
     initLogger();
-    seed(43539805);                /* seed random number generator */
-    enableInterrupts();            /* enable interrupts */
     turnOnTrainSet();
     clearTrainSet();
     displayInfo();
+    seed(43539805);                /* seed random number generator */
+    enableInterrupts();            /* enable interrupts */
     kdebug("Kernel: Booted");
 }
 
 
 int shutdown() {
     /* sequence of shutdown operations */
-    clearTasks();
+    kputstr("\r\nShutting down the system...\r\n");
+    kputstr("Turning off the train controller...\r\n");
+    turnOffTrainSet();
+    kputstr("Disabling interrupts..\r\n");
     disableInterrupts();
+    kputstr("Cleaning up tasks....\r\n");
+    clearTasks();
+    disableIdleTimer();
+    kprintf("%s\033[0;0r%s\r\nExiting...\r\n", SAVE_CURSOR, RESTORE_CURSOR);
     dumpLog();
 
-    kprintf("%s\033[0;0r%s\r\nExiting...\r\n", SAVE_CURSOR, RESTORE_CURSOR);
     return 0;
 }
 

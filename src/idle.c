@@ -47,3 +47,9 @@ void cpuIdle(bool isIdle) {
 int getIdleTime() {
     return (idle * 100) / count;
 }
+
+
+void disableIdleTimer() {
+    volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
+    *timerHigh = 0x0;
+}

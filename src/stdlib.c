@@ -14,6 +14,27 @@ void *memcpy(void *destination, const void *source, size_t num) {
 }
 
 
+static int flushUartRegister(int base) {
+    unsigned char ch;
+    volatile int *flags, *data;
+
+    flags = (int*)(base + UART_FLAG_OFFSET);
+    data = (int*)(base + UART_DATA_OFFSET);
+
+    if (!(*flags & RXFF_MASK) || *flags & RXFE_MASK) {
+        return -1;
+    }
+
+    ch = *data;
+    return ch;
+}
+
+
+void flushUart(int base) {
+    while (flushUartRegister(base) > 0);
+}
+
+
 void initUart(short uart, int speed, bool fifo) {
     int base;
     int *line;
@@ -48,5 +69,5 @@ void initUart(short uart, int speed, bool fifo) {
     if (!fifo) {
         *line = ((*line) & ~FEN_MASK);
     }
-    /* TODO: Flush whatever is in hold registers / read registers ? */
+    flushUart(base);
 }

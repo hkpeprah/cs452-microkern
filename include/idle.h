@@ -4,5 +4,6 @@
 
 void cpuIdle();
 int getIdleTime();
+void disableIdleTimer();
 
 #endif /* __IDLE_H__ */

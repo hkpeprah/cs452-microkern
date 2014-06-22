@@ -32,7 +32,8 @@ void Shell() {
         "rv TRAIN         -   Reverse the specified train\r\n"
         "li TRAIN         -   Turn on/off the lights on the specified train\r\n"
         "ho TRAIN         -   Signal the horn on the specified train\r\n"
-        "cmdtest TRAIN    -   Run through the auxiliary functions supported by the train\r\n"
+        "time             -   Get the current formatted time\r\n"
+        "add TRAIN        -   Add a train to the track\r\n"
         "?                -   Display this help dialog\r\n";
     char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u"};
     HashTable commands;
@@ -156,8 +157,6 @@ void Shell() {
         }
     }
 
-    args[0] = TRAIN_STOP;
-    Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
     SigTerm();
     Exit();
 }
