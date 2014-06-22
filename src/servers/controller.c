@@ -13,7 +13,7 @@ static void TrainSensorSlave() {
     bool bit;
     TRequest_t t;
     int status, byte1, byte2;
-    unsigned int i, j, parent;
+    unsigned int i, j, index, parent;
     volatile uint32_t sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
     parent = MyParentTid();
@@ -35,12 +35,14 @@ static void TrainSensorSlave() {
                     /* lower byte corresponds to sensors 8 - 16 */
                     bit = EXTRACT_BIT(byte2, TRAIN_SENSOR_COUNT - j);
                 }
-                sensors[(i * TRAIN_SENSOR_COUNT) + j] = (bool)(bit & 1);
+                bit = (bool)(bit & 1);
+                index = (i * TRAIN_SENSOR_COUNT) + j;
+                sensors[index] = bit;
             }
         }
         Send(parent, &t, sizeof(t), &status, sizeof(status));
         Delay(1);
-        resetSensors();
+        // resetSensors();
     }
 
     Exit();
@@ -55,6 +57,7 @@ void TrainController() {
     TrainQueue *free, *tmp;
     TrainQueue *sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
     unsigned int bytes, notifier, maxId, *sensors;
+    volatile uint32_t lastPoll[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
     (void)reply; /* TODO: May use this in future */
 
@@ -95,15 +98,18 @@ void TrainController() {
                     status = 1;
                     sensors = (uint32_t*)req.sensor;
                     for (i = 0; i < maxId; ++i) {
-                        if (sensors[i]) {
+                        if (sensors[i] && !lastPoll[i]) {
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
                                         (i % TRAIN_SENSOR_COUNT));          // index in module 
                             while (sensorQueue[i] != NULL) {
                                 tmp = sensorQueue[i];
                                 sensorQueue[i] = tmp->next;
+                                tmp->next = free;
+                                free = tmp;
                                 Reply(tmp->tid, &status, sizeof(status));
                             }
                         }
+                        lastPoll[i] = sensors[i];
                     }
                 } else {
                     status = -1;

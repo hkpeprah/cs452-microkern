@@ -116,22 +116,23 @@ void clearTrainSet() {
 
 void turnOnTrainSet() {
     BW_MASK = 0xFFFFFFFF;
-    bwputc(COM1, TRAIN_AUX_GO);
+    trbwputc(TRAIN_AUX_GO);
 }
 
 
 void turnOffTrainSet() {
     Train_t *tmp;
 
-    trputch(TRAIN_AUX_STOP);
-
     while (trainSet != NULL) {
-        trainSpeed(trainSet->id, 0);
+        trbwputc(0);
+        trbwputc(trainSet->id);
         tmp = freeSet;
         freeSet = trainSet;
         trainSet = trainSet->next;
         freeSet->next = tmp;
     }
+
+    trbwputc(TRAIN_AUX_STOP);
 }
 
 
@@ -282,7 +283,7 @@ void trnbwputs(char *str, unsigned int len) {
 }
 
 
-char trbwflush() {
+int trbwflush() {
     int *flags, *data;
     char ch;
 

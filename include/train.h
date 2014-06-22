@@ -74,6 +74,6 @@ Sensor_t *getSensor(char, unsigned int);
 void trbwputc(char);
 void trbwputs(char*);
 void trnbwputs(char*, unsigned int);
-char trbwflush();
+int trbwflush();
 
 #endif /* __TRAIN_H__ */
