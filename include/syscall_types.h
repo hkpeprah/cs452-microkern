@@ -17,7 +17,8 @@ typedef enum {
     SYS_INTERRUPT,
     SYS_WAITTID,
     SYS_LOG,
-    SYS_IDLE
+    SYS_IDLE,
+    SYS_SIGTERM
 } system_calls;
 
 typedef struct args {

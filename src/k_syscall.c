@@ -8,6 +8,7 @@
 #include <util.h>
 #include <interrupt.h>
 #include <idle.h>
+#include <null.h>
 
 #define INIT_SPSR   0x10
 #define REGS_SAVE   13
@@ -258,4 +259,9 @@ int sys_waittid(uint32_t tid) {
 
 void sys_idle(uint32_t *retval) {
     *retval = getIdleTime();
+}
+
+
+void sys_sigterm() {
+    setExit(1);
 }

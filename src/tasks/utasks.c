@@ -17,6 +17,7 @@
 #include <train.h>
 #include <uart.h>
 #include <stdlib.h>
+#include <controller.h>
 
 
 void firstTask() {
@@ -28,6 +29,7 @@ void firstTask() {
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
     id = Create(13, TimerTask);
+    id = Create(10, TrainController);
 
     debug("FirstTask: Exiting.");
     Exit();
@@ -109,57 +111,19 @@ void TimerTask() {
 }
 
 
-static void TrainSensorSlave() {
-    TrainMessage t;
-    bool bit;
-    int status, byte1, byte2, args[2];
-    unsigned int i, j, parent;
-    volatile bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-
-    parent = MyParentTid();
-
-    debug("TrainSensorSlave: Tid %d", MyTid());
-    t.args = args;
-    args[0] = TRAIN_POLL_SENSORS;
-    args[1] = (int)sensors;
-
-    while (true) {
-        pollSensors();
-        for (i = 0; i < TRAIN_MODULE_COUNT; ++i) {
-            byte1 = trgetchar();
-            byte2 = trgetchar();
-            for (j = 0; j < TRAIN_SENSOR_COUNT; ++j) {
-                if (j < TRAIN_SENSOR_COUNT / 2) {
-                    /* first byte corresponds to sensors 1 - 8 */
-                    bit = EXTRACT_BIT(byte1, (TRAIN_SENSOR_COUNT / 2) - j);
-                } else {
-                    /* lower byte corresponds to sensors 8 - 16 */
-                    bit = EXTRACT_BIT(byte2, TRAIN_SENSOR_COUNT - j);
-                }
-                sensors[(i * TRAIN_SENSOR_COUNT) + j] = (bool)(bit & 1);
-            }
-        }
-        Send(parent, &t, sizeof(t), &status, sizeof(status));
-        Delay(50);
-        resetSensors();
-    }
-
-    Exit();
-}
-
-
 void TrainUserTask() {
+    bool sigkill;
     Train_t *train;
     TrainMessage t;
-    int status, speed;
-    int cmd, callee, bytes;
-    bool sigkill, *sensors;
-    unsigned int i, courier;
+    int status, cmd, callee, bytes;
 
-    RegisterAs("TrainHandler");
-    courier = Create(6, TrainSensorSlave);
-    sensors = NULL;
     sigkill = false;
+    RegisterAs("TrainHandler");
+
+    /* TODO: Are there more trains ? */
+    addTrain(50);
+    addTrain(45);
+    addTrain(40);
 
     while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));
@@ -167,32 +131,11 @@ void TrainUserTask() {
         /* switches on the command and validates it */
         status = 0;
         switch (cmd) {
-            case TRAIN_GET_SENSOR:
-                if (sensors == NULL) {
-                    status = -3;
+            case TRAIN_WAIT:
+                if (WaitOnSensor(t.args[1], t.args[2]) > 0) {
+                    printf("Sensor Triggered: %c%u\r\n", t.args[1], t.args[2]);
                 } else {
-                    if (t.args[1] >= 'A' && t.args[1] <= 'A' + TRAIN_MODULE_COUNT - 1) {
-                        if (t.args[2] >= 0 && t.args[2] <= TRAIN_SENSOR_COUNT) {
-                            status = sensors[t.args[1] - 'A' + t.args[2]];
-                        } else {
-                            status = -2;
-                        }
-                    } else {
-                        status = -1;
-                    }
-                }
-                break;
-            case TRAIN_POLL_SENSORS:
-                /* new sensor data */
-                if (callee == courier) {
-                    /* validate callee actually child */
-                    sensors = (bool*)t.args[1];
-                    for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
-                        if (sensors[i]) {
-                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
-                                        (i % TRAIN_SENSOR_COUNT));          // index in module
-                        }
-                    }
+                    printf("Error: Invalid sensor passed.\r\n");
                 }
                 break;
             case TRAIN_GO:
@@ -234,12 +177,7 @@ void TrainUserTask() {
             case TRAIN_RV:
                 if ((train = getTrain((unsigned int)t.args[1]))) {
                     debug("Reversing train: %u", t.args[1]);
-                    speed = train->speed;
-                    trainSpeed(train->id, 0);
-                    Delay(speed + 30);
                     trainReverse(train->id);
-                    Delay(speed + 30);
-                    trainSpeed(train->id, speed);
                     status = 0;
                 } else {
                     printf("Error: Invalid train.\r\n");

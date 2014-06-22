@@ -5,8 +5,6 @@
 #define WHOIS     1
 #define DELETE    2
 
-extern int nameserver_tid;
-
 
 typedef struct {
     int type : 8;

@@ -13,6 +13,7 @@
 #include <logger.h>
 #include <shell.h>
 #include <idle.h>
+#include <null.h>
 
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
@@ -96,6 +97,9 @@ static int handleRequest(Args_t *args) {
         case SYS_IDLE:
             sys_idle(&result);
             break;
+        case SYS_SIGTERM:
+            sys_sigterm();
+            break;
         default:
             break;
     }
@@ -154,6 +158,7 @@ void kernel_main() {
     Task_t *task = NULL;
 
     status = sys_create(0, NullTask, &nullTaskTid);
+    setExit(0);
     cpuIdle(false);
 
     FOREVER {

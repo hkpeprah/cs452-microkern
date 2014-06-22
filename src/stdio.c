@@ -10,7 +10,7 @@
 #include <uart.h>
 #define __INT             1
 #define __HEX             2
-#define __STRING          3
+#define __STR             3
 #define __UINT            4
 #define __CHAR            5
 #define __LONG            6
@@ -147,7 +147,9 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
         } else if (len <= 0) {
             return -1;
         } else if (isspace(ch)) {
-            while (*fmt && isspace(*fmt));
+            while (*fmt && isspace(*fmt)) {
+                *fmt++;
+            }
             continue;
         }
 
@@ -175,7 +177,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
                 base = 16;
                 break;
             case 's':
-                conversion_type = __STRING;
+                conversion_type = __STR;
                 break;
             case 'i':
                 conversion_type = __INT;
@@ -229,7 +231,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
                 *va_arg(va, unsigned int*) = (unsigned int)atoi(buf, &conv);
                 if (conv == 0) return -1;
                 break;
-            case __STRING:
+            case __STR:
                 tmp = va_arg(va, char*);
                 while ((*tmp++ = *buf++));
                 break;
@@ -256,6 +258,21 @@ int sscanf(const char *src, const char *fmt, ...) {
     va_end(va);
 
     return retval;
+}
+
+
+char *gets(int channel, char *buf, uint32_t len) {
+    int ch;
+    uint32_t count;
+
+    count = 0;
+    while (count < len && (ch = Getc(channel))) {
+        if (ch == LF || ch == CR || ch == EOF) break;
+        *buf++ = ch;
+        Putc(IO, ch);
+    }
+    *buf = 0;
+    return buf;
 }
 
 

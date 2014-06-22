@@ -121,3 +121,10 @@ int CpuIdle() {
     args.code = SYS_IDLE;
     return swi_call(0, &args);
 }
+
+
+void SigTerm() {
+    Args_t args;
+    args.code = SYS_SIGTERM;
+    swi_call(0, &args);
+}

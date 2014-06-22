@@ -27,8 +27,7 @@ typedef enum {
     TRAIN_LI,
     TRAIN_HORN,
     TRAIN_ADD,
-    TRAIN_GET_SENSOR,
-    TRAIN_POLL_SENSORS,
+    TRAIN_WAIT,
     NUM_TRAIN_COMMANDS,
 } TrainCommands;
 
@@ -62,6 +61,7 @@ int trainSwitch(unsigned int, int);
 void turnOnTrainSet();
 void turnOffTrainSet();
 void clearTrainSet();
+int sensorToInt(char, unsigned int);
 void pollSensors();
 void resetSensors();
 void turnOffSolenoid();
