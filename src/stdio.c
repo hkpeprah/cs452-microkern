@@ -10,7 +10,7 @@
 #include <uart.h>
 #define __INT             1
 #define __HEX             2
-#define __STRING          3
+#define __STR             3
 #define __UINT            4
 #define __CHAR            5
 #define __LONG            6
@@ -151,8 +151,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
             continue;
         }
 
-        // bufprintf(IO, "\r\nChecking if ch == %% ? %d", ch == '%' ? 1 : 0);
-
         if (ch != '%') {
             if (*input != ch || len <= 0) {
                 return -1;
@@ -164,8 +162,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
 
         nread++;
         ch = *fmt++;
-
-        bufprintf(IO, "\r\nEntering switch.");
 
         switch (ch) {
             case 'd':
@@ -179,7 +175,7 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
                 base = 16;
                 break;
             case 's':
-                conversion_type = __STRING;
+                conversion_type = __STR;
                 break;
             case 'i':
                 conversion_type = __INT;
@@ -199,7 +195,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
                 return -1;
         }
 
-        bufprintf(IO, "\r\nisspace(%c) ? %d", *input, isspace(*input));
         while (isspace(*input)) {
             ++input;
             --len;
@@ -212,7 +207,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
             buf[1] = 0;
             --len;
         } else {
-            bufprintf(IO, "\r\nconverting to int: %s", input);
             for (i = 0; !isspace(*input) && ((buf[i] = *input++)); ++i) {
                 --len;
             }
@@ -243,13 +237,10 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
         nassigned++;
     }
 
-    bufprintf(IO, "\r\nLooping while len > 0 and not end of input.");
     while (*input && isspace(*input)) {
         input++;
         --len;
     }
-
-    bufprintf(IO, "\r\nReturning.. %d", len == 0);
 
     if (len != 0) return -1;
     return nassigned;

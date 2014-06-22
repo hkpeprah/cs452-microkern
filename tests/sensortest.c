@@ -33,11 +33,11 @@ void PiggyBack() {
     if (n != 0 && (train = addTrain(n))) {
         printf("\r\nEnter first sensor: ");
         gets(IO, buf, 50);
-        if (sscanf(buf, fmt, module, n)) {
+        if (sscanf(buf, fmt, &module, &n)) {
             sensor1 = module - 'A' + n;
             printf("\r\nEnter second sensor: ");
             gets(IO, buf, 50);
-            if (sscanf(buf, fmt, module, n)) {
+            if (sscanf(buf, fmt, &module, &n)) {
                 sensor2 = module - 'A' + n;
                 TrainController = WhoIs("TrainController");
                 trainSpeed(train->id, 10);
