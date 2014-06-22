@@ -27,7 +27,7 @@ int main() {
         return -1;
     }
 
-    kernel_main(tid);
+    kernel_main();
 
     // should reach here after all work has been done
     shutdown();

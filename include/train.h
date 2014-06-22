@@ -27,8 +27,6 @@ typedef enum {
     TRAIN_LI,
     TRAIN_HORN,
     TRAIN_ADD,
-    TRAIN_GET_SENSOR,
-    TRAIN_POLL_SENSORS,
     NUM_TRAIN_COMMANDS,
 } TrainCommands;
 

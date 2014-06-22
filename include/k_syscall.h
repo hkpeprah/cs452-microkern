@@ -14,5 +14,6 @@ void sys_exit();
 int sys_await(int, void*, int);
 int sys_waittid(uint32_t);
 void sys_idle(uint32_t*);
+void sys_sigterm();
 
 #endif /* __K_SYSCALL__ */

@@ -2,12 +2,10 @@
  * stdio.c - Standard I/O functions
  */
 #include <stdio.h>
-#include <string.h>
-#include <ts7200.h>
-#include <types.h>
 #include <vargs.h>
-#include <bwio.h>
-#include <uart.h>
+#include <stdlib.h>
+#include <string.h>
+#include <types.h>
 #define __INT             1
 #define __HEX             2
 #define __STRING          3
@@ -151,8 +149,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
             continue;
         }
 
-        // bufprintf(IO, "\r\nChecking if ch == %% ? %d", ch == '%' ? 1 : 0);
-
         if (ch != '%') {
             if (*input != ch || len <= 0) {
                 return -1;
@@ -164,8 +160,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
 
         nread++;
         ch = *fmt++;
-
-        bufprintf(IO, "\r\nEntering switch.");
 
         switch (ch) {
             case 'd':
@@ -199,7 +193,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
                 return -1;
         }
 
-        bufprintf(IO, "\r\nisspace(%c) ? %d", *input, isspace(*input));
         while (isspace(*input)) {
             ++input;
             --len;
@@ -212,7 +205,6 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
             buf[1] = 0;
             --len;
         } else {
-            bufprintf(IO, "\r\nconverting to int: %s", input);
             for (i = 0; !isspace(*input) && ((buf[i] = *input++)); ++i) {
                 --len;
             }
@@ -243,20 +235,17 @@ int sscanformatted(const char *input, const char *fmt, va_list va) {
         nassigned++;
     }
 
-    bufprintf(IO, "\r\nLooping while len > 0 and not end of input.");
     while (*input && isspace(*input)) {
         input++;
         --len;
     }
-
-    bufprintf(IO, "\r\nReturning.. %d", len == 0);
 
     if (len != 0) return -1;
     return nassigned;
 }
 
 
-int sscanf(const char *src, const char *fmt, ...) {
+int scan(const char *src, const char *fmt, ...) {
     va_list va;
     int retval;
 
@@ -268,118 +257,13 @@ int sscanf(const char *src, const char *fmt, ...) {
 }
 
 
-char *gets(int channel, char *buf, uint32_t len) {
-    int ch;
-    uint32_t count;
+int main() {
+    char buf[] = "C14";
+    unsigned int n;
+    char module;
+    printf("Formatting %s\r\n");
+    scan(buf, "%c%u", module, n);
+    printf("Results: Char = %c, UInt = %u\r\n", module, n);
 
-    count = 0;
-    while (count < len && (ch = Getc(channel))) {
-        if (ch == LF || ch == CR || ch == EOF) break;
-        *buf++ = ch;
-        Putc(IO, ch);
-    }
-    *buf = 0;
-    return buf;
-}
-
-
-void bufputstr(int channel, char *str) {
-    Putcn(channel, str, strlen(str));
-}
-
-
-int format(const char *fmt, va_list va, char *buffer) {
-    char ch;
-    unsigned int i;
-    unsigned int len = 14;
-    char *tmp;
-    char convert_buf[len];
-
-    for (i = 0; i < len; ++i) {
-        convert_buf[i] = '\0';
-    }
-
-    i = 0;
-    while ((ch = *fmt++)) {
-        if (ch != '%') {
-            buffer[i++] = ch;
-        } else {
-            ch = *(fmt++);
-            switch (ch) {
-                case '0':
-                    break;
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                    ch = ch - '1';
-                    break;
-            }
-
-            switch (ch) {
-                case 'c':
-                    buffer[i++] = va_arg(va, char);
-                    break;
-                case 's':
-                    tmp = va_arg(va, char*);
-                    while (*tmp) {
-                        buffer[i++] = *(tmp++);
-                    }
-                    break;
-                case 'u':
-                    uitoa(va_arg(va, unsigned int), 10, convert_buf);
-                    break;
-                case 'd':
-                    itoa(va_arg(va, int), convert_buf);
-                    break;
-                case 'x':
-                    uitoa(va_arg(va, unsigned int), 16, convert_buf);
-                    break;
-                case '%':
-                    buffer[i++] = '%';
-                    break;
-                default:
-                    buffer[i++] = ' ';
-            }
-
-            if (*convert_buf != '\0') {
-                /* if convert buffer is non-empty, we converted something */
-                tmp = convert_buf;
-                do {
-                    buffer[i++] = *tmp;
-                } while (*(++tmp) != '\0');
-                *convert_buf = '\0';
-            }
-        }
-    }
-
-    buffer[i] = '\0';
-    return i;
-}
-
-
-void printformatted(int channel, char *fmt, va_list va) {
-    char buffer[256];
-    unsigned int len;
-
-    len = format(fmt, va, buffer);
-    Putcn(channel, buffer, len);
-}
-
-
-void bufprintf(int channel, char *fmt, ...) {
-    int len;
-    char buffer[256];
-    va_list va;
-
-    va_start(va, fmt);
-    len = format(fmt, va, buffer);
-    va_end(va);
-
-    Putcn(channel, buffer, len);
+    return 0;
 }

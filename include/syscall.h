@@ -15,5 +15,6 @@ int WaitTid(unsigned int);
 int Logn(const char *str, int n);
 int Log(const char *fmt, ...);
 int CpuIdle();
+void SigTerm();
 
 #endif /* __SYSCALL__ */

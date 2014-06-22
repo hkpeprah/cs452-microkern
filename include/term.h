@@ -5,6 +5,7 @@
 #include <vargs.h>
 #include <syscall.h>
 #include <train.h>
+#include <uart.h>
 
 /* ANSI color codes */
 #define CLEAR                    0
@@ -19,11 +20,6 @@
 #define MAGENTA                  35
 #define CYAN                     36
 #define WHITE                    37
-
-/* character codes */
-#define BS                       9
-#define LF                       10
-#define CR                       13
 
 /* Note: ## __VA_ARGS__ is only valid with GNU CPP */
 #ifndef BUFFEREDIO

@@ -17,18 +17,6 @@
 #define FOREVER            for (;;)
 
 
-static volatile int SHELL_EXITED = 0;
-
-
-void NullTask() {
-    /* sits on the kernel passing */
-    notice("NullTask: Entering.");
-    while (SHELL_EXITED == 0);
-    notice("NullTask: Exiting.");
-    Exit();
-}
-
-
 void Shell() {
     char ch;
     char buf[80];
@@ -72,7 +60,6 @@ void Shell() {
     i = 0;
     tr.args = args;
     args[0] = TRAIN_NULL;
-    SHELL_EXITED = 0;
     TrainController = WhoIs("TrainHandler");
     Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
     debug("Shell: Tid %d", MyTid());
@@ -169,6 +156,6 @@ void Shell() {
 
     args[0] = TRAIN_STOP;
     Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
-    SHELL_EXITED = 1;
+    SigTerm();
     Exit();
 }

@@ -109,56 +109,14 @@ void TimerTask() {
 }
 
 
-static void TrainSensorSlave() {
-    TrainMessage t;
-    bool bit;
-    int status, byte1, byte2, args[2];
-    unsigned int i, j, parent;
-    volatile bool sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-
-    parent = MyParentTid();
-
-    debug("TrainSensorSlave: Tid %d", MyTid());
-    t.args = args;
-    args[0] = TRAIN_POLL_SENSORS;
-    args[1] = (int)sensors;
-
-    while (true) {
-        pollSensors();
-        for (i = 0; i < TRAIN_MODULE_COUNT; ++i) {
-            byte1 = trgetchar();
-            byte2 = trgetchar();
-            for (j = 0; j < TRAIN_SENSOR_COUNT; ++j) {
-                if (j < TRAIN_SENSOR_COUNT / 2) {
-                    /* first byte corresponds to sensors 1 - 8 */
-                    bit = EXTRACT_BIT(byte1, (TRAIN_SENSOR_COUNT / 2) - j);
-                } else {
-                    /* lower byte corresponds to sensors 8 - 16 */
-                    bit = EXTRACT_BIT(byte2, TRAIN_SENSOR_COUNT - j);
-                }
-                sensors[(i * TRAIN_SENSOR_COUNT) + j] = (bool)(bit & 1);
-            }
-        }
-        Send(parent, &t, sizeof(t), &status, sizeof(status));
-        Delay(50);
-        resetSensors();
-    }
-
-    Exit();
-}
-
-
 void TrainUserTask() {
     Train_t *train;
     TrainMessage t;
     int status, speed;
     int cmd, callee, bytes;
-    bool sigkill, *sensors;
-    unsigned int i, courier;
+    bool sigkill;
 
     RegisterAs("TrainHandler");
-    courier = Create(6, TrainSensorSlave);
-    sensors = NULL;
     sigkill = false;
 
     while (sigkill == false) {
@@ -167,34 +125,6 @@ void TrainUserTask() {
         /* switches on the command and validates it */
         status = 0;
         switch (cmd) {
-            case TRAIN_GET_SENSOR:
-                if (sensors == NULL) {
-                    status = -3;
-                } else {
-                    if (t.args[1] >= 'A' && t.args[1] <= 'A' + TRAIN_MODULE_COUNT - 1) {
-                        if (t.args[2] >= 0 && t.args[2] <= TRAIN_SENSOR_COUNT) {
-                            status = sensors[t.args[1] - 'A' + t.args[2]];
-                        } else {
-                            status = -2;
-                        }
-                    } else {
-                        status = -1;
-                    }
-                }
-                break;
-            case TRAIN_POLL_SENSORS:
-                /* new sensor data */
-                if (callee == courier) {
-                    /* validate callee actually child */
-                    sensors = (bool*)t.args[1];
-                    for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
-                        if (sensors[i]) {
-                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
-                                        (i % TRAIN_SENSOR_COUNT));          // index in module
-                        }
-                    }
-                }
-                break;
             case TRAIN_GO:
                 turnOnTrainSet();
                 debug("Starting Train Controller");
