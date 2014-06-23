@@ -99,7 +99,7 @@ Memory allocations is created in a trivial manner.  As in accordance with mainta
 \subsection{Task Descriptor (TD)}
 Tasks represent a thread or unit of execution.  A task descriptor describes a single task and stores the following information:
 \begin{center}
-  \begin{tabular}{|l|l|}
+  \begin{tabular}{|l|p{0.6\textwidth}|}
     \hline
     {\bf Field} & {\bf Description} \\\hline
     state & the task state, ie. READY, ACTIVE, or blocked on some events \\\hline
@@ -138,7 +138,7 @@ This sort of round-robin scheduling means that each task in the queue has an equ
 \end{enumerate}
 These two variables are updated each time a call is made to \texttt{addTask} to add a new/existing task descriptor to the end of a queue, which occurs either during creation or scheduling.\\
 
-Tracking the queue state allows for a constant time retrieval of the next task to run.  When a \texttt{schedule()} call results in the last task being removed from the queue of its priority, then the corresponding bit in \texttt{availableQueues} is set to $0$, and \texttt{highestTaskPriority} is updated to the next highest task priority by doing a pseudo-linear search of the bits in \texttt{availableQueues} to find the first occurence of a $1$ bit.  A binary search is run, with the search space between the last \texttt{highestTaskPriority} and $0$.  However, this binary search is inconclusive, in that it will only move the high index towards 0, and will break when doing so will make the high index lower than the next highest priority. Essentially, we want to find the first n such that n $>$ next highest priority, but n/2 $<=$ next highest priority. From here, a linear search is done counting down from n until the first non-zero bit of \texttt{availableQueues} is found. \\
+Tracking the queue state allows for a constant time retrieval of the next task to run.  When a \texttt{schedule()} call results in the last task being removed from the queue of its priority, then the corresponding bit in \texttt{availableQueues} is set to $0$, and \texttt{highestTaskPriority} is updated to the next highest task priority by doing a pseudo-linear search of the bits in \texttt{availableQueues} to find the first occurence of a $1$ bit.  A binary search is run, with the search space between the last \texttt{highestTaskPriority} and $0$.  However, this binary search is inconclusive, in that it will only move the high index towards 0, and will break when doing so will make the high index lower than the next highest priority. Essentially, we want to find the first n such that n $>$ next highest priority, but $\frac{n}{2} <=$ next highest priority. From here, a linear search is done counting down from n until the first non-zero bit of \texttt{availableQueues} is found. \\
 
 This was done to give an optimization in the worst case (last priority was very high, and the next highest priority is low). A full binary search is not done since given the size of the search space, there doesn't seem to be much to be gained from doing so. Optimization seems premature at this time, so there was not much effort spent on it.
 
@@ -204,7 +204,7 @@ If there is a message available, then the corresponding values in the envelope a
 \subsubsection{Reply}
 For Reply, the intended sender task's outbox parameter is used to find the envelope, and the provided reply message is copied into the provided pointer. The sender is then added back to the ready queue and the envelope is released back into the envelope pool.
 
-\section{System Primitives}
+\section{System Calls/Primitives}
 \begin{longtable}{|l|p{0.3\textwidth}|p{0.5\textwidth}|}
   \hline
   {\bf System Call} & {\bf Prototype} & {\bf Description} \\\hline
@@ -506,7 +506,7 @@ while still printing a smaller number of characters, ie. echoing user input.
 The TrainController registers with the NameServer and creates a TrainSensorSlave that polls for sensors and awaits characters being transmitted from UART1.  It then blocks on \texttt{Receive} awaiting requests from other tasks that wish to get the state of a sensor, await a sensor being tripped, or for the notifier to message it with the latest sensor data.
 \\
 \subsection{TrainSensorSlave}
-Blocks on \texttt{AwaitEvent} for $10$ characters to be transmitted from UART1 at a time.  Extracts the individual bits from the given characters and sets the status of its sensor to $1$ or $0$ if that sensor tripped (bit value > 0 means that the sensor was tripped).  It then sends the updated results to the TrainController, and repeats the process.
+Blocks on \texttt{AwaitEvent} for $10$ characters to be transmitted from UART1 at a time.  Extracts the individual bits from the given characters and sets the status of its sensor to $1$ or $0$ if that sensor tripped (bit value $> 0$ means that the sensor was tripped).  It then sends the updated results to the TrainController, and repeats the process.
 \\[1\baselineskip]
 \subsection{API}
 The API allows for tasks to wait on sensors by calling \texttt{WaitOnSensor} at which point the calling task is added to that sensors wait queue.  When the sensor is tripped, all the tasks in that queue are unblocked with a return value of $0$.  Tasks may block forever if the sensor never trips.
@@ -556,6 +556,7 @@ There are known and unknown bugs and errors in our kernel system.  Below we have
 \begin{itemize}
   \item Train derails because of a switch state in the middle switches; in order to remedy this, the train functions should never allow a switch state involving the center switches that would cause a derail.
   \item Known broken switches (e.g. switch $14$ on the second track), and known faulty sensors can cause derails or locations to not accurately be picked up; to compensate for this, the kernel would have to know which sensors are broken and to compensate by looking one sensor ahead or behind that instead to estimate distance.
+  \item There is a potential race condition that is well specified in the Serial IO section between the Kernel and the Train Hardware if it somehow beats the Kernel's CPU; refer to Serial IO section for more detail (section $7.3.3$).
 \end{itemize}
 \subsection{User Interface Bugs}
 \begin{itemize}
