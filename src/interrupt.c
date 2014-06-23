@@ -139,6 +139,7 @@ int handleInterrupt() {
                 *u1int = 0;
             } else {
                 // TODO: no waiting task, mask intr
+                sys_log_f("Uart1 MOD interrupt missed");
                 *u1ctlr &= ~(MSIEN_MASK);
             }
         }

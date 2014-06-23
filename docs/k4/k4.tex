@@ -94,6 +94,115 @@ After the startup tasks have finished running, the user will reach a command pro
 \\[2\baselineskip]
 
 \section{Kernel Structure}
+\subsection{Memory Allocation}
+Memory allocations is created in a trivial manner.  As in accordance with maintaing the performance of a real time system, we make use of the stack to allocate memory, treating Memory as a linked list of addresses which represent a segment (or block) of the stack.  These segments make up the stacks of the tasks.  On allocation, the head of the linked list is returned and the next segment becomes the head, while on free, the block is added as the head of the Memory linked list.  Since Memory protection and segmentation are not required, memory was implemented in the simplest manner.
+\subsection{Task Descriptor (TD)}
+Tasks represent a thread or unit of execution.  A task descriptor describes a single task and stores the following information:
+\begin{center}
+  \begin{tabular}{|l|l|}
+    \hline
+    {\bf Field} & {\bf Description} \\\hline
+    state & the task state, ie. READY, ACTIVE, or blocked on some events \\\hline
+    tid & the task identifier (these aren't reusued) \\\hline
+    parentTid & tid of the parent task (task that created thsi one) \\\hline
+    priority & integer value indicating priority of task (larger number $\rightarrow$ higher priority) \\\hline
+    sp & the task's stack pointer \\\hline
+    next & next task in the task queue this task belongs to \\\hline
+    waitQueue & waits until tasks on this queue exit before this task is run (not in spec) \\\hline
+    addrspace & pointer to the block of memory the task can use as it's stack \\\hline
+    inboxHead & pointer to head of inbound message queue \\\hline
+    inboxTail & pointer to tail of inbound message queue \\\hline
+    outbox & pointer to outbound message (reply location) OR inbound message location (Receive-Before-Send special case) \\\hline
+  \end{tabular}
+\end{center}
+The CPSR of the task and the LR for the kernel to return to are stored on the stack instead of the TD.
+
+To create the task descriptors, since we do not make use of the heap, we have to allocate our task descriptors from a bank that already exists on the stack.  To this end, we have an array of $32$ task descriptors (an amount that will be tweaked depending on how much is needed in the future), that can be used to create new tasks.  These tasks start as blank with their state marked as \texttt{FREE} denoting that they can be used to allocate new tasks.  When a task is \texttt{READY}, it is stored in the \texttt{taskQueue} corresponding to its priority, of which priorities can range from $0 - 15$.  To get constant performance when creating a new task descriptor, in the \texttt{initTasks} function, they are assigned to the \texttt{taskBank} as a linked list, each task descriptor pointing to the next free task descriptor in the list.  When we wish to create a new task, we grab the task descriptor at the head of the bank as it will always be free to use.  We then assign it a priority, task id, parent tid (if the parent exists), an address space to use by calling \texttt{getMem()} which returns a segment of memory for the task to use as its stack, and the task pointer which points to the bottom of the address space.  The task is then added to the end of its respective queue.  On deletion, we mark the state of the task as \texttt{ZOMBIE} and free its address space; for now we make use of the \texttt{ZOMBIE} state and do not add the task descriptor back to the head of the bank to adhere with assignment specifications, but in the future to allow for immediate garbage collection that would not hinder the performance of the system, the task would be added as a free task to the head of the bank.
+
+\subsection{Task Queues}
+Queues for tasks are implemented with two pointers; one pointer to the head of the queue and another pointer to the end of the queue.  We use the tail pointer to enable constant time addition of a new task to the queue by simply having the tail task pointer to the added task as it's \texttt{next} field.  The \texttt{head} pointer enables us to get the next task in the queue that is to be run and pop it off the queue.  Queues are created from an array of queues on the stack, and each queue's index in the array corresponds to the priority of the tasks that are stored in that queue.
+\\[1\baselineskip]
+\subsection{Scheduling}
+On a \texttt{schedule()} call, the following sequence of events takes place:
+\begin{enumerate}
+  \item If the queues are empty, or there are no tasks of higher priority, return the current task (i.e. the last task that was running).
+  \item If the current task is null, the kernel has no more tasks to run, exit.
+  \item Otherwise, if the current task is in the ACTIVE (ie. not blocked) state, add the current task to the end of the priority queue.
+  \item Get the next task descriptor from the priority queue.
+  \item Move that task into the \texttt{ACTIVE} state and return it.
+\end{enumerate}
+This sort of round-robin scheduling means that each task in the queue has an equal opportunity at being run and means that if a task passes and it is the only task in the queue, it will simply be run again.  There are $16$ priorities ($0 - 15$) for tasks, with $15$ being the highest priority a task can have.  Each priority has its own queue of task descriptors that are implemented as a linked list and tracked by
+\begin{enumerate}
+  \item \texttt{highestPriorityQueue} - integer, the highest priority queue that is not empty
+  \item \texttt{availableQueues} - integer, bit field for the queues, $1$ = non-empty, $0$ = empty
+\end{enumerate}
+These two variables are updated each time a call is made to \texttt{addTask} to add a new/existing task descriptor to the end of a queue, which occurs either during creation or scheduling.\\
+
+Tracking the queue state allows for a constant time retrieval of the next task to run.  When a \texttt{schedule()} call results in the last task being removed from the queue of its priority, then the corresponding bit in \texttt{availableQueues} is set to $0$, and \texttt{highestTaskPriority} is updated to the next highest task priority by doing a pseudo-linear search of the bits in \texttt{availableQueues} to find the first occurence of a $1$ bit.  A binary search is run, with the search space between the last \texttt{highestTaskPriority} and $0$.  However, this binary search is inconclusive, in that it will only move the high index towards 0, and will break when doing so will make the high index lower than the next highest priority. Essentially, we want to find the first n such that n $>$ next highest priority, but n/2 $<=$ next highest priority. From here, a linear search is done counting down from n until the first non-zero bit of \texttt{availableQueues} is found. \\
+
+This was done to give an optimization in the worst case (last priority was very high, and the next highest priority is low). A full binary search is not done since given the size of the search space, there doesn't seem to be much to be gained from doing so. Optimization seems premature at this time, so there was not much effort spent on it.
+
+\subsection{Context Switch}
+From both software and hardware interrupts, the same entry point is eventually reached in the kernel. The kernel then handles the request based on the request code and then switches back out to the next scheduled user task in the same way. For kernel SWI calls, the wrapper function will construct an \texttt{Args\_t} struct on its stack and pass its address to the kernel. For hardware interrupts, a default \texttt{Args\_t} struct is used with the code being INTERRUPT and no arguments.
+
+On a context switch, all registers {r0-r12, lr} are pushed to the user stack, as well as the CPSR and LR. Context switch is accomplished with:
+
+\begin{enumerate}
+    \item Switch to SYS mode with interrupts disabled (write 0x9F to CPSR).
+    \item Save {r0-r12, lr} to the user stack, move the SP to r0.
+    \item Switch back to the service mode (SWI/IRQ).
+    \item Push SPSR, LR of the respective service mode to r0 (user stack).
+\end{enumerate}
+
+IRQ Only: The IRQ handler subtracts 4 from the LR when storing it to the user stack (interrupted instruction instead of next instruction).
+\\
+SWI Only: The SWI handler pops the top of the kernel stack as an address and writes r1 into it. This is the method of passing the \texttt{Args\_t} of the sys call to the kernel, as described above.
+\\
+After the user state is saved, the processor is returned to the kernel by popping off the stored kernel registers from its stack. Since the kernel starts in SVC mode, the IRQ handler must first switch to SVC mode before making the pop from the stack. Both handlers will enter the kernel in the exact same way where it exited through the \texttt{swi\_exit} call, returning the task SP (r0).
+\\
+The kernel then handles the request, schedules the next task, and calls the assembly function \texttt{swi\_exit} passing in the task's SP and an output pointer parameter for the next \texttt{Args\_t} which does a context switch back to the user task.
+
+\subsection{Send-Receive-Reply}
+The \texttt{Envelope\_t} struct is used to handle message passing, containing the following information:
+\begin{center}
+  \begin{tabular}{|l|l|}
+    \hline
+    {\bf Field} & {\bf Description} \\\hline
+    void *msg & Source address to copy message from \\\hline
+    int msglen & Length of msg \\\hline
+    void *reply & Destination address to copy reply to \\\hline
+    int replylen & Length of reply \\\hline
+    Task\_t *sender & Pointer to TD of the Sender task \\\hline
+    Envelope\_t *next & Next envelope in the inbox - these are in a linked list \\\hline
+  \end{tabular}
+\end{center}
+A pool of \texttt{Envelope\_t} structures are allocated for message passing, and are retrieved/freed with a simple linked list of free structs.
+\\
+The states \texttt{SEND\_BL}, \texttt{RECV\_BL} and \texttt{REPL\_BL} corresponding to the possible blocked states.
+\\
+These structures are stored in the \texttt{inboxHead}, \texttt{inboxTail} and \texttt{outbox} parameters of the task descriptors.
+
+\subsubsection{Send}
+If the receiver is in the \texttt{SEND\_BL} state, it is added back to the ready queues, and the send value is directly
+copied into the receiver's provided buffer space at its \texttt{outbox} parameter. The same envelope is then added as
+the sender outbox so it can be replied to.
+\\
+Otherwise, the Receiver has yet to block. In this case, an \texttt{Envelope\_t} is retrieved from the available pool,
+and if none are available, an error is returned (A more elegant solution could be implemented by blocking the task until
+one of structs is available). The msg, msglen, reply, and replylen parameters from the \texttt{Send} call are copied into 
+the respective fields of the \texttt{Envelope\_t}. In addition, the current task pointer is added to the envelope as the 
+sender, and the envelope is set as the outbox pointer of the sender. The envelope is then added to the tail of the
+receiver's inbound message queue, inboxTail.
+\\
+In both cases the sender is moved to the \texttt{RECV\_BL} state. 
+\subsubsection{Receive}
+On a Receive, the inbox of the current task is checked. If there is no inbound messages, the task is moved to the \texttt{SEND\_BL} state, 
+and an envelope is allocated to store the Receive parameters. This is stored as the outbox since a task can't be blocked
+on send and receive at the same time, and saves one field in the TD.
+\\
+If there is a message available, then the corresponding values in the envelope are copied into the provided pointers, and the sender task is moved to the \texttt{REPL\_BL} state. The envelope is then removed from the head of the queue so the next message can be received.
+\subsubsection{Reply}
+For Reply, the intended sender task's outbox parameter is used to find the envelope, and the provided reply message is copied into the provided pointer. The sender is then added back to the ready queue and the envelope is released back into the envelope pool.
 
 \section{System Primitives}
 \begin{longtable}{|l|p{0.3\textwidth}|p{0.5\textwidth}|}
@@ -112,7 +221,7 @@ After the startup tasks have finished running, the user will reach a command pro
   Reply & \texttt{int Reply(int, void*, int)} & Replies to the specified task with the given message. \\\hline
   Log & \texttt{int Log(const char*, ...)} & Logs a variable length formatted message to the logger. \\\hline
   Logn & \texttt{int Logn(const char*, n)} & Logs a fixed length message to logger. \\\hline
-  AwaitEvent & \texttt{int AwaitEvent(int eventType)} & Blocks until the event identified occurs then returns. \\\hline
+  AwaitEvent & \texttt{int AwaitEvent(int eventType, void *buf, int buflen)} & Blocks until the event identified occurs then returns. \\\hline
   WaitTid & \texttt{int WaitTid(unsigned int tid)} & Waits until the task specified by the \texttt{tid} exits, then returns. \\\hline
   Delay & \texttt{int Delay(int)} & Blocks the current task until the specified number of ticks have elapsed. \\\hline
   DelayUntil & \texttt{int DelayUntil(int)} & Blocks the current task until the specified time has been reached. \\\hline
@@ -312,6 +421,86 @@ The ClockNotifier is responsible for notifying the ClockServer when a tick occur
 \subsection{API}
 Implements three primitives: \texttt{Tick}, \texttt{Delay}, and \texttt{DelayUntil} that have been described above.
 \\[2\baselineskip]
+
+\section{Serial I/O}
+
+\subsection{Interrupts}
+The following events are used by \texttt{AwaitEvent} for I/O:
+\begin{enumerate}
+    \item UART1\_XMT\_INTERRUPT
+    \item UART1\_RCV\_INTERRUPT
+    \item UART1\_MOD\_INTERRUPT
+    \item UART2\_XMT\_INTERRUPT
+    \item UART2\_RCV\_INTERRUPT
+\end{enumerate}
+
+These interrupts correspond to the OR'd interrupt values, bit 20/22 in VIC2 for UART1/UART2 respectively. Upon receiving
+an interrupt, the handler will read the corresponding UART status register to determine whether a XMT or RCV (or MOD)
+interrupt has actually occured, and unblock the corresponding waiting handler task.
+
+\subsection{Kernel Space Interrupt Handler}
+UART interrupts are dynamically enabled and disabled. When a task calls \texttt{AwaitEvent} and is blocked, the
+interrupt it is waiting on will be enabled by ORing the corresponding CTLR register with the enable mask. This ensures
+that, assuming no external corruption of the CTLR registers, no tasks should be waiting on an interrupt that will never
+be generated.
+\\
+In addition, interrupts are disabled (OR the CTLR witht he negation of the enable mask) when they occur
+and no tasks are currently on them. This ensures that we do not lose the interrupt information without requiring the
+kernel to store state of the interrupts. Combined with enabling interrupts on \texttt{AwaitEvent}, this allows us to
+delay interrupts until the handler task is ready to service it. In the case of RCV, this could cause overrun errors in
+the UART, so additional flow control actions may be necessary (currently not implemented).
+\\
+The following actions are taken for each interrupt, assuming that a task is waiting on the interrupt.
+\begin{enumerate}
+    \item RCV: If the FIFO is in use, copy from the data register into the provided buffer until the RXFE flag is set.
+    Otherwise, read a single byte and return it as the return value.
+    \item XMT: Reschedule the blocked XMT handler task and disable the XMT interrupt.
+    \item MOD: Clear the MOD interrupt (write to the INTR register) and reschedule the blocked task.
+\end{enumerate}
+
+\subsection{Handlers}
+There are 4 handler tasks in total, \texttt{Uart(1|2)(XMT|RCV)Handler}, each corresponding to one of the new interrupts, with the
+\texttt{Uart1XMTHandler} also registering for the MOD interrupt.
+
+\subsubsection{RCV Handlers}
+RCV handlers are the simplest handlers, and do nothing more than wait for their correspond interrupt event and send the
+result to their parent server. UART2 uses a FIFO buffer with 8 bytes while UART1 sends a single byte.
+
+\subsubsection{UART2 XMT Handler}
+The UART2 XMT handler is also rather simple: wait for the XMT interrupt, Send to the parent server to request up to 8
+bytes of data then writes it to the UART2 data register.
+
+\subsubsection{UART1 XMT Handler}
+This handler is much more complicated than the others, mainly due to the fact that it requires the CTS bit to be
+asserted. The control flow is as follows:
+\begin{verbatim}
+FOREVER:
+    AwaitEvent(UART1_XMT_INTERRUPT)
+    if (not cts):
+        AwaitEvent(UART1_MOD_INTERRUPT)
+    Send(server)
+    write byte
+    if (cts):
+        AwaitEvent(UART1_MOD_INTERRUPT)
+\end{verbatim}
+The handler waits for CTS before writing to the UART, and waits for !CTS after writing to the UART before looping
+around. This handles the race condition of two write requests in the space of a single CTS assert, the second occuring 
+before the train controller has had the chance to deassert CTS. There is a potential race condition here in the case of
+a MOD interrupt occuring before the CTS check, which will be masked but the corresponding AwaitEvent will never be
+called. However, given the massive speed differences between the kernel and the train controller, the fix for this has
+been deferred to a later time.
+
+\subsection{Servers}
+There are two servers, \texttt{InputServer} and \texttt{OutputServer}, each handling both channels. The servers create
+the corresponding Handler tasks, and then block on receive. Each server can be sent two different types of messages:
+READ and WRITE. The \texttt{OutputServer} only accepts READ calls from its handlers, and the \texttt{InputServer} only
+accepts WRITE calls from its handlers.
+\\
+Each server, for each channel, uses a circular buffer to store characters written to it, and replies to READ requests
+from this buffer. READ requests on the \texttt{InputServer} with insufficient characters will be blocked until a
+subsquent write gives it enough characters. However, for the \texttt{OutputServer}, a READ request will return any
+number of characters, and indicate the length of characters. This is done so that the COM2 FIFO can be used effectively
+while still printing a smaller number of characters, ie. echoing user input.
 
 \section{TrainController}
 The TrainController registers with the NameServer and creates a TrainSensorSlave that polls for sensors and awaits characters being transmitted from UART1.  It then blocks on \texttt{Receive} awaiting requests from other tasks that wish to get the state of a sensor, await a sensor being tripped, or for the notifier to message it with the latest sensor data.

@@ -21,8 +21,6 @@ typedef struct {
     UartRequest_t request;
 } UartRequestQueue_t;
 
-void enableUartInterrupts();
-
 int Getcn(int channel, volatile char *buf, int n);
 char Getc(int channel);
 int Putcn(int channel, volatile char *buf, int n);

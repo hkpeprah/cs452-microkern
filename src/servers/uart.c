@@ -12,16 +12,6 @@
 static int is_tid = -1;
 static int os_tid = -1;
 
-
-void enableUartInterrupts() {
-    int *uart1ctrl = (int*) (UART1_BASE + UART_CTLR_OFFSET);
-    *uart1ctrl |= RIEN_MASK | MSIEN_MASK;
-
-    int *uart2ctrl = (int*) (UART2_BASE + UART_CTLR_OFFSET);
-    *uart2ctrl |= RIEN_MASK | RTIEN_MASK;
-}
-
-
 int Getcn(int channel, volatile char *buf, int n) {
     UartRequest_t req;
 
@@ -141,6 +131,19 @@ static void Uart1XMTHandler() {
         if (result < 0) {
             continue;
         }
+
+        // TODO: fix this potential race condition
+        // ie. if the interrupt occurs before the check, then nothing
+        // is waiting on it and the AwaitEvent call here is skipped but the
+        // interrupt is still there and masked (will be triggered on the next AwaitEvent)
+
+        // Clearing the interrupt (even when no task wait) won't work either as an interrupt between
+        // the if check and the call to AwaitEvent will result in a never-unblocking
+        // await.
+
+        // Essentially, this conditional + await needs to be an atomic kernel operation
+        // However, we are fine for now as we are beating the train controller in the race
+        // by miles
 
         // wait for cts to assert
         if (!(*flags & CTS_MASK)) {
