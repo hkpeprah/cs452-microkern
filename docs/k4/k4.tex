@@ -1,0 +1,42 @@
+\documentclass[12pt]{article}
+\usepackage{enumerate, amsmath, fullpage, hyperref, amsfonts, titlesec, listings}
+\renewcommand*\contentsname{Table of Contents}
+\newlength\tindent
+\setlength{\tindent}{\parindent}
+\setlength{\parindent}{0pt}
+\renewcommand{\indent}{\hspace*{\tindent}}
+\lstset{
+   breaklines=true,
+   basicstyle=\scriptsize\rmfamily}
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+  {\bf\Large Kernel 4}\\
+  {\bf\large CS452 - Spring 2014}\\
+  Real-Time Programming\vspace{5cm}\\
+  {\bf Team }\\
+  Max Chen - mqchen\\
+  mqchen@uwaterloo.ca\\[1\baselineskip]
+  Ford Peprah - hkpeprah\\
+  ford.peprah@uwaterloo.ca\vspace{5cm}\\
+  Bill Cowan\\
+  University of Waterloo\\
+  {\bf Due Date:} Monday, $23^{rd}$, June, $2014$
+\end{center}
+\newpage
+% Program Description: how to operate it, full pathname
+% Description fo structure of Kernel: algorithms, data structures, etc.
+% Location fo source code + MD5
+% Output produced by program and explanation of why it does
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+\section{Program Description}
+\section{Kernel Structure}
+\section{System Primitives}
+\section{Servers}
+\section{Algorithms and Data Structures}
+\section{Shell Task}
+\section{MD5 Hashes}
+\lstinputlisting{md5}
+\end{document}
