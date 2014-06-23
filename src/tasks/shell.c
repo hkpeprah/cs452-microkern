@@ -157,6 +157,9 @@ void Shell() {
         }
     }
 
+    args[0] = TRAIN_STOP;
+    Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
+
     SigTerm();
     Exit();
 }

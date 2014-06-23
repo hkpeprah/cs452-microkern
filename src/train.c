@@ -123,7 +123,16 @@ void turnOnTrainSet() {
 
 
 void turnOffTrainSet() {
-    bwputc(TRAIN, TRAIN_AUX_STOP);
+    Train_t *train;
+
+    train = trainSet;
+    while (train != NULL) {
+        trbwputc(0);
+        trbwputc(train->id);
+        train = train->next;
+    }
+
+    trbwputc(TRAIN_AUX_STOP);
 }
 
 
@@ -245,10 +254,13 @@ void trbwputc(char ch) {
     volatile int *data, *flags;
     flags = (int*)(UART1_BASE + UART_FLAG_OFFSET);
 
-    while (!(*flags & CTS_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)));
-
-    data = (int*)(UART1_BASE + UART_DATA_OFFSET);
-    *data = ch;
+    while (true) {
+        if (*flags & CTS_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
+            data = (int*)(UART1_BASE + UART_DATA_OFFSET);
+            *data = ch;
+            break;
+        }
+    }
 }
 
 

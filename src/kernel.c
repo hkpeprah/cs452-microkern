@@ -140,10 +140,9 @@ void boot () {
 int shutdown() {
     /* sequence of shutdown operations */
     kputstr("\r\nShutting down the system...\r\n");
-    kputstr("Turning off the train controller...\r\n");
-    turnOffTrainSet();
     kputstr("Disabling interrupts..\r\n");
     disableInterrupts();
+    kputstr("Turning off the train controller...\r\n");
     kputstr("Cleaning up tasks....\r\n");
     clearTasks();
     disableIdleTimer();
