@@ -57,7 +57,7 @@ typedef struct {
 int trainSpeed(unsigned int, unsigned int);
 int trainAuxiliary(unsigned int, unsigned int);
 int trainReverse(unsigned int);
-int trainSwitch(unsigned int, int);
+int trainSwitch(unsigned int, char);
 void turnOnTrainSet();
 void turnOffTrainSet();
 void clearTrainSet();
