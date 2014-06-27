@@ -33,3 +33,7 @@ latex/
 
 # Temporary Directories
 build
+
+# generated code
+track_data.h
+track_data.c
