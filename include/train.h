@@ -2,6 +2,7 @@
 #define __TRAIN_H__
 #include <ts7200.h>
 #include <types.h>
+#include <track_node.h>
 
 #define TRAIN                COM1
 #define TRAIN_SWITCH_COUNT   22     /* switches on the board, upper four are special */
@@ -31,20 +32,23 @@ typedef enum {
     NUM_TRAIN_COMMANDS,
 } TrainCommands;
 
+#define SWITCH_CHAR(x) ((x == DIR_STRAIGHT) ? 'S' : 'C')
 
 typedef struct __Train_t {
     unsigned int id : 16;
     unsigned int speed : 8;
     unsigned int aux : 8;
-    unsigned int lastSensor : 16;
+    track_edge *currentEdge;
+    unsigned int edgeDistanceMM : 16;       // distance from src of edge, updated on speed change
+    unsigned int lastDistUpdateTick;        // time of above update
+    unsigned int microPerTick: 16;          // micrometer / clock tick speed
     struct __Train_t *next;
-    /* TODO: Direction or nextSensor ? */
 } Train_t;
 
 
 typedef struct {
     unsigned int id : 16;
-    char state;
+    unsigned int state : 1;
 } Switch_t;
 
 

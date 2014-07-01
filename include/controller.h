@@ -2,6 +2,8 @@
 #define __TRAIN_CONTROLLER_H__
 #include <types.h>
 
+#define TRAIN_CONTROLLER "TrainController"
+
 typedef enum {
     SENSOR_WAIT = 0,
     SENSOR_RETURNED,
