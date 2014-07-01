@@ -67,11 +67,11 @@ void resetSensors() {
 }
 
 
-static inline void setTrainSwitchState(int index, int state, char statech) {
+static inline void setTrainSwitchState(int index, int state, int swstate) {
     int id = SWITCH_INDEX_TO_ID(index);
 
     trainSwitches[index].id = id;
-    trainSwitches[index].state = statech;
+    trainSwitches[index].state = swstate;
 
     trbwputc(state);
     trbwputc(id);
@@ -88,12 +88,12 @@ void clearTrainSet() {
 
     for (i = 0; i < sizeof(straight) / sizeof(straight[0]); ++i) {
         index = straight[i];
-        setTrainSwitchState(index, TRAIN_AUX_STRAIGHT, 'S');
+        setTrainSwitchState(index, TRAIN_AUX_STRAIGHT, DIR_STRAIGHT);
     }
 
     for (i = 0; i < sizeof(curved) / sizeof(curved[0]); ++i) {
         index = curved[i];
-        setTrainSwitchState(index, TRAIN_AUX_CURVE, 'C');
+        setTrainSwitchState(index, TRAIN_AUX_CURVE, DIR_CURVED);
     }
 
     trbwputc(TRAIN_AUX_SOLENOID);
@@ -106,6 +106,10 @@ void clearTrainSet() {
         freeSet = &__trainSet[i];
         freeSet->speed = 0;
         freeSet->aux = 0;
+        freeSet->currentEdge = NULL;
+        freeSet->edgeDistanceMM = 0;
+        freeSet->lastDistUpdateTick = 0;
+        freeSet->microPerTick = 0;
     }
 
     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
@@ -165,6 +169,66 @@ Sensor_t *getSensor(char module, unsigned int id) {
     return NULL;
 }
 
+static inline unsigned int toMicroPerTick(unsigned int tr, unsigned int sp) {
+    return sp;
+
+    switch(tr) {
+        case 45:
+
+        case 47:
+
+        case 48:
+
+        case 49:
+
+        case 50:
+
+        default:
+            error("BAD TRAIN NUMBER");
+            return 0;
+    }
+}
+
+void traverseNode(Train_t *train, track_node *node) {
+    Switch_t *sw;
+
+    if (train->currentEdge->dest != node) {
+        error("Expected dest node %s but received %s", train->currentEdge->dest, node);
+    }
+
+    switch(node->type) {
+        case NODE_SENSOR:
+        case NODE_MERGE:
+        case NODE_ENTER:
+        case NODE_EXIT:
+            train->currentEdge = &(node->edge[DIR_AHEAD]);
+            break;
+
+        case NODE_BRANCH:
+            sw = getSwitch(node->num);
+            train->currentEdge = &(node->edge[sw->state]);
+            break;
+
+        case NODE_NONE:
+        default:
+            error("BAD NODE TYPE");
+    }
+
+    train->edgeDistanceMM = 0;
+    train->lastDistUpdateTick = Time();
+}
+
+static void updatePosition(Train_t *train) {
+    unsigned int currentTick = Time();
+    // TODO: account for acceleration
+    train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
+    train->lastDistUpdateTick = currentTick;
+}
+
+static void printPosition(Train_t *train) {
+    unsigned int dist = (Time() - train->lastDistUpdateTick) * train->microPerTick / 1000;
+    printf("%d mm from %s", dist, train->currentEdge->src->name);
+}
 
 int trainSpeed(unsigned int tr, unsigned int sp) {
     char buf[2];
@@ -176,6 +240,11 @@ int trainSpeed(unsigned int tr, unsigned int sp) {
         buf[0] = sp + train->aux;
         buf[1] = tr;
         trnputs(buf, 2);
+
+        updatePosition(train);
+        printPosition(train);
+        train->microPerTick = toMicroPerTick(tr, sp);
+
         return 0;
     }
     return 1;
@@ -214,6 +283,8 @@ int trainReverse(unsigned int tr) {
         buf[1] = tr;
         trnputs(buf, 2);
         Delay(speed + 30);
+        train->currentEdge = train->currentEdge->reverse;
+        train->edgeDistanceMM = train->currentEdge->dist - train->edgeDistanceMM;
         trainSpeed(train->id, speed);
         return 0;
     }
@@ -223,22 +294,29 @@ int trainReverse(unsigned int tr) {
 
 int trainSwitch(unsigned int sw, char ch) {
     char buf[2];
+    unsigned int ss;
 
     buf[0] = 0;
     switch (ch) {
         case 'C':
         case 'c':
             buf[0] = TRAIN_AUX_CURVE;
+            ss = DIR_CURVED;
             break;
         case 'S':
         case 's':
             buf[0] = TRAIN_AUX_STRAIGHT;
+            ss = DIR_STRAIGHT;
             break;
+        default:
+            error("INVALID SWITCH CHARACTER: %c", ch);
+            return -1;
     }
 
     if (buf[0] != 0  && sw >= 0 && sw <= 255) {
         buf[1] = sw;
         trnputs(buf, 2);
+        getSwitch(sw)->state = ss;
         return 0;
     }
     return 1;

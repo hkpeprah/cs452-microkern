@@ -117,7 +117,7 @@ void displayInfo() {
             } else if (swtch->id < 100) {
                 kputstr("0");
             }
-            kprintf("%d: %c    ", swtch->id, swtch->state);
+            kprintf("%d: %c    ", swtch->id, SWITCH_CHAR(swtch->state));
         }
         count -= MIN(9, count);
         kputstr(NEW_LINE);

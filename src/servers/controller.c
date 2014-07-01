@@ -56,7 +56,7 @@ void TrainController() {
 
     (void)reply; /* TODO: May use this in future */
 
-    RegisterAs("TrainController");
+    RegisterAs(TRAIN_CONTROLLER);
     train_controller_tid = MyTid();
     notifier = Create(13, TrainSensorSlave);
 
