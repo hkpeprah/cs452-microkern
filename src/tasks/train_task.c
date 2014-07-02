@@ -5,6 +5,7 @@
 #include <train_task.h>
 #include <term.h>
 #include <train.h>
+#include <train_speed.h>
 
 #define TRAIN_AUX_REVERSE   15
 
@@ -25,25 +26,6 @@ int TrGetLocation(int tid, TrainMessage_t *msg) {
     return Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
 }
 
-static inline unsigned int toMicroPerTick(unsigned int tr, unsigned int sp) {
-    return sp;
-
-    switch(tr) {
-        case 45:
-
-        case 47:
-
-        case 48:
-
-        case 49:
-
-        case 50:
-
-        default:
-            error("BAD TRAIN NUMBER");
-            return 0;
-    }
-}
 
 static void TrainCourierTask() {
     int boss = MyParentTid();
@@ -169,7 +151,7 @@ void TrainTask() {
                 // update location
                 // TODO: account for acceleration
                 updateLocation(&train);
-                train.microPerTick = toMicroPerTick(train.id, train.speed);
+                train.microPerTick = getTrainVelocity(train.id, train.speed);
 
                 // send bytes
                 train.speed = msg.arg0;

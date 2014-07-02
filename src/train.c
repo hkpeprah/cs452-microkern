@@ -181,62 +181,6 @@ Sensor_t *getSensorFromIndex(unsigned int index) {
 }
 
 
-static inline unsigned int toMicroPerTick(unsigned int tr, unsigned int sp) {
-    switch(tr) {
-        case 45:
-            switch (sp) {
-                case 0:
-                    return 0;
-                case 1:
-                case 2:
-                case 3:
-                    break;
-            }
-        case 47:
-            switch (sp) {
-
-            }
-        case 48:
-            switch (sp) {
-
-            }
-        case 49:
-            switch (sp) {
-                case 0:
-                    return 0;
-                case 1:
-                case 2:
-                case 3:
-                    return 1275;
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 11:
-            case 12:
-            case 13:
-            case 14:
-
-            }
-        case 50:
-            switch (sp) {
-
-            }
-        case 51:
-            switch (sp) {
-
-            }
-        default:
-            error("BAD TRAIN NUMBER");
-            return 0;
-    }
-
-    return sp;
-}
-
 void traverseNode(Train_t *train, track_node *node) {
     Switch_t *sw;
 
