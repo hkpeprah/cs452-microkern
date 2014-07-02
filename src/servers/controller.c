@@ -36,6 +36,7 @@ static void TrainSensorSlave() {
                 sensors[index++] = EXTRACT_BIT(byte, TRAIN_SENSOR_COUNT - j - 1) & 1;
             }
         }
+
         Send(parent, &t, sizeof(t), &status, sizeof(status));
     }
 

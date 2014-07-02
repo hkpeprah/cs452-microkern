@@ -241,10 +241,11 @@ int trainSpeed(unsigned int tr, unsigned int sp) {
         buf[1] = tr;
         trnputs(buf, 2);
 
+/*
         updatePosition(train);
         printPosition(train);
         train->microPerTick = toMicroPerTick(tr, sp);
-
+*/
         return 0;
     }
     return 1;
@@ -283,9 +284,11 @@ int trainReverse(unsigned int tr) {
         buf[1] = tr;
         trnputs(buf, 2);
         Delay(speed + 30);
+        /*
         train->currentEdge = train->currentEdge->reverse;
         train->edgeDistanceMM = train->currentEdge->dist - train->edgeDistanceMM;
         trainSpeed(train->id, speed);
+        */
         return 0;
     }
     return 1;
