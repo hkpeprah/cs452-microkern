@@ -139,10 +139,7 @@ void TrainController() {
 }
 
 
-int WaitOnSensor(char module, unsigned int id) {
-    /*
-     * interrupt a return value of 0 as the sensor not existing.
-     */
+int WaitOnSensorN(unsigned int id) {
     int errno, status;
     TRequest_t wait;
 
@@ -151,7 +148,7 @@ int WaitOnSensor(char module, unsigned int id) {
     }
 
     wait.type = SENSOR_WAIT;
-    wait.sensor = sensorToInt(module, id);
+    wait.sensor = id;
     errno = Send(train_controller_tid, &wait, sizeof(wait), &status, sizeof(status));
 
     if (errno < 0) {
@@ -160,6 +157,11 @@ int WaitOnSensor(char module, unsigned int id) {
     }
 
     return status;
+}
+
+
+int WaitOnSensor(char module, unsigned int id) {
+    return WaitOnSensorN(sensorToInt(module, id));
 }
 
 

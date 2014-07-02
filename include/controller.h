@@ -25,6 +25,7 @@ typedef struct TrainQueue_t {
 
 
 void TrainController();
+int WaitOnSensorN(unsigned int);
 int WaitOnSensor(char, unsigned int);
 int WaitAnySensor();
 
