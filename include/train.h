@@ -13,6 +13,7 @@
 #define MULTI_SWITCH_OFFSET  134    /* we have four multi switches */
 #define TRAIN_LIGHT_OFFSET   16     /* offset for lights */
 #define TRAIN_HORN_OFFSET    17     /* offset for horn */
+#define TRAIN_MAX_SPEED      14
 
 
 struct __Train_t;
@@ -47,13 +48,13 @@ typedef struct __Train_t {
 
 
 typedef struct {
-    unsigned int id : 16;
     unsigned int state : 1;
+    unsigned int id : 16;
 } Switch_t;
 
 
 typedef struct {
-    unsigned int module : 4;
+    char module;
     unsigned int id : 16;
 } Sensor_t;
 
@@ -73,6 +74,7 @@ Train_t *addTrain(unsigned int);
 Train_t *getTrain(unsigned int);
 Switch_t *getSwitch(unsigned int);
 Sensor_t *getSensor(char, unsigned int);
+Sensor_t *getSensorFromIndex(unsigned int);
 
 /* Deprecated */
 void trbwputc(char);

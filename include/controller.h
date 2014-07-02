@@ -6,6 +6,7 @@
 
 typedef enum {
     SENSOR_WAIT = 0,
+    SENSOR_WAIT_ANY,
     SENSOR_RETURNED,
     NUM_TRAIN_REQUESTS
 } TrainRequest_t;
@@ -25,5 +26,6 @@ typedef struct TrainQueue_t {
 
 void TrainController();
 int WaitOnSensor(char, unsigned int);
+int WaitAnySensor();
 
 #endif /* __TRAIN_CONTROLLER_H__ */
