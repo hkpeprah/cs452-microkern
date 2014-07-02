@@ -14,7 +14,6 @@
 #define TRAIN_AUX_STOP        97
 #define TRAIN_AUX_SNSRESET    192
 
-#define TRAIN_MAX_SPEED       14
 #define MAX_TRAINS            8
 
 #define SWITCH_INDEX_TO_ID(x) ((x >= TRAIN_SWITCH_COUNT - 4 ? x + MULTI_SWITCH_OFFSET : x) + 1)
@@ -114,7 +113,7 @@ void clearTrainSet() {
 
     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
         trainSensors[i].id = (i % TRAIN_SENSOR_COUNT) + 1;
-        trainSensors[i].module = i / TRAIN_SENSOR_COUNT;
+        trainSensors[i].module = (i / TRAIN_SENSOR_COUNT) + 'A';
     }
 
     kdebug("Switches set.  Train Controller setup complete.");
@@ -162,31 +161,80 @@ Switch_t *getSwitch(unsigned int id) {
 
 
 Sensor_t *getSensor(char module, unsigned int id) {
-    id += (module - 'A');
+    id = MAX(0, id - 1);
+    id += ((module - 'A') * TRAIN_SENSOR_COUNT);
     if (id < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
         return &trainSensors[id];
     }
     return NULL;
 }
 
-static inline unsigned int toMicroPerTick(unsigned int tr, unsigned int sp) {
-    return sp;
 
+Sensor_t *getSensorFromIndex(unsigned int index) {
+    char module;
+    unsigned int id;
+
+    module = (index / TRAIN_SENSOR_COUNT) + 'A';
+    id = index % TRAIN_SENSOR_COUNT + 1;
+
+    return getSensor(module, id);
+}
+
+
+static inline unsigned int toMicroPerTick(unsigned int tr, unsigned int sp) {
     switch(tr) {
         case 45:
-
+            switch (sp) {
+                case 0:
+                    return 0;
+                case 1:
+                case 2:
+                case 3:
+                    break;
+            }
         case 47:
+            switch (sp) {
 
+            }
         case 48:
+            switch (sp) {
 
+            }
         case 49:
+            switch (sp) {
+                case 0:
+                    return 0;
+                case 1:
+                case 2:
+                case 3:
+                    return 1275;
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+            case 13:
+            case 14:
 
+            }
         case 50:
+            switch (sp) {
 
+            }
+        case 51:
+            switch (sp) {
+
+            }
         default:
             error("BAD TRAIN NUMBER");
             return 0;
     }
+
+    return sp;
 }
 
 void traverseNode(Train_t *train, track_node *node) {
@@ -230,6 +278,7 @@ static void printPosition(Train_t *train) {
     printf("%d mm from %s", dist, train->currentEdge->src->name);
 }
 
+
 int trainSpeed(unsigned int tr, unsigned int sp) {
     char buf[2];
     Train_t *train;
@@ -241,9 +290,9 @@ int trainSpeed(unsigned int tr, unsigned int sp) {
         buf[1] = tr;
         trnputs(buf, 2);
 
-        updatePosition(train);
-        printPosition(train);
-        train->microPerTick = toMicroPerTick(tr, sp);
+        // updatePosition(train);
+        // printPosition(train);
+        // train->microPerTick = toMicroPerTick(tr, sp);
 
         return 0;
     }
