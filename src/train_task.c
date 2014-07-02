@@ -42,7 +42,7 @@ int TrReverse(int tid) {
 
 int TrGetLocation(int tid, TrainMessage_t *msg) {
     msg->type = TRM_GET_LOCATION;
-    return Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    return Send(tid, msg, sizeof(TrainMessage_t), msg, sizeof(TrainMessage_t));
 }
 
 static inline unsigned int toMicroPerTick(unsigned int tr, unsigned int sp) {
@@ -76,6 +76,7 @@ static void TrainCourierTask() {
         switch (msg.type) {
             case TRM_SENSOR_WAIT:
                 // wait on sensor with delay
+                WaitOnSensorN(msg.arg0);
                 break;
 
             case TRM_TIME_WAIT:
@@ -168,6 +169,7 @@ static void TrainTask() {
                     }
 
                     traverseNode(&train);
+                    printf("traversed sensor: %s\n", train.currentEdge->src->name);
                 }
 
                 // in all cases, send courier out to wait for next sensor/time trip
@@ -183,6 +185,7 @@ static void TrainTask() {
                 msg.arg1 = WAIT_TIME(train.microPerTick, train.currentEdge->dist);
                 result = Reply(sensorCourier, &msg, sizeof(msg));
                 validWait = 1;
+                printf("on edge from %s to %s, dist %d\n", train.currentEdge->src->name, train.currentEdge->dest->name, train.edgeDistanceMM);
                 break;
 
             case TRM_SPEED:

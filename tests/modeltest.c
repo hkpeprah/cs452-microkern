@@ -24,6 +24,8 @@ void go() {
     int trtid;
     char buf[4];
     char ch;
+    TrainMessage_t msg;
+    track_edge *edge;
     track_node track[TRACK_MAX];
 
     init_tracka(track);
@@ -46,14 +48,18 @@ void go() {
             case 'r':
                 TrReverse(trtid);
                 break;
+            case 'g':
+                TrGetLocation(trtid, &msg);
+                edge = (track_edge*) msg.arg0; 
+                printf("train %d at %d after sensor %s\n", trtid, msg.arg1, edge->src->name);
+                break;
             case 'q':
-                goto end;
+                SigTerm();
+                break;
             default:
                 break;
         }
     }
-    end:
-    return;
 }
 
 
