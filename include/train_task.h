@@ -1,6 +1,8 @@
 #ifndef __TRAIN_TASK_H__
 #define __TRAIN_TASK_H__
 
+#include <track_node.h>
+
 typedef enum {
     TRM_INIT,               // sent on creation, pass tr number (a0)  and init location (a1)
     TRM_SENSOR_WAIT,        // sensor in arg0, time in arg1
@@ -17,11 +19,9 @@ typedef struct TrainMessage {
     int arg1;
 } TrainMessage_t;
 
+int TrCreate(int priority, int tr, track_edge *start);
 int TrSpeed(int tid, int speed);
 int TrReverse(int tid);
 int TrGetLocation(int tid, TrainMessage_t *msg);
-
-void TrainTask();
-
 
 #endif
