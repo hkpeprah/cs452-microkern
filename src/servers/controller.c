@@ -56,7 +56,7 @@ void TrainController() {
 
     (void)reply; /* TODO: May use this in future */
 
-    RegisterAs("TrainController");
+    RegisterAs(TRAIN_CONTROLLER);
     train_controller_tid = MyTid();
     notifier = Create(13, TrainSensorSlave);
 
@@ -73,6 +73,18 @@ void TrainController() {
         }
 
         switch (req.type) {
+            case SENSOR_WAIT_ANY:
+                if (free != NULL) {
+                    tmp = free;
+                    free = free->next;
+                    tmp->tid = callee;
+                    tmp->next = sensorQueue[maxId];
+                    sensorQueue[maxId] = tmp;
+                } else {
+                    status = 0;
+                    Reply(callee, &status, sizeof(status));
+                }
+                break;
             case SENSOR_WAIT:
                 if (free != NULL && req.sensor < maxId) {
                     status = 0;
@@ -102,6 +114,15 @@ void TrainController() {
                                 free = tmp;
                                 Reply(tmp->tid, &status, sizeof(status));
                             }
+
+                            while (sensorQueue[maxId] != NULL) {
+                                tmp = sensorQueue[maxId];
+                                sensorQueue[maxId] = tmp->next;
+                                tmp->next = free;
+                                free = tmp;
+                                status = i;
+                                Reply(tmp->tid, &status, sizeof(status));
+                            }
                         }
                         lastPoll[i] = sensors[i];
                     }
@@ -117,10 +138,7 @@ void TrainController() {
 }
 
 
-int WaitOnSensor(char module, unsigned int id) {
-    /*
-     * interrupt a return value of 0 as the sensor not existing.
-     */
+int WaitOnSensorN(unsigned int id) {
     int errno, status;
     TRequest_t wait;
 
@@ -129,11 +147,35 @@ int WaitOnSensor(char module, unsigned int id) {
     }
 
     wait.type = SENSOR_WAIT;
-    wait.sensor = sensorToInt(module, id);
+    wait.sensor = id;
     errno = Send(train_controller_tid, &wait, sizeof(wait), &status, sizeof(status));
 
     if (errno < 0) {
         error("WaitOnSensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, train_controller_tid);
+        return -2;
+    }
+
+    return status;
+}
+
+
+int WaitOnSensor(char module, unsigned int id) {
+    return WaitOnSensorN(sensorToInt(module, id));
+}
+
+int WaitAnySensor() {
+    int errno, status;
+    TRequest_t wait;
+
+    if (train_controller_tid < 0) {
+        return -1;
+    }
+
+    wait.type = SENSOR_WAIT_ANY;
+    errno = Send(train_controller_tid, &wait, sizeof(wait), &status, sizeof(status));
+
+    if (errno < 0) {
+        error("WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, train_controller_tid);
         return -2;
     }
 

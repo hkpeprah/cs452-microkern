@@ -2,6 +2,7 @@
 #define __TRAIN_H__
 #include <ts7200.h>
 #include <types.h>
+#include <track_node.h>
 
 #define TRAIN                COM1
 #define TRAIN_SWITCH_COUNT   22     /* switches on the board, upper four are special */
@@ -12,6 +13,7 @@
 #define MULTI_SWITCH_OFFSET  134    /* we have four multi switches */
 #define TRAIN_LIGHT_OFFSET   16     /* offset for lights */
 #define TRAIN_HORN_OFFSET    17     /* offset for horn */
+#define TRAIN_MAX_SPEED      14
 
 
 struct __Train_t;
@@ -31,32 +33,20 @@ typedef enum {
     NUM_TRAIN_COMMANDS,
 } TrainCommands;
 
-
-typedef struct __Train_t {
-    unsigned int id : 16;
-    unsigned int speed : 8;
-    unsigned int aux : 8;
-    unsigned int lastSensor : 16;
-    struct __Train_t *next;
-    /* TODO: Direction or nextSensor ? */
-} Train_t;
-
+#define SWITCH_CHAR(x) ((x == DIR_STRAIGHT) ? 'S' : 'C')
 
 typedef struct {
+    unsigned int state : 1;
     unsigned int id : 16;
-    char state;
 } Switch_t;
 
 
 typedef struct {
-    unsigned int module : 4;
+    char module;
     unsigned int id : 16;
 } Sensor_t;
 
 
-int trainSpeed(unsigned int, unsigned int);
-int trainAuxiliary(unsigned int, unsigned int);
-int trainReverse(unsigned int);
 int trainSwitch(unsigned int, char);
 void turnOnTrainSet();
 void turnOffTrainSet();
@@ -65,10 +55,9 @@ int sensorToInt(char, unsigned int);
 void pollSensors();
 void resetSensors();
 void turnOffSolenoid();
-Train_t *addTrain(unsigned int);
-Train_t *getTrain(unsigned int);
 Switch_t *getSwitch(unsigned int);
 Sensor_t *getSensor(char, unsigned int);
+Sensor_t *getSensorFromIndex(unsigned int);
 
 /* Deprecated */
 void trbwputc(char);

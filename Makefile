@@ -7,6 +7,7 @@ XCC              = gcc
 AS               = as
 LD               = ld
 CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O3 -DBUFFEREDIO
+TRACK            = a
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -37,7 +38,7 @@ debug: upload
 profile: CFLAGS += -DPROFILE $(PROFILING)
 profile: upload
 
-test: CFLAGS += -DTEST
+test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
 test: init
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
 	@$(MAKE) > /dev/null
@@ -54,6 +55,7 @@ init:
 	@echo "CFLAGS: $(CFLAGS)"
 	@-rm -rf $(builddir)/*
 	@-cp -r $(srcdir)/*.s $(builddir)/
+	track/parse_track track/new/track$(TRACK)_new -C src/track_data.c -H include/track_data.h
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 

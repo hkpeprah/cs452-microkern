@@ -113,18 +113,11 @@ void TimerTask() {
 
 void TrainUserTask() {
     bool sigkill;
-    Train_t *train;
     TrainMessage t;
     int status, cmd, callee, bytes;
 
     sigkill = false;
     RegisterAs("TrainHandler");
-
-    /* TODO: Are there more trains ? */
-    addTrain(50);
-    addTrain(45);
-    addTrain(48);
-    addTrain(49);
 
     while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));
@@ -150,7 +143,7 @@ void TrainUserTask() {
                 sigkill = true;
                 break;
             case TRAIN_SPEED:
-                status = trainSpeed((unsigned int)t.args[1], (unsigned int)t.args[2]);
+                // TODO: use train task version
                 if (status == 0) {
                     debug("Setting Train %u at Speed %u", t.args[1], t.args[2]);
                 } else {
@@ -169,7 +162,7 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_AUX:
-                status = trainAuxiliary((unsigned int)t.args[1], (unsigned int)t.args[2]);
+                // TODO: currently not supported in train task
                 if (status == 0) {
                     debug("Toggling auxiliary function %u for Train %u", t.args[1], t.args[2]);
                 } else {
@@ -177,17 +170,10 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_RV:
-                if ((train = getTrain((unsigned int)t.args[1]))) {
-                    debug("Reversing train: %u", t.args[1]);
-                    trainReverse(train->id);
-                    status = 0;
-                } else {
-                    printf("Error: Invalid train.\r\n");
-                    status = -1;
-                }
+                // TODO: all the steps must be done here
                 break;
             case TRAIN_LI:
-                status = trainAuxiliary((unsigned int)t.args[1], TRAIN_LIGHT_OFFSET);
+                // TODO: not supported yet
                 if (status == 0) {
                     debug("Turning on/off the lights on train: %u", t.args[1]);
                 } else {
@@ -195,7 +181,7 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_HORN:
-                status = trainAuxiliary((unsigned int)t.args[1], TRAIN_HORN_OFFSET);
+                // TODO: not supported yet
                 if (status == 0) {
                     debug("Turning on/off horn on train: %u", t.args[1]);
                 } else {
@@ -203,9 +189,7 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_ADD:
-                if (addTrain((unsigned int)t.args[1])) {
-                    debug("Added Train %u to Controller.", t.args[1]);
-                }
+                // TODO: use train_task
                 break;
         }
         Reply(callee, &status, sizeof(status));
