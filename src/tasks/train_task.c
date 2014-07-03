@@ -74,6 +74,7 @@ static void TrainCourierTask() {
     }
 }
 
+
 static inline void traverseNode(Train_t *train) {
     Switch_t *sw;
     track_node *dest = train->currentEdge->dest;
@@ -98,11 +99,13 @@ static inline void traverseNode(Train_t *train) {
     train->lastDistUpdateTick = Time();
 }
 
+
 static inline void updateLocation(Train_t *train) {
     unsigned int currentTick = Time();
     train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
     train->lastDistUpdateTick = currentTick;
 }
+
 
 static void TrainTask() {
     int sensorCourier;
@@ -121,13 +124,13 @@ static void TrainTask() {
     }
 
     train.id = msg.arg0;
-    train.currentEdge = (track_edge*) msg.arg1;
+    train.currentEdge = (track_edge*)msg.arg1;
     Reply(sender, NULL, 0);
 
     // TODO: are these the right priorities?
     sensorCourier = Create(5, TrainCourierTask);
 
-    for(;;) {
+    for (;;) {
         result = Receive(&sender, &msg, sizeof(msg));
 
         if (result < 0) {
@@ -177,10 +180,7 @@ static void TrainTask() {
                 train.microPerTick = getTrainVelocity(train.id, train.speed);
 
                 // send bytes
-                train.speed = msg.arg0;
-                cmdbuf[0] = train.speed;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
+                trainSpeed(train.id, msg.arg0);
 
                 // free up courier, invalidate wait
                 if (validWait) {

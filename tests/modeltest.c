@@ -13,6 +13,7 @@
 #include <utasks.h>
 #include <train.h>
 #include <controller.h>
+#include <random.h>
 #include <track_node.h>
 #include <track_data.h>
 #include <train_task.h>
@@ -39,10 +40,9 @@ void go() {
 
     while (true) {
         ch = getchar();
-        printf("%c\r\n", ch);
         switch (ch) {
             case 's':
-                TrSpeed(trtid, 10);
+                TrSpeed(trtid, 8);
                 break;
             case 't':
                 TrSpeed(trtid, 0);
@@ -56,7 +56,10 @@ void go() {
                 printf("train %d at %d after sensor %s\n", trtid, msg.arg1, edge->src->name);
                 break;
             case 'q':
+                turnOffTrainSet();
+                Delay(10);
                 SigTerm();
+                Exit();
                 break;
             default:
                 break;

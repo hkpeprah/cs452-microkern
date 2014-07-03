@@ -210,18 +210,6 @@ void traverseNode(Train_t *train, track_node *node) {
     train->lastDistUpdateTick = Time();
 }
 
-static void updatePosition(Train_t *train) {
-    unsigned int currentTick = Time();
-    // TODO: account for acceleration
-    train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
-    train->lastDistUpdateTick = currentTick;
-}
-
-static void printPosition(Train_t *train) {
-    unsigned int dist = (Time() - train->lastDistUpdateTick) * train->microPerTick / 1000;
-    printf("%d mm from %s", dist, train->currentEdge->src->name);
-}
-
 
 int trainSpeed(unsigned int tr, unsigned int sp) {
     char buf[2];
