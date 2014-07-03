@@ -35,9 +35,11 @@ void go() {
     trainSwitch(14, 'c');
 
     trtid = TrCreate(6, tr, &track[24].edge[DIR_AHEAD]);
+    TrSpeed(trtid, 0);
 
     while (true) {
         ch = getchar();
+        printf("%c\r\n", ch);
         switch (ch) {
             case 's':
                 TrSpeed(trtid, 10);

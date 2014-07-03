@@ -233,10 +233,6 @@ int trainSpeed(unsigned int tr, unsigned int sp) {
         buf[0] = sp + train->aux;
         buf[1] = tr;
         trnputs(buf, 2);
-
-        // updatePosition(train);
-        // printPosition(train);
-        // train->microPerTick = toMicroPerTick(tr, sp);
         return 0;
     }
     return 1;

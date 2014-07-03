@@ -34,15 +34,19 @@ void SpeedTest() {
     while (true) {
         printf("Enter Train Number (or q to quit): ");
         gets(IO, buf, 50);
-        if (strcmp(buf, "q") == 0) break;
+        if (strcmp(buf, "q") == 0) {
+            break;
+        }
         tr_number = atoin(buf, &status);
         train = addTrain(tr_number);
         if (train != NULL) {
-            for (speed = 3; speed < TRAIN_MAX_SPEED + 1; ++speed) {
+            for (speed = 3; speed <= TRAIN_MAX_SPEED; ++speed) {
                 trainSpeed(train->id, speed);
                 status = WaitAnySensor();
                 sensor = getSensorFromIndex(status);
-                if (sensor == NULL) break;
+                if (sensor == NULL) {
+                    break;
+                }
                 printf("Using Sensor: %c%u\r\n", sensor->module, sensor->id);
                 WaitOnSensor(sensor->module, sensor->id);
                 startTime = Time();
