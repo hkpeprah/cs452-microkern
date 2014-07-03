@@ -1,5 +1,6 @@
 #include <train_speed.h>
 #include <types.h>
+#include <term.h>
 
 static struct train_speed_state trainSpeeds[6];
 
@@ -203,12 +204,13 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
     static bool started = false;
     unsigned int id;
 
-    if (!started) {
+    if (started == false) {
         started = true;
         init_speed_state();
     }
 
     if (sp > 14) {
+        error("getTrainVelocity: Speed out of range.");
         return 0;
     }
 
@@ -232,6 +234,7 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
             id = 5;
             break;
         default:
+            error("getTrainVelocity: Unknown train.");
             return 0;
     }
 
