@@ -28,7 +28,7 @@ void go() {
     track_edge *edge;
     track_node track[TRACK_MAX];
 
-    init_tracka(track);
+    init_track(track);
     printf("Enter Train Number: ");
     gets(IO, buf, 4);
     tr = atoin(buf, &result);

@@ -9,7 +9,17 @@
 
 #define TRAIN_AUX_REVERSE   15
 
-#define WAIT_TIME(microPerTick, dist) ((dist * 1000 / microPerTick) + 10)
+#define WAIT_TIME(microPerTick, dist) ((dist * 1000 / microPerTick))
+
+typedef struct __Train_t {
+    unsigned int id : 16;
+    unsigned int speed : 8;
+    unsigned int aux : 8;
+    track_edge *currentEdge;
+    unsigned int edgeDistanceMM : 16;       // distance from src of edge, updated on speed change
+    unsigned int lastDistUpdateTick;        // time of above update
+    unsigned int microPerTick: 16;          // micrometer / clock tick speed
+} Train_t;
 
 static void TrainTask();
 
@@ -46,14 +56,19 @@ int TrGetLocation(int tid, TrainMessage_t *msg) {
     return Send(tid, msg, sizeof(TrainMessage_t), msg, sizeof(TrainMessage_t));
 }
 
-
 static void TrainCourierTask() {
+    int result;
     int boss = MyParentTid();
     TrainMessage_t msg;
     msg.type = TRM_SENSOR_WAIT;
 
     for(;;) {
-        Send(boss, &msg, sizeof(msg), &msg, sizeof(msg));
+        result = Send(boss, &msg, sizeof(msg), &msg, sizeof(msg));
+
+        if (result < 0) {
+            debug("TrainCourierTask: Warning: send result %d, exiting", result);
+            return;
+        }
 
         switch (msg.type) {
             case TRM_SENSOR_WAIT:
@@ -67,6 +82,9 @@ static void TrainCourierTask() {
 
             case TRM_FREE_COURIER:
                 break;
+
+            case TRM_EXIT:
+                return;
 
             default:
                 error("TrainCourierTask: Invalid message type %d", msg.type);
@@ -93,20 +111,46 @@ static inline void traverseNode(Train_t *train) {
         default:
             error("BAD NODE TYPE");
     }
-
-    train->edgeDistanceMM = 0;
-    train->lastDistUpdateTick = Time();
 }
 
 static inline void updateLocation(Train_t *train) {
+    // TODO: account for acceleration
     unsigned int currentTick = Time();
     train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
     train->lastDistUpdateTick = currentTick;
+
+    if (train->edgeDistanceMM >= train->currentEdge->dist) {
+        debug("edge dist %d, actual %d, traversing", train->edgeDistanceMM, train->currentEdge->dist);
+        train->edgeDistanceMM -= train->currentEdge->dist;
+        traverseNode(train);
+    }
+}
+
+static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
+    int result;
+    TrainMessage_t msg;
+    track_node *dest = train->currentEdge->dest;
+
+    if (dest->type == NODE_SENSOR) {
+        msg.type = TRM_SENSOR_WAIT;
+        msg.arg0 = dest->num;
+    } else {
+        msg.type = TRM_TIME_WAIT;
+    }
+
+    msg.arg1 = WAIT_TIME(train->microPerTick, train->currentEdge->dist - train->edgeDistanceMM);
+    printf("NEXT WAIT: %s for %d\n", dest->name, msg.arg1);
+
+    if ( (result = Reply(sensorCourier, &msg, sizeof(msg)) < 0) ) {
+        error("TrainTask: waitOnNextSensor: Reply returned %d", result);
+    }
 }
 
 static void TrainTask() {
     int sensorCourier;
     bool validWait = 0;
+    bool courierReady = 0;
+    bool running = 1;
     int result, sender;
     char cmdbuf[2];
     TrainMessage_t msg;
@@ -125,9 +169,9 @@ static void TrainTask() {
     Reply(sender, NULL, 0);
 
     // TODO: are these the right priorities?
-    sensorCourier = Create(5, TrainCourierTask);
+    sensorCourier = Create(1, TrainCourierTask);
 
-    for(;;) {
+    while (running) {
         result = Receive(&sender, &msg, sizeof(msg));
 
         if (result < 0) {
@@ -150,47 +194,56 @@ static void TrainTask() {
                         error("Expected dest node %d but received %d", dest->num, msg.arg0);
                     }
 
-                    traverseNode(&train);
-                    printf("traversed sensor: %s\n", train.currentEdge->src->name);
+                    updateLocation(&train);
                 }
 
-                // in all cases, send courier out to wait for next sensor/time trip
+                // if the train is driving, send courier out to wait for next sensor/time trip
                 // this can be triggered either by an actual sensor trip or an invalidated
                 // courier wait (ie. speed changes, train reverses)
-                dest = train.currentEdge->dest;
-                if (dest->type == NODE_SENSOR) {
-                    msg.type = TRM_SENSOR_WAIT;
-                    msg.arg0 = dest->num;
+                if (train.speed > 0) {
+                    validWait = 1;
+                    courierReady = 0;
+                    waitOnNextSensor(&train, sensorCourier);
                 } else {
-                    msg.type = TRM_TIME_WAIT;
+                    courierReady = 1;
                 }
-                msg.arg1 = WAIT_TIME(train.microPerTick, train.currentEdge->dist);
-                result = Reply(sensorCourier, &msg, sizeof(msg));
-                validWait = 1;
-                printf("on edge from %s to %s, dist %d\n", train.currentEdge->src->name, train.currentEdge->dest->name, train.edgeDistanceMM);
+
                 break;
 
             case TRM_SPEED:
-                // update location
-                // TODO: account for acceleration
-                updateLocation(&train);
-                train.microPerTick = getTrainVelocity(train.id, train.speed);
-
-                // send bytes
-                train.speed = msg.arg0;
-                cmdbuf[0] = train.speed;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
-
-                // free up courier, invalidate wait
-                if (validWait) {
+                // previously driving -> update location, get courier back
+                // courier should send back and get picked up by TRM_SENSOR/TIME_WAIT
+                if (train.speed > 0) {
+                    updateLocation(&train);
                     validWait = 0;
-                    result = Reply(sensorCourier, NULL, 0);
+                    msg.type = TRM_FREE_COURIER;
+                    result = Reply(sensorCourier, &msg, sizeof(msg));
 
                     if (result < 0) {
                         error("TrainTask: TRM_SPEED: bad reply result %d", result);
                     }
                 }
+
+                // update to new speed
+                train.speed = msg.arg0;
+                train.microPerTick = getTrainVelocity(train.id, train.speed);
+
+                // if previously stationary, use new data to wait
+                if (courierReady && train.speed > 0) {
+                    validWait = 1;
+                    courierReady = 0;
+                    waitOnNextSensor(&train, sensorCourier);
+                }
+
+                printf("train speed: %d\n", train.microPerTick);
+                printf("location: %s + %d\n", train.currentEdge->src->name, train.edgeDistanceMM);
+
+                // send bytes
+                cmdbuf[0] = train.speed;
+                cmdbuf[1] = train.id;
+                trnputs(cmdbuf, 2);
+
+                
 
                 result = Reply(sender, NULL, 0);
                 break;
@@ -210,10 +263,25 @@ static void TrainTask() {
                 break;
 
             case TRM_GET_LOCATION:
-                updateLocation(&train);
+                if (train.speed > 0) {
+                    updateLocation(&train);
+                }
                 msg.arg0 = (int) train.currentEdge;
                 msg.arg1 = train.edgeDistanceMM;
                 result = Reply(sender, &msg, sizeof(msg));
+                break;
+
+            case TRM_EXIT:
+                running = 0;
+                cmdbuf[0] = 0;
+                cmdbuf[1] = train.id;
+                trnputs(cmdbuf, 2);
+                Reply(sender, NULL, 0);
+                do {
+                    debug("Freeing child courier");
+                    result = Reply(sensorCourier, &msg, sizeof(msg));
+                    Delay(10);
+                } while (result != TASK_DOES_NOT_EXIST);
                 break;
 
             default:

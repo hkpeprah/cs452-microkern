@@ -20,36 +20,8 @@
 #define SWITCH_ID_TO_INDEX(x) ((unsigned int)(TRAIN_SWITCH_COUNT + MULTI_SWITCH_OFFSET - x) < 4 ? x - MULTI_SWITCH_OFFSET - 1 : x)
 
 
-static Train_t __trainSet[MAX_TRAINS];
 static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
 static Sensor_t trainSensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
-static Train_t *freeSet;
-static Train_t *trainSet;
-
-
-Train_t *addTrain(unsigned int id) {
-    Train_t *tmp;
-
-    tmp = trainSet;
-    while (tmp != NULL) {
-        if (tmp->id == id) {
-            return tmp;
-        }
-        tmp = tmp->next;
-    }
-
-    if (freeSet != NULL && id > 0 && id <= 80) {
-        tmp = freeSet;
-        freeSet = freeSet->next;
-        tmp->next = trainSet;
-        tmp->id = id;
-        trainSet = tmp;
-        trainSpeed(id, 0);
-    }
-
-    return tmp;
-}
-
 
 int sensorToInt(char module, unsigned int id) {
     return (toUpperCase(module) - 'A') * TRAIN_SENSOR_COUNT + id - 1;
@@ -97,19 +69,6 @@ void clearTrainSet() {
 
     trbwputc(TRAIN_AUX_SOLENOID);
     trbwputc(TRAIN_AUX_SNSRESET);
-    trainSet = NULL;
-    freeSet = NULL;
-
-    for (i = 0; i < MAX_TRAINS; ++i) {
-        __trainSet[i].next = freeSet;
-        freeSet = &__trainSet[i];
-        freeSet->speed = 0;
-        freeSet->aux = 0;
-        freeSet->currentEdge = NULL;
-        freeSet->edgeDistanceMM = 0;
-        freeSet->lastDistUpdateTick = 0;
-        freeSet->microPerTick = 0;
-    }
 
     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
         trainSensors[i].id = (i % TRAIN_SENSOR_COUNT) + 1;
@@ -126,26 +85,7 @@ void turnOnTrainSet() {
 
 
 void turnOffTrainSet() {
-    Train_t *train;
-
-    train = trainSet;
-    while (train != NULL) {
-        trbwputc(0);
-        trbwputc(train->id);
-        train = train->next;
-    }
-
     trbwputc(TRAIN_AUX_STOP);
-}
-
-
-Train_t *getTrain(unsigned int tr) {
-    Train_t *train;
-    train = trainSet;
-    while (train && train->id != tr) {
-        train = train->next;
-    }
-    return train;
 }
 
 
@@ -210,12 +150,14 @@ void traverseNode(Train_t *train, track_node *node) {
     train->lastDistUpdateTick = Time();
 }
 
+
 static void updatePosition(Train_t *train) {
     unsigned int currentTick = Time();
     // TODO: account for acceleration
     train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
     train->lastDistUpdateTick = currentTick;
 }
+
 
 static void printPosition(Train_t *train) {
     unsigned int dist = (Time() - train->lastDistUpdateTick) * train->microPerTick / 1000;
