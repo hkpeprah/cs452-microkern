@@ -92,6 +92,7 @@ static void TrainCourierTask() {
     }
 }
 
+
 static inline void traverseNode(Train_t *train) {
     Switch_t *sw;
     track_node *dest = train->currentEdge->dest;
@@ -112,6 +113,7 @@ static inline void traverseNode(Train_t *train) {
             error("BAD NODE TYPE");
     }
 }
+
 
 static inline void updateLocation(Train_t *train) {
     // TODO: account for acceleration
@@ -146,6 +148,7 @@ static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
     }
 }
 
+
 static void TrainTask() {
     int sensorCourier;
     bool validWait = 0;
@@ -165,7 +168,7 @@ static void TrainTask() {
     }
 
     train.id = msg.arg0;
-    train.currentEdge = (track_edge*) msg.arg1;
+    train.currentEdge = (track_edge*)msg.arg1;
     Reply(sender, NULL, 0);
 
     // TODO: are these the right priorities?
@@ -241,9 +244,7 @@ static void TrainTask() {
                 // send bytes
                 cmdbuf[0] = train.speed;
                 cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
-
-                
+                trnputs(cmdbuf, 2);                
 
                 result = Reply(sender, NULL, 0);
                 break;
