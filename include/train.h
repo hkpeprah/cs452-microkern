@@ -35,18 +35,6 @@ typedef enum {
 
 #define SWITCH_CHAR(x) ((x == DIR_STRAIGHT) ? 'S' : 'C')
 
-typedef struct __Train_t {
-    unsigned int id : 16;
-    unsigned int speed : 8;
-    unsigned int aux : 8;
-    track_edge *currentEdge;
-    unsigned int edgeDistanceMM : 16;       // distance from src of edge, updated on speed change
-    unsigned int lastDistUpdateTick;        // time of above update
-    unsigned int microPerTick: 16;          // micrometer / clock tick speed
-    struct __Train_t *next;
-} Train_t;
-
-
 typedef struct {
     unsigned int state : 1;
     unsigned int id : 16;
@@ -59,9 +47,6 @@ typedef struct {
 } Sensor_t;
 
 
-int trainSpeed(unsigned int, unsigned int);
-int trainAuxiliary(unsigned int, unsigned int);
-int trainReverse(unsigned int);
 int trainSwitch(unsigned int, char);
 void turnOnTrainSet();
 void turnOffTrainSet();
@@ -70,8 +55,6 @@ int sensorToInt(char, unsigned int);
 void pollSensors();
 void resetSensors();
 void turnOffSolenoid();
-Train_t *addTrain(unsigned int);
-Train_t *getTrain(unsigned int);
 Switch_t *getSwitch(unsigned int);
 Sensor_t *getSensor(char, unsigned int);
 Sensor_t *getSensorFromIndex(unsigned int);

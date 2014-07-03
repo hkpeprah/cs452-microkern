@@ -5,6 +5,7 @@
 
 typedef enum {
     TRM_INIT,               // sent on creation, pass tr number (a0)  and init location (a1)
+    TRM_EXIT,               // no args, stop the train
     TRM_SENSOR_WAIT,        // sensor in arg0, time in arg1
     TRM_TIME_WAIT,          // arg1 ticks to wait, arg0 not used
     TRM_FREE_COURIER,       // optimistic courier free from time/sensor wait
