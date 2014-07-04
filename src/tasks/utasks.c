@@ -138,7 +138,6 @@ void TrainUserTask() {
                 break;
             case TRAIN_STOP:
                 turnOffTrainSet();
-                Delay(10);
                 debug("Stopping Train Controller");
                 sigkill = true;
                 break;

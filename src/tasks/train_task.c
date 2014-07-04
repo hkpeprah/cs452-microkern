@@ -23,6 +23,7 @@ typedef struct __Train_t {
 
 static void TrainTask();
 
+
 int TrCreate(int priority, int tr, track_edge *start) {
     int result;
     int trainTask = Create(priority, TrainTask);
@@ -141,8 +142,7 @@ static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
     }
 
     msg.arg1 = WAIT_TIME(train->microPerTick, train->currentEdge->dist - train->edgeDistanceMM);
-    printf("NEXT WAIT: %s for %d\n", dest->name, msg.arg1);
-
+    debug("NEXT WAIT: %s for %d", dest->name, msg.arg1);
     if ( (result = Reply(sensorCourier, &msg, sizeof(msg)) < 0) ) {
         error("TrainTask: waitOnNextSensor: Reply returned %d", result);
     }
@@ -213,6 +213,16 @@ static void TrainTask() {
 
                 break;
 
+            case TRM_AUX:
+                // toggles an auxiliary function, don't have to worry about speed/location stuff
+                train.aux = msg.arg0;
+                cmdbuf[0] = train.speed + train.aux;
+                cmdbuf[1] = train.id;
+                trnputs(cmdbuf, 2);
+
+                result = Reply(sender, NULL, 0);
+                break;
+
             case TRM_SPEED:
                 // previously driving -> update location, get courier back
                 // courier should send back and get picked up by TRM_SENSOR/TIME_WAIT
@@ -238,8 +248,8 @@ static void TrainTask() {
                     waitOnNextSensor(&train, sensorCourier);
                 }
 
-                printf("train speed: %d\n", train.microPerTick);
-                printf("location: %s + %d\n", train.currentEdge->src->name, train.edgeDistanceMM);
+                debug("Train Speed: %u micrometers/tick", train.microPerTick);
+                debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
 
                 // send bytes
                 cmdbuf[0] = train.speed;

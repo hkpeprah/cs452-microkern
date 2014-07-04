@@ -5,6 +5,15 @@
 #include <ts7200.h>
 
 
+void *memset(void *s, int c, unsigned int n) {
+    unsigned char *p = s;
+    while (n --> 0) {
+        *p++ = (unsigned char)c;
+    }
+    return s;
+}
+
+
 void *memcpy(void *destination, const void *source, size_t num) {
     char *dst = (char*)destination;
     char *src = (char*)source;

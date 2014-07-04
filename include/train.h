@@ -61,8 +61,6 @@ Sensor_t *getSensorFromIndex(unsigned int);
 
 /* Deprecated */
 void trbwputc(char);
-void trbwputs(char*);
-void trnbwputs(char*, unsigned int);
 int trbwflush();
 
 #endif /* __TRAIN_H__ */

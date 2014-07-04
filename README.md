@@ -16,7 +16,7 @@ Run `make upload`
 Run `make`  
   
 **Testing**:  
-Run `make TEST="testfilename"`  
+Run `make test TEST="testfilename"`  
   
 **Debugging**:  
 Run `make debug`  

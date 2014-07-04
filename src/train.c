@@ -85,7 +85,9 @@ void turnOnTrainSet() {
 
 
 void turnOffTrainSet() {
+    // TODO: Figure out why this sometimes works
     trbwputc(TRAIN_AUX_STOP);
+    Delay(10);
 }
 
 
@@ -251,20 +253,6 @@ void trbwputc(char ch) {
             *data = ch;
             break;
         }
-    }
-}
-
-
-void trbwputs(char *str) {
-    while (*str) {
-        trbwputc(*str++);
-    }
-}
-
-
-void trnbwputs(char *str, unsigned int len) {
-    while (len-- > 0) {
-        trbwputc(*str++);
     }
 }
 
