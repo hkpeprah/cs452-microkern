@@ -28,8 +28,8 @@
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
 #define trgetchar()              bwgetc(TRAIN)
-#define trputs(str)              trbwputs(str)
-#define trnputs(str, n)          trnbwputs(str, n)
+#define trputs(str)              bwputstr(TRAIN, str)
+#define trnputs(str, n)          bwputstr(TRAIN, str)
 #define trputch(ch)              trbwputc(ch)
 #else
 #define putchar(ch)              Putc(IO, ch)

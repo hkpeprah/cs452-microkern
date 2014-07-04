@@ -9,6 +9,18 @@
 
 static unsigned int train_controller_tid = -1;
 
+typedef enum {
+    SENSOR_WAIT = 0,
+    SENSOR_WAIT_ANY,
+    SENSOR_RETURNED,
+    NEAREST_EDGE,
+    NUM_TRAIN_REQUESTS
+} TrainRequest_t;
+
+typedef struct __SensorQueue_t {
+    uint32_t tid : 8;
+} SensorQueue;
+
 
 static void TrainSensorSlave() {
     TRequest_t t;
@@ -45,28 +57,24 @@ static void TrainSensorSlave() {
 
 
 void TrainController() {
-    TRequest_t req, reply;
+    TRequest_t req;
     unsigned int i;
     int callee, status;
-    TrainQueue bank[TRAIN_SENSOR_COUNT];
-    TrainQueue *free, *tmp;
     unsigned int bytes, notifier, *sensors;
     track_node track[TRACK_MAX];
-    unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
-    TrainQueue *sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-    volatile uint32_t lastPoll[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
-
-    (void)reply; /* TODO: May use this in future */
+    const unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
+    SensorQueue waitChannel[maxId];
+    volatile uint32_t lastPoll[maxId];
 
     init_track(track);
+    memset(&waitChannel, 0, maxId * sizeof(SensorQueue));
+    memset(&lastPoll, 0, maxId * sizeof(uint32_t));
     RegisterAs(TRAIN_CONTROLLER);
     train_controller_tid = MyTid();
     notifier = Create(13, TrainSensorSlave);
 
-    free = NULL;
-    for (i = 0; i < TRAIN_SENSOR_COUNT; ++i) {
-        bank[i].next = free;
-        free = &bank[i];
+    for (i = 0; i < maxId; ++i) {
+        waitChannel[i].tid = 0;
     }
 
     while (true) {
@@ -74,28 +82,12 @@ void TrainController() {
         if (bytes < 0) {
             error("TrainController: Failed to receive message from Task %d with status %d", callee, bytes);
         }
-
         switch (req.type) {
             case SENSOR_WAIT_ANY:
-                if (free != NULL) {
-                    tmp = free;
-                    free = free->next;
-                    tmp->tid = callee;
-                    tmp->next = sensorQueue[maxId];
-                    sensorQueue[maxId] = tmp;
-                } else {
-                    status = 0;
-                    Reply(callee, &status, sizeof(status));
-                }
-                break;
+                req.sensor = maxId;
             case SENSOR_WAIT:
-                if (free != NULL && req.sensor < maxId) {
-                    status = 0;
-                    tmp = free;
-                    free = free->next;
-                    tmp->tid = callee;
-                    tmp->next = sensorQueue[req.sensor];
-                    sensorQueue[req.sensor] =  tmp;
+                if (req.sensor <= maxId && waitChannel[req.sensor].tid == 0) {
+                    waitChannel[req.sensor].tid = callee;
                 } else {
                     status = 0;
                     Reply(callee, &status, sizeof(status));
@@ -111,34 +103,27 @@ void TrainController() {
                 break;
             case SENSOR_RETURNED:
                 /* TODO: Would be optimal if knew which train triggered ? */
+                status = -1;
                 if (callee == notifier) {
                     status = 1;
                     sensors = (uint32_t*)req.sensor;
                     for (i = 0; i < maxId; ++i) {
                         if (sensors[i] && !lastPoll[i]) {
-                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
-                                        (i % TRAIN_SENSOR_COUNT) + 1);      // index in module
-                            while (sensorQueue[i] != NULL) {
-                                tmp = sensorQueue[i];
-                                sensorQueue[i] = tmp->next;
-                                tmp->next = free;
-                                free = tmp;
-                                Reply(tmp->tid, &status, sizeof(status));
+                            status = i;
+                            printSensor((i / TRAIN_SENSOR_COUNT) + 'A', (i % TRAIN_SENSOR_COUNT) + 1);
+                            if (waitChannel[i].tid != 0) {
+                                Reply(waitChannel[i].tid, &status, sizeof(status));
+                                waitChannel[i].tid = 0;
                             }
 
-                            while (sensorQueue[maxId] != NULL) {
-                                tmp = sensorQueue[maxId];
-                                sensorQueue[maxId] = tmp->next;
-                                tmp->next = free;
-                                free = tmp;
-                                status = i;
-                                Reply(tmp->tid, &status, sizeof(status));
+                            // TODO: Should we look for sensors not assigned to trains?
+                            if (waitChannel[maxId].tid != 0) {
+                                Reply(waitChannel[maxId].tid, &status, sizeof(status));
+                                waitChannel[maxId].tid = 0;
                             }
                         }
                         lastPoll[i] = sensors[i];
                     }
-                } else {
-                    status = -1;
                 }
                 Reply(callee, &status, sizeof(status));
                 break;

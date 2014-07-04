@@ -173,8 +173,7 @@ static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
     }
 
     msg.arg1 = WAIT_TIME(train->microPerTick, train->currentEdge->dist - train->edgeDistanceMM);
-    printf("NEXT WAIT: %s for %d\n", dest->name, msg.arg1);
-
+    debug("NEXT WAIT: %s for %d", dest->name, msg.arg1);
     if ( (result = Reply(sensorCourier, &msg, sizeof(msg)) < 0) ) {
         error("TrainTask: waitOnNextSensor: Reply returned %d", result);
     }
@@ -254,6 +253,8 @@ static void TrainTask() {
                 cmdbuf[0] = train.speed + train.aux;
                 cmdbuf[1] = train.id;
                 trnputs(cmdbuf, 2);
+
+                result = Reply(sender, NULL, 0);
                 break;
 
             case TRM_SPEED:
@@ -281,8 +282,8 @@ static void TrainTask() {
                     waitOnNextSensor(&train, sensorCourier);
                 }
 
-                printf("Train Speed: %u micrometers/tick\r\n", train.microPerTick);
-                printf("Location: %s + %u micrometers\r\n", train.currentEdge->src->name, train.edgeDistanceMM);
+                debug("Train Speed: %u micrometers/tick", train.microPerTick);
+                debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
 
                 // send bytes
                 cmdbuf[0] = train.speed + train.aux;

@@ -141,6 +141,7 @@ void boot () {
 
 int shutdown() {
     /* sequence of shutdown operations */
+    kputstr(RESTORE_CURSOR);
     kputstr("\r\nShutting down the system...\r\n");
     kputstr("Disabling interrupts..\r\n");
     disableInterrupts();
