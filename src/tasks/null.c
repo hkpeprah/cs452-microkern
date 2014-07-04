@@ -16,6 +16,5 @@ void NullTask() {
     /* sits on the kernel passing */
     notice("NullTask: Entering.");
     while (SHELL_EXITED == 0);
-    notice("NullTask: Exiting.");
     Exit();
 }

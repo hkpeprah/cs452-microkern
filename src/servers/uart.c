@@ -221,7 +221,7 @@ void OutputServer() {
 
     result = RegisterAs(OS_NAME);
     if (result < 0) {
-        error("OutputServer: Error: NameServer returned %d", result);
+        kerror("OutputServer: Error: NameServer returned %d", result);
         return;
     }
 
@@ -231,7 +231,7 @@ void OutputServer() {
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
         if (result != sizeof(req)) {
-            error("Incorrect message received");
+            kerror("OutputServer: Error: Incorrect message received");
             continue;
         }
 
@@ -291,7 +291,7 @@ void InputServer() {
 
     result = RegisterAs(IS_NAME);
     if (result < 0) {
-        error("InputServer: Error: NameServer returned %d", result);
+        kerror("InputServer: Error: NameServer returned %d", result);
         return;
     }
 
@@ -301,7 +301,7 @@ void InputServer() {
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
         if (result != sizeof(req)) {
-            error("Incorrect message received");
+            kerror("InputServer: Error: Incorrect message received");
             continue;
         }
 

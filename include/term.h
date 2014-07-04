@@ -54,9 +54,15 @@
         bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF + 1, 0);                \
         bwputstr(IO, RESTORE_CURSOR);                                 \
     }
+#define kerror(format, ...)      {                                      \
+        kdebug(CHANGE_COLOR, RED);                                      \
+        kdebug(format, ## __VA_ARGS__);                                 \
+        kdebug(CHANGE_COLOR, 0);                                        \
+    }
 #define error(format, ...)       debugc(format, RED, ## __VA_ARGS__)
 #define notice(format, ...)      debugc(format, CYAN, ## __VA_ARGS__)
 #else
+#define kerror(format, ...)
 #define kdebug(format, ...)
 #define notice(format, ...)
 #define error(format, ...)

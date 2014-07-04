@@ -242,7 +242,7 @@ static void TrainTask() {
                 train.microPerTick = getTrainVelocity(train.id, train.speed);
 
                 // if previously stationary, use new data to wait
-                if (courierReady && train.speed > 0) {
+                if (courierReady && train.speed > 0 && train.microPerTick > 0) {
                     validWait = 1;
                     courierReady = 0;
                     waitOnNextSensor(&train, sensorCourier);

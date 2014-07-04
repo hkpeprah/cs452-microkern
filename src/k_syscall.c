@@ -69,7 +69,7 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
     }
 
     if (target == currentTask) {
-        kprintf("Error: Send: %d Sending to self, msg: 0x%x, len: %d\n", tid, msg, msglen);
+        kprintf("Send: Error: %d sending to self, msg: 0x%x, len: %d\r\n", tid, msg, msglen);
         return TASK_ID_IMPOSSIBLE;
     }
 

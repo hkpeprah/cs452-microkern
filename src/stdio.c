@@ -273,7 +273,7 @@ char *gets(int channel, char *buf, uint32_t len) {
         } else if (ch == BS) {
             if (nread > 0) {
                 nread--;
-                *buf--;
+                buf--;
                 bufputstr(IO, "\b \b");
             }
         } else {
