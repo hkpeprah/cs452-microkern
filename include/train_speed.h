@@ -1,5 +1,6 @@
 #ifndef __TRAIN_SPEED_H__
 #define __TRAIN_SPEED_H__
+#include <types.h>
 
 struct train_speed_state {
     const char *train;
@@ -8,6 +9,8 @@ struct train_speed_state {
 };
 
 
+bool isValidTrainId(unsigned int);
+void initTrainSpeeds();
 unsigned int getTrainVelocity(unsigned int, unsigned int);
 
 #endif /* __TRAIN_SPEED_H__ */

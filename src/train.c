@@ -6,14 +6,12 @@
 #include <stdlib.h>
 #include <ts7200.h>
 
-#define TRAIN_AUX_REVERSE     15
 #define TRAIN_AUX_SOLENOID    32
 #define TRAIN_AUX_STRAIGHT    33
 #define TRAIN_AUX_CURVE       34
 #define TRAIN_AUX_GO          96
 #define TRAIN_AUX_STOP        97
 #define TRAIN_AUX_SNSRESET    192
-
 #define MAX_TRAINS            8
 
 #define SWITCH_INDEX_TO_ID(x) ((x >= TRAIN_SWITCH_COUNT - 4 ? x + MULTI_SWITCH_OFFSET : x) + 1)
@@ -107,6 +105,18 @@ Sensor_t *getSensor(char module, unsigned int id) {
     }
     return NULL;
 }
+
+
+Sensor_t *getSensorFromIndex(unsigned int index) {
+    char module;
+    unsigned int id;
+
+    module = (index / TRAIN_SENSOR_COUNT) + 'A';
+    id = index % TRAIN_SENSOR_COUNT + 1;
+
+    return getSensor(module, id);
+}
+
 
 int trainSwitch(unsigned int sw, char ch) {
     char buf[2];

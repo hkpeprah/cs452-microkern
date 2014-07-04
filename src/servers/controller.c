@@ -5,6 +5,7 @@
 #include <term.h>
 #include <stdlib.h>
 #include <clock.h>
+#include <train_task.h>
 
 static unsigned int train_controller_tid = -1;
 
@@ -50,12 +51,14 @@ void TrainController() {
     TrainQueue bank[TRAIN_SENSOR_COUNT];
     TrainQueue *free, *tmp;
     unsigned int bytes, notifier, *sensors;
+    track_node track[TRACK_MAX];
     unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
     TrainQueue *sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
     volatile uint32_t lastPoll[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
     (void)reply; /* TODO: May use this in future */
 
+    init_track(track);
     RegisterAs(TRAIN_CONTROLLER);
     train_controller_tid = MyTid();
     notifier = Create(13, TrainSensorSlave);
@@ -97,6 +100,14 @@ void TrainController() {
                     status = 0;
                     Reply(callee, &status, sizeof(status));
                 }
+                break;
+            case NEAREST_EDGE:
+                if (req.sensor < maxId) {
+                    status = (int)(&track[req.sensor].edge[DIR_AHEAD]);
+                } else {
+                    status = 0;
+                }
+                Reply(callee, &status, sizeof(status));
                 break;
             case SENSOR_RETURNED:
                 /* TODO: Would be optimal if knew which train triggered ? */
@@ -163,6 +174,7 @@ int WaitOnSensor(char module, unsigned int id) {
     return WaitOnSensorN(sensorToInt(module, id));
 }
 
+
 int WaitAnySensor() {
     int errno, status;
     TRequest_t wait;
@@ -180,4 +192,28 @@ int WaitAnySensor() {
     }
 
     return status;
+}
+
+
+track_edge *NearestSensorEdge(char module, unsigned int id) {
+    int errno, edge;
+    TRequest_t msg;
+
+    if (train_controller_tid < 0) {
+        return NULL;
+    }
+
+    msg.type = NEAREST_EDGE;
+    msg.sensor = sensorToInt(module, id);
+    errno = Send(train_controller_tid, &msg, sizeof(msg), &edge, sizeof(edge));
+
+    if (errno < 0) {
+        error("NearestSensorEdge: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, train_controller_tid);
+        return NULL;
+    }
+
+    if (edge > 0) {
+        return (track_edge*)edge;
+    }
+    return NULL;
 }

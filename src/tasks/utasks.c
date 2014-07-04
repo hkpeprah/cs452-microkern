@@ -18,6 +18,8 @@
 #include <uart.h>
 #include <stdlib.h>
 #include <controller.h>
+#include <train_task.h>
+#include <track_node.h>
 
 
 void firstTask() {
@@ -114,7 +116,8 @@ void TimerTask() {
 void TrainUserTask() {
     bool sigkill;
     TrainMessage t;
-    int status, cmd, callee, bytes;
+    int status, cmd, callee, bytes, tid;
+    track_edge *edge;
 
     sigkill = false;
     RegisterAs("TrainHandler");
@@ -122,6 +125,7 @@ void TrainUserTask() {
     while (sigkill == false) {
         bytes = Receive(&callee, &t, sizeof(t));
         cmd = t.args[0];
+
         /* switches on the command and validates it */
         status = 0;
         switch (cmd) {
@@ -143,11 +147,15 @@ void TrainUserTask() {
                 sigkill = true;
                 break;
             case TRAIN_SPEED:
-                // TODO: use train task version
-                if (status == 0) {
-                    debug("Setting Train %u at Speed %u", t.args[1], t.args[2]);
+                tid = LookupTrain(t.args[1]);
+                if (tid >= 0) {
+                    if (TrSpeed(tid, t.args[2]) < 0) {
+                        printf("Error: Invalid train speed.\r\n");
+                    } else {
+                        debug("Setting speed  %u for Train %u", t.args[1], t.args[2]);
+                    }
                 } else {
-                    printf("Error: Invalid train or speed.\r\n");
+                    printf("Error: Invalid train.\r\n");
                 }
                 break;
             case TRAIN_SWITCH:
@@ -161,35 +169,46 @@ void TrainUserTask() {
                     printf("Error: Invalid state or switch.\r\n");
                 }
                 break;
-            case TRAIN_AUX:
-                // TODO: currently not supported in train task
-                if (status == 0) {
-                    debug("Toggling auxiliary function %u for Train %u", t.args[1], t.args[2]);
-                } else {
-                    printf("Error: Invalid train or auxiliary function.\r\n");
-                }
-                break;
-            case TRAIN_RV:
-                // TODO: all the steps must be done here
-                break;
             case TRAIN_LI:
-                // TODO: not supported yet
-                if (status == 0) {
-                    debug("Turning on/off the lights on train: %u", t.args[1]);
+                t.args[2] = TRAIN_LIGHT_OFFSET;
+                goto auxiliary;
+                break;
+            case TRAIN_HORN:
+                t.args[2] = TRAIN_HORN_OFFSET;
+                goto auxiliary;
+                break;
+        auxiliary:
+            case TRAIN_AUX:
+                tid = LookupTrain(t.args[1]);
+                if (tid >= 0) {
+                    if (TrAuxiliary(tid, t.args[2]) < 0) {
+                        printf("Error: Invalid auxiliary function.\r\n");
+                    } else {
+                        debug("Toggling auxiliary function %u for Train %u", t.args[1], t.args[2]);
+                    }
                 } else {
                     printf("Error: Invalid train.\r\n");
                 }
                 break;
-            case TRAIN_HORN:
-                // TODO: not supported yet
-                if (status == 0) {
-                    debug("Turning on/off horn on train: %u", t.args[1]);
+            case TRAIN_RV:
+                tid = LookupTrain(t.args[1]);
+                if (tid >= 0) {
+                    TrReverse(tid);
+                    debug("Reversing train: %u", t.args[1]);
                 } else {
                     printf("Error: Invalid train.\r\n");
                 }
                 break;
             case TRAIN_ADD:
-                // TODO: use train_task
+                // TODO: figure out priority
+                edge = NearestSensorEdge(t.args[2], t.args[3]);
+                if (edge == NULL) {
+                    printf("Error: Invalid sensor passed.\r\n");
+                } else {
+                    if (!TrCreate(6, t.args[1], edge)) {
+                        printf("Error: Invalid train id.\r\n");
+                    }
+                }
                 break;
         }
         Reply(callee, &status, sizeof(status));
