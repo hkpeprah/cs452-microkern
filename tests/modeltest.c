@@ -29,7 +29,7 @@ void go() {
     track_edge *edge;
     track_node track[TRACK_MAX];
 
-    init_tracka(track);
+    init_track(track);
     printf("Enter Train Number: ");
     gets(IO, buf, 4);
     tr = atoin(buf, &result);
@@ -56,8 +56,6 @@ void go() {
                 printf("train %d at %d after sensor %s\n", trtid, msg.arg1, edge->src->name);
                 break;
             case 'q':
-                turnOffTrainSet();
-                Delay(10);
                 SigTerm();
                 Exit();
                 break;
