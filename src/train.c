@@ -15,7 +15,7 @@
 #define MAX_TRAINS            8
 
 #define SWITCH_INDEX_TO_ID(x) ((x >= TRAIN_SWITCH_COUNT - 4 ? x + MULTI_SWITCH_OFFSET : x) + 1)
-#define SWITCH_ID_TO_INDEX(x) ((unsigned int)(TRAIN_SWITCH_COUNT + MULTI_SWITCH_OFFSET - x) < 4 ? x - MULTI_SWITCH_OFFSET - 1 : x)
+#define SWITCH_ID_TO_INDEX(x) (((unsigned int)(TRAIN_SWITCH_COUNT + MULTI_SWITCH_OFFSET - x) < 4 ? x - MULTI_SWITCH_OFFSET : x) - 1)
 
 
 static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
@@ -50,8 +50,8 @@ static inline void setTrainSwitchState(int index, int state, int swstate) {
 void clearTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i, index;
-    char straight[] = {13, 19, 21};
-    char curved[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20};
+    char straight[] = {9, 12, 15, 16, 19, 21};
+    char curved[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14, 17, 18, 20};
 
     kdebug("Setting the state of switches.");
 

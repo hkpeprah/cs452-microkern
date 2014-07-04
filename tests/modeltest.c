@@ -25,15 +25,14 @@ void go() {
     int trtid;
     char buf[4];
     char ch;
-    TrainMessage_t msg;
     track_edge *edge;
+    unsigned int dist;
     track_node track[TRACK_MAX];
 
     init_track(track);
     printf("Enter Train Number: ");
     gets(IO, buf, 4);
     tr = atoin(buf, &result);
-    trainSwitch(14, 'c');
 
     trtid = TrCreate(6, tr, &track[24].edge[DIR_AHEAD]);
     TrSpeed(trtid, 0);
@@ -51,9 +50,8 @@ void go() {
                 TrReverse(trtid);
                 break;
             case 'g':
-                TrGetLocation(trtid, &msg);
-                edge = (track_edge*) msg.arg0; 
-                printf("train %d at %d after sensor %s\n", trtid, msg.arg1, edge->src->name);
+                TrGetLocation(trtid, &edge, &dist);
+                printf("train %d at %d after sensor %s\n", trtid, dist, edge->src->name);
                 break;
             case 'q':
                 SigTerm();

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <clock.h>
 #include <util.h>
+#include <random.h>
 
 static unsigned int sensor_server_tid = -1;
 
@@ -13,16 +14,15 @@ typedef enum {
     SENSOR_WAIT = 0,
     SENSOR_WAIT_TIMEOUT,
     SENSOR_WAIT_ANY,
-    SENSOR_RETURNED,
-    NUM_TRAIN_REQUESTS
-} SensorRequest_t;
+    SENSOR_RETURNED
+} SensorRequestType;
 
 
 typedef struct {
-    SensorRequest_t type;
+    SensorRequestType type;
     uint32_t sensor;
     uint32_t timeout;
-} TRequest_t;
+} SensorRequest_t;
 
 
 typedef struct SensorQueue {
@@ -31,7 +31,7 @@ typedef struct SensorQueue {
 } SensorQueue_t;
 
 static void SensorSlave() {
-    TRequest_t t;
+    SensorRequest_t t;
     int status, byte;
     unsigned int i, j, index, parent;
     volatile uint32_t sensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
@@ -65,10 +65,10 @@ static void SensorSlave() {
 
 
 void SensorServer() {
-    TRequest_t req, reply;
+    SensorRequest_t req, reply;
     bool hasNotify;
     unsigned int timeout;
-    unsigned int time;
+    unsigned int time = 0;
     unsigned int i;
     int callee, status;
     char calleeByte;
@@ -86,6 +86,11 @@ void SensorServer() {
     RegisterAs(SENSOR_SERVER);
     sensor_server_tid = MyTid();
     notifier = Create(13, SensorSlave);
+
+    for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
+        sensorQueue[i].tid = -1;
+        sensorQueue[i].timeout = 0;
+    }
 
     while (true) {
         bytes = Receive(&callee, &req, sizeof(req));
@@ -120,7 +125,16 @@ void SensorServer() {
                     status = 1;
                     sensors = (uint32_t*)req.sensor;
 
-                    time = Time();
+                    // TODO: is this actually better than using Time all the time?
+                    if (random_range(0, 9) == 0) {
+                        // re-sync clock with probability 10%
+                        time = Time();
+                    } else {
+                        // otherwise, roughly estimate the time. the sensor poll loop is roughly every 6 ticks
+                        // a loss of granularity here, but it only applies for cases of error sensors and our
+                        // time-based location re-sync in the train should handle it just fine
+                        time += 6;
+                    }
 
                     for (i = 0; i < maxId; ++i) {
                         tid = -1;
@@ -132,21 +146,25 @@ void SensorServer() {
 
                             tid = sensorQueue[i].tid;
                             sensorQueue[i].tid = -1;
+                            status = SENSOR_TRIP;
 
                             hasNotify = 1;
                             
                         } else if (sensorQueue[i].timeout > 0 && sensorQueue[i].timeout < time) {
                             tid = sensorQueue[i].tid;
                             sensorQueue[i].tid = -1;
+                            status = TIMER_TRIP;
                         }
 
                         if (tid >= 0) {
+                            printf("freeing %d at time %d\n", tid, time);
                             Reply(tid, &status, sizeof(status));
                         }
                         lastPoll[i] = sensors[i];
                     }
 
                     if (hasNotify) {
+                        status = SENSOR_TRIP;
                         while (length(&waitAnyQueue) > 0) {
                             read(&waitAnyQueue, &calleeByte, 1);
                             Reply(calleeByte, &status, sizeof(status));
@@ -165,7 +183,7 @@ void SensorServer() {
 
 int WaitWithTimeout(unsigned int id, unsigned int to) {
     int errno, status;
-    TRequest_t msg;
+    SensorRequest_t msg;
 
     if (sensor_server_tid < 0) {
         return -1;
@@ -187,7 +205,7 @@ int WaitWithTimeout(unsigned int id, unsigned int to) {
 
 int WaitOnSensorN(unsigned int id) {
     int errno, status;
-    TRequest_t wait;
+    SensorRequest_t wait;
 
     if (sensor_server_tid < 0) {
         return -1;
@@ -212,7 +230,7 @@ int WaitOnSensor(char module, unsigned int id) {
 
 int WaitAnySensor() {
     int errno, status;
-    TRequest_t wait;
+    SensorRequest_t wait;
 
     if (sensor_server_tid < 0) {
         return -1;
