@@ -10,9 +10,10 @@ typedef enum {
     TRM_TIME_WAIT,          // arg1 ticks to wait, arg0 not used
     TRM_FREE_COURIER,       // optimistic courier free from time/sensor wait
     TRM_SPEED,              // speed in arg0
+    TRM_AUX                 // auxiliary train function
     TRM_RV,                 // no args
     TRM_GET_LOCATION,       // train_edge ptr in arg0, dist (mm) in arg1
-    TRM_AUX                 // auxiliary train function
+    TRM_GET_SPEED,          // no args
 } TrainMessageType;
 
 typedef struct TrainMessage {
@@ -21,12 +22,13 @@ typedef struct TrainMessage {
     int arg1;
 } TrainMessage_t;
 
-
 int TrCreate(int, int, track_edge*);
 int TrSpeed(unsigned int, unsigned int);
+int TrAuxiliary(unsigned int, unsigned int);
 int TrReverse(unsigned int);
 int TrGetLocation(unsigned int, TrainMessage_t*);
-int TrAuxiliary(unsigned int, unsigned int);
+// train speed in micrometers per clock tick
+int TrGetSpeed(int tid);
 int LookupTrain(unsigned int);
 
 #endif /* __TRAIN_TASK_H__ */

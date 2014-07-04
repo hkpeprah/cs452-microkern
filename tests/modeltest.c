@@ -12,8 +12,8 @@
 #include <term.h>
 #include <utasks.h>
 #include <train.h>
-#include <controller.h>
 #include <random.h>
+#include <sensor_server.h>
 #include <track_node.h>
 #include <track_data.h>
 #include <train_task.h>
@@ -77,7 +77,7 @@ int main() {
     sys_create(12, OutputServer, &tid);
     sys_create(13, TimerTask, &tid);
     sys_create(1, go, &tid);
-    sys_create(10, TrainController, &tid);
+    sys_create(10, SensorServer, &tid);
 
     kernel_main();
 

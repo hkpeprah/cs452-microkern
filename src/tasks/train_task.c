@@ -1,7 +1,7 @@
 #include <server.h>
 #include <syscall.h>
 #include <clock.h>
-#include <controller.h>
+#include <sensor_server.h>
 #include <track_node.h>
 #include <train_task.h>
 #include <term.h>
@@ -67,6 +67,14 @@ int TrReverse(unsigned int tid) {
     return status;
 }
 
+int TrGetSpeed(int tid) {
+    TrainMessage_t msg = {.type = TRM_GET_SPEED};
+    int result = Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    if (result < 0) {
+        return result;
+    }
+    return msg.arg0;
+}
 
 int TrGetLocation(unsigned int tid, TrainMessage_t *msg) {
     msg->type = TRM_GET_LOCATION;
@@ -101,8 +109,7 @@ static void TrainCourierTask() {
 
         switch (msg.type) {
             case TRM_SENSOR_WAIT:
-                // wait on sensor with delay
-                WaitOnSensorN(msg.arg0);
+                WaitWithTimeout(msg.arg0, msg.arg1);
                 break;
 
             case TRM_TIME_WAIT:
@@ -125,6 +132,7 @@ static void TrainCourierTask() {
 static inline void traverseNode(Train_t *train) {
     Switch_t *sw;
     track_node *dest = train->currentEdge->dest;
+    printf("traversing node");
 
     switch (dest->type) {
         case NODE_SENSOR:
@@ -135,6 +143,7 @@ static inline void traverseNode(Train_t *train) {
             break;
         case NODE_BRANCH:
             sw = getSwitch(dest->num);
+            printf("switch %d state: %c\n", sw->id, sw->state == DIR_STRAIGHT ? 's' : 'c');
             train->currentEdge = &(dest->edge[sw->state]);
             break;
         case NODE_NONE:
@@ -304,6 +313,11 @@ static void TrainTask() {
                 trnputs(cmdbuf, 2);
 
                 result = Reply(sender, NULL, 0);
+                break;
+
+            case TRM_GET_SPEED:
+                msg.arg0 = train.microPerTick;
+                result = Reply(sender, &msg, sizeof(msg));
                 break;
 
             case TRM_GET_LOCATION:

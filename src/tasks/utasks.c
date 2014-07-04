@@ -17,9 +17,9 @@
 #include <train.h>
 #include <uart.h>
 #include <stdlib.h>
-#include <controller.h>
 #include <train_task.h>
 #include <track_node.h>
+#include <sensor_server.h>
 
 
 void firstTask() {
@@ -31,7 +31,7 @@ void firstTask() {
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
     id = Create(13, TimerTask);
-    id = Create(10, TrainController);
+    id = Create(10, SensorServer);
 
     debug("FirstTask: Exiting.");
     Exit();
