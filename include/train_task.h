@@ -25,8 +25,10 @@ typedef struct TrainMessage {
 
 
 int TrCreate(int priority, int tr, track_edge *start);
-int TrSpeed(int tid, int speed);
-int TrReverse(int tid);
-int TrGetLocation(int tid, TrainMessage_t *msg);
+int TrSpeed(unsigned int tid, unsigned int speed);
+int TrReverse(unsigned int tid);
+int TrAuxiliary(unsigned int tid, unsigned int aux);
+int TrGetLocation(unsigned int tid, TrainMessage_t *msg);
+int LookupTrain(unsigned int tid);
 
 #endif

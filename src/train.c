@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <ts7200.h>
 
-#define TRAIN_AUX_REVERSE     15
 #define TRAIN_AUX_SOLENOID    32
 #define TRAIN_AUX_STRAIGHT    33
 #define TRAIN_AUX_CURVE       34
@@ -124,90 +123,6 @@ Sensor_t *getSensorFromIndex(unsigned int index) {
     id = index % TRAIN_SENSOR_COUNT + 1;
 
     return getSensor(module, id);
-}
-
-
-void traverseNode(Train_t *train, track_node *node) {
-    Switch_t *sw;
-
-    if (train->currentEdge->dest != node) {
-        error("Expected dest node %s but received %s", train->currentEdge->dest, node);
-    }
-
-    switch(node->type) {
-        case NODE_SENSOR:
-        case NODE_MERGE:
-        case NODE_ENTER:
-        case NODE_EXIT:
-            train->currentEdge = &(node->edge[DIR_AHEAD]);
-            break;
-
-        case NODE_BRANCH:
-            sw = getSwitch(node->num);
-            train->currentEdge = &(node->edge[sw->state]);
-            break;
-
-        case NODE_NONE:
-        default:
-            error("BAD NODE TYPE");
-    }
-
-    train->edgeDistanceMM = 0;
-    train->lastDistUpdateTick = Time();
-}
-
-
-int trainSpeed(unsigned int tr, unsigned int sp) {
-    char buf[2];
-    Train_t *train;
-
-    train = getTrain(tr);
-    if (train != NULL && sp <= TRAIN_MAX_SPEED) {
-        train->speed = sp;
-        buf[0] = sp + train->aux;
-        buf[1] = tr;
-        trnputs(buf, 2);
-        return 0;
-    }
-    return 1;
-}
-
-
-int trainAuxiliary(unsigned int tr, unsigned int ax) {
-    char buf[2];
-    Train_t *train;
-
-    if ((train = getTrain(tr)) && ax >= 16 && ax < 32) {
-        if (train->aux >= ax) {
-            train->aux -= ax;
-        } else {
-            train->aux = ax;
-        }
-        buf[0] = train->aux + train->speed;
-        buf[1] = tr;
-        trnputs(buf, 2);
-        return 0;
-    }
-    return 1;
-}
-
-
-int trainReverse(unsigned int tr) {
-    char buf[2];
-    Train_t *train;
-    unsigned int speed;
-
-    if ((train = getTrain(tr))) {
-        speed = train->speed;
-        trainSpeed(train->id, 0);
-        Delay(speed + 30);
-        buf[0] = TRAIN_AUX_REVERSE;
-        buf[1] = tr;
-        trnputs(buf, 2);
-        Delay(speed + 30);
-        return 0;
-    }
-    return 1;
 }
 
 

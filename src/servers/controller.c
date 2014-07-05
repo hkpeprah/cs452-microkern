@@ -5,6 +5,7 @@
 #include <term.h>
 #include <stdlib.h>
 #include <clock.h>
+#include <train_task.h>
 
 static unsigned int train_controller_tid = -1;
 static unsigned int sensor_controller_tid = -1;
@@ -132,6 +133,9 @@ void TrainController() {
                             repl = -1;
                         }
                     }
+                } else {
+                    error("TrainController: Invalid Sensor: %c%u", request.arg1, request.arg2);
+                    repl = -1;
                 }
                 break;
             default:

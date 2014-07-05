@@ -1,3 +1,4 @@
+#include <server.h>
 #include <syscall.h>
 #include <clock.h>
 #include <controller.h>
@@ -8,9 +9,8 @@
 #include <train_speed.h>
 #include <calibration.h>
 
-#define TRAIN_AUX_REVERSE   15
-
 #define WAIT_TIME(microPerTick, dist) ((dist * 1000 / microPerTick))
+
 
 typedef struct __Train_t {
     unsigned int id : 16;
@@ -22,21 +22,25 @@ typedef struct __Train_t {
     unsigned int microPerTick: 16;          // micrometer / clock tick speed
 } Train_t;
 
+
 static void TrainTask();
 static void CalibrationSnapshot(Train_t*);
 
 
 int TrCreate(int priority, int tr, track_edge *start) {
-    int result;
-    int trainTask = Create(priority, TrainTask);
+    int result, trainTask;
 
+    if (!isValidTrainId(tr)) {
+        return -1;
+    }
+
+    trainTask = Create(priority, TrainTask);
     if (trainTask < 0) {
         return trainTask;
     }
 
     TrainMessage_t msg = {.type = TRM_INIT, .arg0 = tr, .arg1 = (int) start};
     result = Send(trainTask, &msg, sizeof(msg), NULL, 0);
-
     if (result < 0) {
         return result;
     }
@@ -44,20 +48,44 @@ int TrCreate(int priority, int tr, track_edge *start) {
     return trainTask;
 }
 
-int TrSpeed(int tid, int speed) {
+
+int TrSpeed(unsigned int tid, unsigned int speed) {
     TrainMessage_t msg = {.type = TRM_SPEED, .arg0 = speed};
-    return Send(tid, &msg, sizeof(msg), NULL, 0);
+    int status;
+
+    if (speed <= TRAIN_MAX_SPEED) {
+        Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+        return status;
+    }
+    return -1;
 }
 
-int TrReverse(int tid) {
+
+int TrReverse(unsigned int tid) {
     TrainMessage_t msg = {.type = TRM_RV};
-    return Send(tid, &msg, sizeof(msg), NULL, 0);
+    int status;
+
+    Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+    return status;
 }
 
-int TrGetLocation(int tid, TrainMessage_t *msg) {
+
+int TrGetLocation(unsigned int tid, TrainMessage_t *msg) {
     msg->type = TRM_GET_LOCATION;
     return Send(tid, msg, sizeof(TrainMessage_t), msg, sizeof(TrainMessage_t));
 }
+
+
+int TrAuxiliary(unsigned int tid, unsigned int aux) {
+    TrainMessage_t msg = {.type = TRM_AUX, .arg0 = aux};
+    int status;
+    if (aux >= 16 && aux < 32) {
+        Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+        return status;
+    }
+    return -1;
+}
+
 
 static void TrainCourierTask() {
     int result;
@@ -120,7 +148,9 @@ static inline void traverseNode(Train_t *train) {
 
 static inline void updateLocation(Train_t *train) {
     // TODO: account for acceleration
-    unsigned int currentTick = Time();
+    unsigned int currentTick;
+
+    currentTick = Time();
     train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
     train->lastDistUpdateTick = currentTick;
 
@@ -130,6 +160,7 @@ static inline void updateLocation(Train_t *train) {
         traverseNode(train);
     }
 }
+
 
 static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
     int result;
@@ -159,33 +190,36 @@ static void TrainTask() {
     int result, sender;
     char cmdbuf[2];
     TrainMessage_t msg;
-
     Train_t train = {0};
     track_node *dest;
+    char name[] = "TrainXX";
 
     result = Receive(&sender, &msg, sizeof(msg));
-
     if (result < 0 || msg.type != TRM_INIT) {
         error("TrainTask: Receive error: %d or incorrect msg type (not TRM_INIT): %d", result, msg.type);
     }
 
     train.id = msg.arg0;
+    train.aux = 0;
+    train.speed = 0;
     train.currentEdge = (track_edge*)msg.arg1;
+    train.lastDistUpdateTick = 0;
+    train.microPerTick = 0;
+    name[5] = (train.id / 10) + '0';
+    name[6] = (train.id % 10) + '0';
+    RegisterAs(name);
     Reply(sender, NULL, 0);
     CalibrationSnapshot(&train);
 
     // TODO: are these the right priorities?
     sensorCourier = Create(1, TrainCourierTask);
-
     while (running) {
         result = Receive(&sender, &msg, sizeof(msg));
-
         if (result < 0) {
             error("TrainTask: Receive error: %d", result);
         }
 
         dest = train.currentEdge->dest;
-
         switch (msg.type) {
             case TRM_TIME_WAIT:
                 // TODO: something about time offset? also fall through here
@@ -257,9 +291,9 @@ static void TrainTask() {
                 CalibrationSnapshot(&train);
 
                 // send bytes
-                cmdbuf[0] = train.speed;
+                cmdbuf[0] = train.speed + train.aux;
                 cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);                
+                trnputs(cmdbuf, 2);
 
                 result = Reply(sender, NULL, 0);
                 break;

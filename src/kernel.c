@@ -14,6 +14,7 @@
 #include <shell.h>
 #include <idle.h>
 #include <null.h>
+#include <train_speed.h>
 
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)

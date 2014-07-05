@@ -38,26 +38,26 @@ void initDebug() {
     TERM_OFFSET += 5;
 }
 
-
+#if DEBUG
 static void debugformatted(char *fmt, va_list va) {
-    #if DEBUG
-        char buffer[100] = {0};
+    char buffer[100] = {0};
 
-        strcpy(buffer, SAVE_CURSOR "\033[0;");
-        uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
-        strcat(buffer, "r" "\033[");
-        uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
-        strcat(buffer, ";0H\r\n");
-        strcat(buffer, fmt);
-        strcat(buffer, "\033[");
-        uitoa(TERM_BOTTOM, 10, &buffer[strlen(buffer)]);
-        strcat(buffer, ";");
-        uitoa(TERMINAL_HEIGHT, 10, &buffer[strlen(buffer)]);
-        strcat(buffer, "r" RESTORE_CURSOR);
+    strcpy(buffer, SAVE_CURSOR "\033[0;");
+    uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
+    strcat(buffer, "r" "\033[");
+    uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
+    strcat(buffer, ";0H\r\n");
+    strcat(buffer, fmt);
+    strcat(buffer, "\033[");
+    uitoa(TERM_BOTTOM, 10, &buffer[strlen(buffer)]);
+    strcat(buffer, ";");
+    uitoa(TERMINAL_HEIGHT, 10, &buffer[strlen(buffer)]);
+    strcat(buffer, "r" RESTORE_CURSOR);
 
-        printformatted(IO, buffer, va);
-    #endif
+    printformatted(IO, buffer, va);
 }
+#endif
+
 
 void debug(char *fmt, ...) {
     #if DEBUG
@@ -67,6 +67,7 @@ void debug(char *fmt, ...) {
         va_end(va);
     #endif
 }
+
 
 void debugc(char *fmt, unsigned int color, ...) {
     #if DEBUG

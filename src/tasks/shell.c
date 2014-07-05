@@ -35,7 +35,7 @@ void Shell() {
         "time             -   Get the current formatted time\r\n"
         "add TRAIN        -   Add a train to the track\r\n"
         "?                -   Display this help dialog\r\n";
-    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u"};
+    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u"};
     HashTable commands;
     int command, status;
     unsigned int TrainController;
@@ -107,7 +107,6 @@ void Shell() {
                         case TRAIN_RV:
                         case TRAIN_LI:
                         case TRAIN_HORN:
-                        case TRAIN_ADD:
                             i = 1;
                             break;
                         case TRAIN_SPEED:
@@ -119,6 +118,10 @@ void Shell() {
                             break;
                         case TRAIN_WAIT:
                             i = 4;
+                            break;
+                        case TRAIN_ADD:
+                            i = 5;
+                            break;
                         default:
                             i = -1;
                     }

@@ -5,7 +5,7 @@
 static struct train_speed_state trainSpeeds[6];
 
 
-static void init_speed_state() {
+void initTrainSpeeds() {
     trainSpeeds[0].train = "45";
     trainSpeeds[0].ticks[0] = 0;
     trainSpeeds[0].speed[0] = 0;
@@ -200,14 +200,26 @@ static void init_speed_state() {
 }
 
 
-unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
-    static bool started = false;
-    unsigned int id;
+bool isValidTrainId(unsigned int id) {
+    bool valid;
 
-    if (started == false) {
-        started = true;
-        init_speed_state();
+    valid = false;
+    switch (id) {
+        case 45:
+        case 47:
+        case 48:
+        case 49:
+        case 50:
+        case 51:
+            valid = true;
+            break;
     }
+    return valid;
+}
+
+
+unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
+    unsigned int id;
 
     if (sp > 14) {
         error("getTrainVelocity: Speed out of range.");
