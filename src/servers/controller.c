@@ -84,10 +84,12 @@ void TrainController() {
     track_node track[TRACK_MAX];
     TrainCntrlMessage_t request, message;
 
+    /* TODO: we will use this eventually... */
+    (void)message;
+
     init_track(track);
     RegisterAs(TRAIN_CONTROLLER);
     train_controller_tid = MyTid();
-    turnOnTrainSet();
     setTrainSetState();
 
     id = 0;

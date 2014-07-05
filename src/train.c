@@ -20,7 +20,6 @@
 
 static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
 static Sensor_t trainSensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
-static int BW_MASK;
 
 int sensorToInt(char module, unsigned int id) {
     return (toUpperCase(module) - 'A') * TRAIN_SENSOR_COUNT + id - 1;
@@ -53,16 +52,16 @@ void setTrainSetState() {
         trainSwitch(trainSwitches[i].id, SWITCH_CHAR(trainSwitches[i].state));
     }
 
-    trputch(TRAIN_AUX_SOLENOID);
-    trputch(TRAIN_AUX_SNSRESET);
+    turnOffSolenoid();
+    resetSensors();
 }
 
 
 void initTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i, index;
-    char straight[] = {13, 19, 21};
-    char curved[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20};
+    char straight[] = {13, 14, 19, 21};
+    char curved[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 20};
 
     for (i = 0; i < sizeof(straight) / sizeof(straight[0]); ++i) {
         index = straight[i];
@@ -84,15 +83,12 @@ void initTrainSet() {
 
 
 void turnOnTrainSet() {
-    BW_MASK = 0xFFFFFFFF;
-    trbwputc(TRAIN_AUX_GO);
+    bwputc(TRAIN, TRAIN_AUX_GO);
 }
 
 
 void turnOffTrainSet() {
-    // TODO: Figure out why this sometimes works
-    BW_MASK = 0xFFFFFFFF;
-    trbwputc(TRAIN_AUX_STOP);
+    bwputc(TRAIN, TRAIN_AUX_STOP);
     Delay(10);
 }
 
@@ -170,10 +166,9 @@ void trbwputc(char ch) {
     flags = (int*)(UART1_BASE + UART_FLAG_OFFSET);
 
     while (true) {
-        if (*flags & BW_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
+        if (*flags & CTS_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
             data = (int*)(UART1_BASE + UART_DATA_OFFSET);
             *data = ch;
-            BW_MASK = CTS_MASK;
             break;
         }
     }
