@@ -88,7 +88,7 @@ void turnOnTrainSet() {
 
 
 void turnOffTrainSet() {
-    bwputc(TRAIN, TRAIN_AUX_STOP);
+    trbwputc(TRAIN_AUX_STOP);
     Delay(10);
 }
 
