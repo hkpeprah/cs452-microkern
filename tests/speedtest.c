@@ -11,17 +11,17 @@
 #include <controller.h>
 #include <k_syscall.h>
 #include <stdlib.h>
-#include <train.h>
 #include <utasks.h>
 #include <string.h>
+#include <train_task.h>
+#include <sensor_server.h>
 
 
 void SpeedTest() {
-    char buf[50];
     int status;
+    char buf[50];
     Sensor_t *sensor;
-    Train_t *train;
-    unsigned int speed, tr_number, startTime, endTime;
+    unsigned int i, speed, tr_number, startTime, endTime;
 
     Delay(10);
     trainSwitch(10, 'S');
@@ -38,23 +38,35 @@ void SpeedTest() {
             break;
         }
         tr_number = atoin(buf, &status);
-        train = addTrain(tr_number);
-        if (train != NULL) {
+        printf("Speed Calculations for Train %u\r\n", tr_number);
+        tr_number = TrCreate(6, tr_number, NearestSensorEdge('B', 9));
+        if (tr_number >= 0) {
+            TrSpeed(tr_number, 0);
             for (speed = 3; speed <= TRAIN_MAX_SPEED; ++speed) {
-                trainSpeed(train->id, speed);
+                TrSpeed(tr_number, speed);
                 status = WaitAnySensor();
-                sensor = getSensorFromIndex(status);
-                if (sensor == NULL) {
-                    break;
+                if (status == 0) {
+                    continue;
                 }
+                sensor = getSensorFromIndex(status);
                 printf("Using Sensor: %c%u\r\n", sensor->module, sensor->id);
                 WaitOnSensor(sensor->module, sensor->id);
                 startTime = Time();
                 WaitOnSensor(sensor->module, sensor->id);
                 endTime = Time();
-                printf("Train %d: Speed %d, Time %d\r\n", train->id, speed, endTime - startTime);
+                printf("Speed %d, Time %d\r\n", speed, endTime - startTime);
+                printf("Stopping in.... ");
+                for (i = 0; i < 10; ++i) {
+                    printf(" %u", i);
+                }
+                printf("NOW!\r\n");
+                TrSpeed(tr_number, 0);
+                printf("Press c to continue: ");
+                gets(IO, buf, 50);
+                if (strcmp(buf, "c") != 0) {
+                    break;
+                }
             }
-            trainSpeed(train->id, 0);
         }
     }
 

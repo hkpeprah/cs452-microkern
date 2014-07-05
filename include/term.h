@@ -28,8 +28,8 @@
 #define getchar()                bwgetc(IO)
 #define putchar(ch)              bwputc(IO, ch)
 #define trgetchar()              bwgetc(TRAIN)
-#define trputs(str)              trbwputs(str)
-#define trnputs(str, n)          trnbwputs(str, n)
+#define trputs(str)              bwputstr(TRAIN, str)
+#define trnputs(str, n)          bwputstr(TRAIN, str)
 #define trputch(ch)              trbwputc(ch)
 #else
 #define putchar(ch)              Putc(IO, ch)
@@ -54,9 +54,15 @@
         bwprintf(IO, MOVE_CURSOR, BOTTOM_HALF + 1, 0);                \
         bwputstr(IO, RESTORE_CURSOR);                                 \
     }
+#define kerror(format, ...)      {                                      \
+        kdebug(CHANGE_COLOR, RED);                                      \
+        kdebug(format, ## __VA_ARGS__);                                 \
+        kdebug(CHANGE_COLOR, 0);                                        \
+    }
 #define error(format, ...)       debugc(format, RED, ## __VA_ARGS__)
 #define notice(format, ...)      debugc(format, CYAN, ## __VA_ARGS__)
 #else
+#define kerror(format, ...)
 #define kdebug(format, ...)
 #define notice(format, ...)
 #define error(format, ...)
@@ -83,6 +89,7 @@
 #define SET_WINDOW               "\033]2;\"%s\"ST"
 #define SET_COLS_80              "\033[?3l"
 #define SET_COLS_132             "\033[?3h"
+#define MOVE_TO_COL              "\033[%dG"
 
 #define restore_cursor()         puts(RESTORE_CURSOR)
 #define save_cursor()            puts(SAVE_CURSOR)
@@ -118,6 +125,7 @@ void initDebug();
 void debug(char*, ...);
 void debugc(char*, unsigned int, ...);
 void displayInfo();
+unsigned int getTermOffset();
 void printSwitch(unsigned int, char);
 void printSensor(char, unsigned int);
 void updateTime(unsigned int, unsigned int);

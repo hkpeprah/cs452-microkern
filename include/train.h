@@ -51,7 +51,8 @@ typedef struct {
 int trainSwitch(unsigned int, char);
 void turnOnTrainSet();
 void turnOffTrainSet();
-void clearTrainSet();
+void setTrainSetState();
+void initTrainSet();
 int sensorToInt(char, unsigned int);
 void pollSensors();
 void resetSensors();
@@ -62,8 +63,6 @@ Sensor_t *getSensorFromIndex(unsigned int);
 
 /* Deprecated */
 void trbwputc(char);
-void trbwputs(char*);
-void trnbwputs(char*, unsigned int);
 int trbwflush();
 
 #endif /* __TRAIN_H__ */

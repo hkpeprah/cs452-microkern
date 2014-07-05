@@ -38,16 +38,26 @@ void resetSensors() {
 
 static inline void setTrainSwitchState(int index, int state, int swstate) {
     int id = SWITCH_INDEX_TO_ID(index);
-
     trainSwitches[index].id = id;
     trainSwitches[index].state = swstate;
-
-    trbwputc(state);
-    trbwputc(id);
 }
 
 
-void clearTrainSet() {
+void setTrainSetState() {
+    unsigned int i;
+
+    debug("Setting the state of switches.");
+
+    for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
+        trainSwitch(trainSwitches[i].id, SWITCH_CHAR(trainSwitches[i].state));
+    }
+
+    turnOffSolenoid();
+    resetSensors();
+}
+
+
+void initTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i, index;
     char straight[] = {9, 12, 15, 16, 19, 21};
@@ -65,15 +75,12 @@ void clearTrainSet() {
         setTrainSwitchState(index, TRAIN_AUX_CURVE, DIR_CURVED);
     }
 
-    trbwputc(TRAIN_AUX_SOLENOID);
-    trbwputc(TRAIN_AUX_SNSRESET);
-
     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
         trainSensors[i].id = (i % TRAIN_SENSOR_COUNT) + 1;
         trainSensors[i].module = (i / TRAIN_SENSOR_COUNT) + 'A';
     }
 
-    kdebug("Switches set.  Train Controller setup complete.");
+    kdebug("Initialized train set.");
 }
 
 
@@ -84,7 +91,9 @@ void turnOnTrainSet() {
 
 void turnOffTrainSet() {
     trbwputc(TRAIN_AUX_STOP);
+    Delay(10);
 }
+
 
 Switch_t *getSwitch(unsigned int id) {
     id = SWITCH_ID_TO_INDEX(id);
@@ -135,7 +144,7 @@ int trainSwitch(unsigned int sw, char ch) {
             ss = DIR_STRAIGHT;
             break;
         default:
-            error("INVALID SWITCH CHARACTER: %c", ch);
+            kerror("Invalid switch character: %c", ch);
             return -1;
     }
 
@@ -164,20 +173,6 @@ void trbwputc(char ch) {
             *data = ch;
             break;
         }
-    }
-}
-
-
-void trbwputs(char *str) {
-    while (*str) {
-        trbwputc(*str++);
-    }
-}
-
-
-void trnbwputs(char *str, unsigned int len) {
-    while (len-- > 0) {
-        trbwputc(*str++);
     }
 }
 

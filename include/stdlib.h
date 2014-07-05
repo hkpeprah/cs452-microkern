@@ -11,6 +11,7 @@
 #define MAX(x, y)                (x > y ? x : y)
 #define EXTRACT_BIT(n, k)        (((n) & (1 << (k))) >> (k))
 
+void *memset(void*, int, unsigned int);
 void *memcpy(void*, const void*, size_t);
 void initUart(short, int, bool);
 void flushUart(int);

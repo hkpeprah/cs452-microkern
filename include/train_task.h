@@ -1,15 +1,15 @@
 #ifndef __TRAIN_TASK_H__
 #define __TRAIN_TASK_H__
-
 #include <track_node.h>
 
-int TrCreate(int, int, track_edge*);
-int TrSpeed(unsigned int, unsigned int);
-int TrAuxiliary(unsigned int, unsigned int);
-int TrReverse(unsigned int);
-int TrGetLocation(unsigned int, track_edge **edge, unsigned int *edgeDistMM);
-// train speed in micrometers per clock tick
-int TrGetSpeed(int tid);
-int LookupTrain(unsigned int);
+
+
+int TrCreate(int priority, int tr, track_edge *start);
+int TrSpeed(unsigned int tid, unsigned int speed);
+int TrReverse(unsigned int tid);
+int TrAuxiliary(unsigned int tid, unsigned int aux);
+int TrGetLocation(unsigned int tid, track_edge **edge, unsigned int *edgeDistMM);
+int LookupTrain(unsigned int tid);
+int TrGetSpeed(unsigned int tid);
 
 #endif /* __TRAIN_TASK_H__ */

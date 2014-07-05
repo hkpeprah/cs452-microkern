@@ -21,6 +21,7 @@ SOURCE           = $(wildcard $(srcdir)/*.[cs]) $(wildcard $(srcdir)/**/*.[cs])
 SOURCEFILES      = $(basename $(SOURCE))
 TARGET           = kernel.elf
 DEBUG            ?= DEBUG
+SILENT           ?= false
 
 .PHONY: all
 
@@ -39,9 +40,9 @@ profile: CFLAGS += -DPROFILE $(PROFILING)
 profile: upload
 
 test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
-test: init
+test:
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
-	@$(MAKE) > /dev/null
+	@$(MAKE) debug SILENT=true
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
 	@$(AS) $(ASFLAGS) $(builddir)/main.s -o $(builddir)/main.o
@@ -64,8 +65,10 @@ clean:
 
 upload: all
 	@USER=`whoami`
-	@-diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET)
-	@bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER)
+	@-if [ "$(SILENT)" != "true" ]; then \
+		diff -s $(builddir)/$(TARGET) /u/cs452/tftp/ARM/$(USER)/$(TARGET) ; \
+		bin/cs452-upload.sh $(builddir)/$(TARGET) $(USER) ; \
+	fi
 
 $(builddir)/%.o: $(builddir)/%.s
 	@$(AS) $(ASFLAGS) $< -o $@
@@ -77,4 +80,8 @@ $(builddir)/%.s: $(srcdir)/%.c
 	@$(XCC) -S $(CFLAGS) $< -o $@
 
 target: $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES)))
-	$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc
+	@if [ "$(SILENT)" = "true" ]; then \
+		$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc > /dev/null ; \
+	else \
+		$(LD) $(LDFLAGS) -o $(builddir)/$(TARGET) $^ -lbwio -lgcc ; \
+	fi

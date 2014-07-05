@@ -39,6 +39,7 @@ void cpuIdle(bool isIdle) {
              * TODO: Figure out why we need this, some race conditioning
              */
             idle = 0;
+            count = 1;
         }
     }
 }
@@ -51,5 +52,5 @@ int getIdleTime() {
 
 void disableIdleTimer() {
     volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
-    *timerHigh = 0x0;
+    *timerHigh = 0x000;
 }

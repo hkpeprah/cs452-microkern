@@ -111,7 +111,7 @@ void SensorServer() {
             case SENSOR_WAIT:
                 if (req.sensor < maxId && sensorQueue[req.sensor].tid < 0) {
                     status = 0;
-                    printf("%d waiting on %d with timeout %d\n", callee, req.sensor, timeout);
+                    debug("%d waiting on %d with timeout %d", callee, req.sensor, timeout);
                     sensorQueue[req.sensor].tid = callee;
                     sensorQueue[req.sensor].timeout = timeout;
                 } else {
@@ -157,7 +157,7 @@ void SensorServer() {
                         }
 
                         if (tid >= 0) {
-                            printf("freeing %d at time %d\n", tid, time);
+                            debug("Freeing %d at time %d", tid, time);
                             Reply(tid, &status, sizeof(status));
                         }
                         lastPoll[i] = sensors[i];

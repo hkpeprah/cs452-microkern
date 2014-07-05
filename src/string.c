@@ -14,26 +14,51 @@ size_t strlen(const char *str) {
 
 
 char *strcpy(char *dest, const char *src) {
-    unsigned int i;
-    i = 0;
-    while ((dest[i] = src[i])) i++;
+    char *d = dest;
+    while ((*d++ = *src++));
     return dest;
 }
 
 
 char *strncpy(char *dest, const char *src, size_t num) {
+    char *d;
     size_t i;
-    i = 0;
-    while (i < num && (dest[i] = src[i]) && ++i);
 
-    if (i < num) {
-        while (i <= num) {
-            dest[i] = '\0';
-            ++i;
-        }
+    i = 0;
+    d = dest;
+    while (i < num) {
+        *d++ = *src++;
+        ++i;
     }
 
-    dest[i] = '\0';
+    *d = '\0';
+    return dest;
+}
+
+
+char *strcat(char *dest, const char *src) {
+    char *d;
+
+    d = dest + strlen(dest);
+    while ((*d++ = *src++));
+
+    return dest;
+}
+
+
+char *strncat(char *dest, const char *src, size_t num) {
+    char *d;
+    size_t i;
+
+    i = 0;
+    d = dest + strlen(dest);
+
+    while (i < num) {
+        *d++ = *src++;
+        ++i;
+    }
+
+    *d = '\0';
     return dest;
 }
 

@@ -35,5 +35,5 @@ latex/
 build
 
 # generated code
-track_data.h
-track_data.c
+include/track_data.h
+src/track_data.c

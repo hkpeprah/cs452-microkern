@@ -54,6 +54,8 @@ void go() {
                 printf("train %d at %d after sensor %s\n", trtid, dist, edge->src->name);
                 break;
             case 'q':
+                turnOffTrainSet();
+                Delay(10);
                 SigTerm();
                 Exit();
                 break;

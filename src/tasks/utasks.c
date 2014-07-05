@@ -32,8 +32,8 @@ void firstTask() {
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
     id = Create(13, TimerTask);
-    id = Create(10, SensorServer);
-    id = Create(13, TrainController);
+    id = Create(10, TrainController);
+    id = Create(12, SensorServer);
 
     debug("FirstTask: Exiting.");
     Exit();
@@ -119,7 +119,6 @@ void TrainUserTask() {
     bool sigkill;
     TrainMessage t;
     int status, cmd, callee, bytes, tid;
-    track_edge *edge;
 
     sigkill = false;
     RegisterAs("TrainHandler");
@@ -143,9 +142,8 @@ void TrainUserTask() {
                 debug("Starting Train Controller");
                 break;
             case TRAIN_STOP:
-                turnOffTrainSet();
-                Delay(10);
                 debug("Stopping Train Controller");
+                turnOffTrainSet();
                 sigkill = true;
                 break;
             case TRAIN_SPEED:
@@ -202,14 +200,11 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_ADD:
-                // TODO: figure out priority
-                edge = NearestSensorEdge(t.args[2], t.args[3]);
-                if (edge == NULL) {
-                    printf("Error: Invalid sensor passed.\r\n");
+                status = AddTrainToTrack(t.args[1], t.args[2], t.args[3]);
+                if (status < 0) {
+                    printf("Error: Invalid train or sensor.\r\n");
                 } else {
-                    if (!TrCreate(6, t.args[1], edge)) {
-                        printf("Error: Invalid train id.\r\n");
-                    }
+                    debug("Added Train %u to track near %c%u", t.args[1], t.args[2], t.args[3]);
                 }
                 break;
         }

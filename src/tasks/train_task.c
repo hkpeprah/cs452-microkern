@@ -7,6 +7,7 @@
 #include <term.h>
 #include <train.h>
 #include <train_speed.h>
+#include <calibration.h>
 
 #define TIMEOUT_BUFFER 20
 
@@ -30,7 +31,7 @@ typedef enum {
     TRM_AUX,                // auxiliary train function
     TRM_RV,                 // no args
     TRM_GET_LOCATION,       // track_edge ptr in arg0, dist (mm) in arg1
-    TRM_GET_SPEED,          // no args
+    TRM_GET_SPEED           // no args
 } TrainMessageType;
 
 typedef struct TrainMessage {
@@ -40,8 +41,8 @@ typedef struct TrainMessage {
 } TrainMessage_t;
 
 
-
 static void TrainTask();
+static void CalibrationSnapshot(Train_t*);
 
 
 int TrCreate(int priority, int tr, track_edge *start) {
@@ -86,7 +87,7 @@ int TrReverse(unsigned int tid) {
     return status;
 }
 
-int TrGetSpeed(int tid) {
+int TrGetSpeed(unsigned int tid) {
     TrainMessage_t msg = {.type = TRM_GET_SPEED};
     int result = Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
     if (result < 0) {
@@ -130,7 +131,7 @@ static inline void traverseNode(Train_t *train) {
             break;
         case NODE_BRANCH:
             sw = getSwitch(dest->num);
-            printf("switch %d state: %c\n", sw->id, sw->state == DIR_STRAIGHT ? 's' : 'c');
+            debug("Switch %d, State: %c", sw->id, sw->state == DIR_STRAIGHT ? 's' : 'c');
             train->currentEdge = &(dest->edge[sw->state]);
             break;
         case NODE_NONE:
@@ -143,13 +144,15 @@ static inline void syncWithSensor(Train_t *train) {
     traverseNode(train);
     train->edgeDistanceMM = 0;
     train->lastDistUpdateTick = Time();
+    CalibrationSnapshot(train);
 }
 
 static inline void updateLocation(Train_t *train) {
     // TODO: account for acceleration
     unsigned int currentTick = Time();
 
-    printf("updating location: prev tick: %d, currentTic: %d, prev dist: %d\n", train->lastDistUpdateTick, currentTick, train->edgeDistanceMM);
+    debug("Updating Location: Prev tick: %d, CurrentTick: %d, Prev Dist: %d",
+          train->lastDistUpdateTick, currentTick, train->edgeDistanceMM);
 
     if (currentTick == train->lastDistUpdateTick) {
         return;
@@ -158,10 +161,11 @@ static inline void updateLocation(Train_t *train) {
     train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
     train->lastDistUpdateTick = currentTick;
 
-    printf("new distance: %d\n", train->edgeDistanceMM);
+    debug("New Distance: %d", train->edgeDistanceMM);
 
     while (train->edgeDistanceMM >= train->currentEdge->dist) {
-        printf("edge dist %d, actual %d, traversing to %s\n", train->edgeDistanceMM, train->currentEdge->dist, train->currentEdge->dest->name);
+        debug("Edge Dist %d, Actual %d, Traversing to %s", train->edgeDistanceMM,
+              train->currentEdge->dist, train->currentEdge->dest->name);
         train->edgeDistanceMM -= train->currentEdge->dist;
         traverseNode(train);
     }
@@ -174,7 +178,8 @@ static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
     updateLocation(train);
     track_node *dest = train->currentEdge->dest;
 
-    msg.arg1 = train->lastDistUpdateTick + ((train->currentEdge->dist - train->edgeDistanceMM) * 1000 / train->microPerTick) + TIMEOUT_BUFFER;
+    msg.arg1 = train->lastDistUpdateTick;
+    msg.arg1 += ((train->currentEdge->dist - train->edgeDistanceMM) * 1000 / train->microPerTick) + TIMEOUT_BUFFER;
 
     if (dest->type == NODE_SENSOR) {
         msg.type = TRM_SENSOR_WAIT;
@@ -184,9 +189,10 @@ static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
         msg.type = TRM_TIME_WAIT;
     }
 
-    printf("NEXT WAIT: %s at %d (current time %d) waiting for time %d\n", dest->name, msg.arg1, train->lastDistUpdateTick, msg.arg1 - train->lastDistUpdateTick);
+    debug("NEXT WAIT: %s for %d (current time %d) waiting for time %d", dest->name, msg.arg1, train->lastDistUpdateTick,
+          msg.arg1 - train->lastDistUpdateTick);
 
-    if ( (result = Reply(sensorCourier, &msg, sizeof(msg)) < 0) ) {
+    if ((result = Reply(sensorCourier, &msg, sizeof(msg)) < 0)) {
         error("TrainTask: waitOnNextSensor: Reply returned %d", result);
     }
 }
@@ -256,6 +262,7 @@ static void TrainTask() {
     name[6] = (train.id % 10) + '0';
     RegisterAs(name);
     Reply(sender, NULL, 0);
+    CalibrationSnapshot(&train);
 
     // TODO: are these the right priorities?
     sensorCourier = Create(1, TrainCourierTask);
@@ -275,7 +282,7 @@ static void TrainTask() {
                     Reply(sender, NULL, 0);
                 }
 
-                printf("courier returned!\n");
+                debug("Train %u: Courier returned!", train.id);
                 if (msg.arg0 == SENSOR_TRIP) {
                     syncWithSensor(&train);
                 }
@@ -298,10 +305,12 @@ static void TrainTask() {
                 cmdbuf[0] = train.speed + train.aux;
                 cmdbuf[1] = train.id;
                 trnputs(cmdbuf, 2);
+
+                result = Reply(sender, NULL, 0);
                 break;
 
             case TRM_SPEED:
-                printf("train speed setting to: %d\n", msg.arg0);
+                debug("Train speed setting to: %d", msg.arg0);
                 // previously driving -> update location, get courier back
                 // courier should send back and get picked up by TRM_SENSOR/TIME_WAIT
                 updateLocation(&train);
@@ -318,8 +327,8 @@ static void TrainTask() {
                 train.speed = msg.arg0;
                 train.microPerTick = getTrainVelocity(train.id, train.speed);
 
-                printf("Train Speed: %u micrometers/tick\r\n", train.microPerTick);
-                printf("Location: %s + %u micrometers\r\n", train.currentEdge->src->name, train.edgeDistanceMM);
+                debug("Train Speed: %u micrometers/tick", train.microPerTick);
+                debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
 
                 // if previously stationary, use new data to wait
                 if (courierReady && train.speed > 0) {
@@ -379,14 +388,31 @@ static void TrainTask() {
                 } while (result != TASK_DOES_NOT_EXIST);
                 break;
 
+            case TRM_FREE_COURIER:
+                notice("TrainTask %d, TRM_FREE_COURIER not implemented.", train.id);
+                break;
+
             default:
                 error("TrainTask %d, incorrect msg type %d", train.id, msg.type);
         }
+
+        CalibrationSnapshot(&train);
 
         if (result < 0) {
             error("TrainTask: request: %d, got bad reply result %d", msg.type, result);
         }
     }
+}
+
+
+void CalibrationSnapshot(Train_t *train) {
+    CalibrationSnapshot_t snapshot;
+    snapshot.tr = train->id;
+    snapshot.sp = train->speed;
+    snapshot.dist = train->edgeDistanceMM;
+    snapshot.landmark = train->currentEdge->src->name;
+    snapshot.nextmark = train->currentEdge->dest->name;
+    printTrainSnapshot(&snapshot);
 }
 
 
