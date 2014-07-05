@@ -14,6 +14,7 @@
 #include <utasks.h>
 #include <string.h>
 #include <train_task.h>
+#include <sensor_server.h>
 
 
 void SpeedTest() {
