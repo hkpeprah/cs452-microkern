@@ -95,12 +95,9 @@ void printSwitch(unsigned int id, char state) {
         id -= MULTI_SWITCH_OFFSET;
     }
 
-    while (id > SENSORS_PER_LINE) {
-        id -= SENSORS_PER_LINE;
-        lines += 1;
-    }
-
-    printf(SAVE_CURSOR MOVE_CURSOR "%c" RESTORE_CURSOR, lines, 6 + (10 * (id - 1)), toUpperCase(state));
+    lines += ((id - 1) / SENSORS_PER_LINE);
+    id = (id - 1) % SENSORS_PER_LINE;
+    printf(SAVE_CURSOR MOVE_CURSOR "%c" RESTORE_CURSOR, lines, 6 + (10 * id), toUpperCase(state));
 }
 
 
@@ -139,11 +136,15 @@ void displayInfo() {
             RIGHT_HALF + 5, YELLOW, 0, RIGHT_HALF + 5, 0);
     while (count > 0) {
         for (i = 0; i < MIN(count, SENSORS_PER_LINE); ++i) {
-            swtch = getSwitch(TRAIN_SWITCH_COUNT - count + i);
-            if (swtch->id < 10) {
-                kputstr("00");
-            } else if (swtch->id < 100) {
-                kputstr("0");
+            if (count <= 4) {
+                swtch = getSwitch(MULTI_SWITCH_OFFSET + (TRAIN_SWITCH_COUNT - count + i + 1));
+            } else {
+                swtch = getSwitch(TRAIN_SWITCH_COUNT - count + i + 1);
+                if (swtch->id < 10) {
+                    kputstr("00");
+                } else if (swtch->id < 100) {
+                    kputstr("0");
+                }
             }
             kprintf("%d: %c    ", swtch->id, SWITCH_CHAR(swtch->state));
         }

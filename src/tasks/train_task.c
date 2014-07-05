@@ -326,7 +326,6 @@ static void TrainTask() {
                 // update to new speed
                 train.speed = msg.arg0;
                 train.microPerTick = getTrainVelocity(train.id, train.speed);
-                CalibrationSnapshot(&train);
 
                 debug("Train Speed: %u micrometers/tick", train.microPerTick);
                 debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
@@ -396,6 +395,8 @@ static void TrainTask() {
             default:
                 error("TrainTask %d, incorrect msg type %d", train.id, msg.type);
         }
+
+        CalibrationSnapshot(&train);
 
         if (result < 0) {
             error("TrainTask: request: %d, got bad reply result %d", msg.type, result);
