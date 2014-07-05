@@ -36,8 +36,8 @@ int write(CircularBuffer_t *cbuf, const volatile char *buf, uint32_t len) {
         cbuf->data[cbuf->tail++] = *buf++;
     }
 
-#if 0
-    Log("0x%x write, head = %d, tail = %d, remaining = %d\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+#if LOG
+    Log("0x%x wt, hd {%d} tl {%d}, rem = {%d}\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
 #endif
     return len;
 }
@@ -51,8 +51,8 @@ int read(CircularBuffer_t *cbuf, volatile char *buf, uint32_t len) {
         ++cbuf->remaining;
     }
 
-#if 0
-    Log("0x%x read, head = %d, tail = %d, remaining = %d\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
+#if LOG
+    Log("0x%x rd, hd {%d} tl {%d}, rem = {%d}\n", cbuf, cbuf->head, cbuf->tail, cbuf->remaining);
 #endif
     return cbuf->remaining - iremaining;
 }

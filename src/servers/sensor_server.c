@@ -14,7 +14,8 @@ typedef enum {
     SENSOR_WAIT = 0,
     SENSOR_WAIT_TIMEOUT,
     SENSOR_WAIT_ANY,
-    SENSOR_RETURNED
+    SENSOR_RETURNED,
+    SENSOR_FREE,
 } SensorRequestType;
 
 
@@ -118,6 +119,16 @@ void SensorServer() {
                     status = OTHER_TASK_WAITING_ON_SENSOR;
                     Reply(callee, &status, sizeof(status));
                 }
+                break;
+            case SENSOR_FREE:
+                if (req.sensor > maxId || sensorQueue[req.sensor].tid < 0) {
+                    status = INVALID_SENSOR;
+                    break;
+                }
+                status = TIMER_TRIP;
+                Reply(sensorQueue[req.sensor].tid, &status, sizeof(status));
+                sensorQueue[req.sensor].tid = -1;
+
                 break;
             case SENSOR_RETURNED:
                 /* TODO: Would be optimal if knew which train triggered ? */

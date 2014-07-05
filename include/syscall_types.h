@@ -10,6 +10,7 @@ typedef enum {
     SYS_CREATE,
     SYS_PASS,
     SYS_EXIT,
+    SYS_DESTROY,
     SYS_SEND,
     SYS_RECV,
     SYS_REPL,

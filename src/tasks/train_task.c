@@ -26,7 +26,6 @@ typedef enum {
     TRM_EXIT,               // no args, stop the train
     TRM_SENSOR_WAIT,        // sensor in arg0, time in arg1
     TRM_TIME_WAIT,          // arg1 ticks to wait, arg0 not used
-    TRM_FREE_COURIER,       // optimistic courier free from time/sensor wait
     TRM_SPEED,              // speed in arg0
     TRM_AUX,                // auxiliary train function
     TRM_RV,                 // no args
@@ -172,7 +171,11 @@ static inline void updateLocation(Train_t *train) {
 }
 
 
-static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
+static inline void waitOnNextSensor(Train_t *train, unsigned sensorCourier) {
+    if (train->microPerTick == 0) {
+        return;
+    }
+
     int result;
     TrainMessage_t msg;
     updateLocation(train);
@@ -195,6 +198,28 @@ static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
     if ((result = Reply(sensorCourier, &msg, sizeof(msg)) < 0)) {
         error("TrainTask: waitOnNextSensor: Reply returned %d", result);
     }
+}
+
+/* 
+ * pre: courier is ready to wait on sensor
+ *      train speed has been updated to new speed
+ * result: courier waiting on next sensor
+ *         train driving at provided speed
+ */
+static inline void driveTrain(Train_t *train, unsigned int sensorCourier) {
+    char cmdbuf[2];
+
+    // send bytes
+    cmdbuf[0] = train->speed + train->aux;
+    cmdbuf[1] = train->id;
+    trnputs(cmdbuf, 2);
+
+    // update speed
+    train->microPerTick = getTrainVelocity(train->id, train->speed);
+    waitOnNextSensor(train, sensorCourier);
+
+    printf("Train Speed: %u micrometers/tick\r\n", train->microPerTick);
+    printf("Location: %s + %u micrometers\r\n", train->currentEdge->src->name, train->edgeDistanceMM);
 }
 
 
@@ -223,9 +248,6 @@ static void TrainCourierTask() {
                 msg.arg0 = TIMER_TRIP;
                 break;
 
-            case TRM_FREE_COURIER:
-                break;
-
             case TRM_EXIT:
                 return;
 
@@ -240,6 +262,7 @@ static void TrainTask() {
     int sensorCourier;
     bool courierReady = 0;
     bool running = 1;
+    bool driveWhenCourierReady = 0;
     int result, sender;
     char cmdbuf[2];
     TrainMessage_t msg;
@@ -287,13 +310,19 @@ static void TrainTask() {
                     syncWithSensor(&train);
                 }
 
-                // if the train is driving, send courier out to wait for next sensor/time trip
-                // this can be triggered either by an actual sensor trip or an invalidated
-                // courier wait (ie. speed changes, train reverses)
                 if (train.speed > 0) {
+                    if (driveWhenCourierReady) {
+                        // courier returns after speed change, start driving
+                        driveTrain(&train, sensorCourier);
+                        driveWhenCourierReady = 0;
+                    } else {
+                        // courier returns after hitting sensor/timeout, just wait
+                        // on sensor
+                        waitOnNextSensor(&train, sensorCourier);
+                    }
                     courierReady = 0;
-                    waitOnNextSensor(&train, sensorCourier);
                 } else {
+                    // courier return on stationary train, mark ready, do nothing
                     courierReady = 1;
                 }
 
@@ -305,44 +334,36 @@ static void TrainTask() {
                 cmdbuf[0] = train.speed + train.aux;
                 cmdbuf[1] = train.id;
                 trnputs(cmdbuf, 2);
-
                 result = Reply(sender, NULL, 0);
                 break;
 
             case TRM_SPEED:
                 debug("Train speed setting to: %d", msg.arg0);
+                if (train.speed == msg.arg0) {
+                    result = Reply(sender, NULL, 0);
+                    break;
+                }
                 // previously driving -> update location, get courier back
                 // courier should send back and get picked up by TRM_SENSOR/TIME_WAIT
                 updateLocation(&train);
-                if (train.speed > 0) {
-                    msg.type = TRM_FREE_COURIER;
-                    result = Reply(sensorCourier, &msg, sizeof(msg));
 
-                    if (result < 0) {
-                        error("TrainTask: TRM_SPEED: bad reply result %d", result);
-                    }
-                }
-
-                // update to new speed
+                // update to new speed, but might not do anything yet
                 train.speed = msg.arg0;
-                train.microPerTick = getTrainVelocity(train.id, train.speed);
-
                 debug("Train Speed: %u micrometers/tick", train.microPerTick);
                 debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
 
-                // if previously stationary, use new data to wait
-                if (courierReady && train.speed > 0) {
-                    // deal with acceleration
-                    courierReady = 0;
-                    waitOnNextSensor(&train, sensorCourier);
+                // if courier is ready and train will be moving, wait on next sensor
+                if (train.speed > 0) {
+                    if (courierReady) {
+                        driveTrain(&train, sensorCourier);
+                        courierReady = 0;
+                        driveWhenCourierReady = 0;
+                    } else {
+                        driveWhenCourierReady = 1;
+                    }
                 } else if (train.speed == 0) {
-                    // deal with deceleration
+                    driveTrain(&train, sensorCourier);
                 }
-
-                // send bytes
-                cmdbuf[0] = train.speed + train.aux;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
 
                 result = Reply(sender, NULL, 0);
                 break;
@@ -386,10 +407,6 @@ static void TrainTask() {
                     result = Reply(sensorCourier, &msg, sizeof(msg));
                     Delay(10);
                 } while (result != TASK_DOES_NOT_EXIST);
-                break;
-
-            case TRM_FREE_COURIER:
-                notice("TrainTask %d, TRM_FREE_COURIER not implemented.", train.id);
                 break;
 
             default:

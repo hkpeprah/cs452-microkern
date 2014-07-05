@@ -1,6 +1,7 @@
 #include <uart.h>
 #include <stdlib.h>
 #include <term.h>
+#include <logger.h>
 #include <server.h>
 #include <types.h>
 #include <syscall.h>
@@ -76,6 +77,7 @@ static void Uart1RCVHandler() {
 
         if (result < 0) {
             // bad stuff
+            sys_log_f("U1RCV: AwaitEvent result %d\n", result);
             continue;
         }
 
@@ -101,7 +103,7 @@ static void Uart2RCVHandler() {
 
         if (result < 0) {
             // bad stuff
-            printf("bad stuff\n");
+            sys_log_f("U2RCV: AwaitEvent result %d\n", result);
             continue;
         }
 
@@ -129,6 +131,7 @@ static void Uart1XMTHandler() {
         result = AwaitEvent(UART1_XMT_INTERRUPT, NULL, 0);
 
         if (result < 0) {
+            sys_log_f("U1XMT: AwaitEvent result %d\n", result);
             continue;
         }
 
@@ -153,6 +156,7 @@ static void Uart1XMTHandler() {
         result = Send(serverTid, &req, sizeof(req), &req, sizeof(req));
 
         if (result < 0) {
+            sys_log_f("U1XMT: Send result %d\n", result);
             continue;
         }
 
@@ -163,7 +167,11 @@ static void Uart1XMTHandler() {
 
         // wait for cts to desert if necessary
         if (*flags & CTS_MASK) {
-            AwaitEvent(UART1_MOD_INTERRUPT, NULL, 0);
+            result = AwaitEvent(UART1_MOD_INTERRUPT, NULL, 0);
+
+            if (result < 0) {
+                sys_log_f("U1XMT: AwaitEvent(2) result %d\n", result);
+            }
         }
     }
 }
@@ -183,7 +191,8 @@ static void Uart2XMTHandler() {
     for (;;) {
         result = AwaitEvent(UART2_XMT_INTERRUPT, NULL, 0);
         if (result < 0) {
-            continue; /* bad stuff */
+            sys_log_f("U2XMT: AwaitEvent result %d\n", result);
+            continue;
         }
 
         req.len = FIFO_SIZE;
@@ -191,7 +200,9 @@ static void Uart2XMTHandler() {
         // reply will be same as req except the len parameter is changed to # bytes
         // written back
         result = Send(serverTid, &req, sizeof(req), &req, sizeof(req));
+
         if (result < 0) {
+            sys_log_f("U2XMT: Send result %d\n", result);
             continue;
         }
 

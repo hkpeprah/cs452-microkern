@@ -1,12 +1,14 @@
 #ifndef __SYSCALL__
 #define __SYSCALL__
 
+#include <types.h>
 
 int Create(int, void(*)());
 int MyTid();
 int MyParentTid();
 void Pass();
 void Exit();
+int Destroy(uint32_t tid);
 int Send(int, void*, int, void*, int);
 int Receive(int*, void*, int);
 int Reply(int, void*, int);

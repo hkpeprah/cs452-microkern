@@ -123,12 +123,16 @@ int handleInterrupt() {
                 result = *u1data & DATA_MASK;
             } else {
                 // TODO: no waiting task, should send stop control bit
+                sys_log_f("Uart1 rcv interrupt missed\n");
                 *u1ctlr &= ~(RIEN_MASK);
             }
         } else if (*u1int & TIS_MASK) {
             type = UART1_XMT_INTERRUPT;
             *u1ctlr &= ~(TIEN_MASK);
             task = interruptTable[type].blockedTask;
+            if (!task) {
+                sys_log_f("uart1 xmt interrupt missed\n");
+            }
             result = 1;
         } else if (*u1int & MIS_MASK) {
             type = UART1_MOD_INTERRUPT;
@@ -139,7 +143,7 @@ int handleInterrupt() {
                 *u1int = 0;
             } else {
                 // TODO: no waiting task, mask intr
-                sys_log_f("Uart1 MOD interrupt missed");
+                sys_log_f("Uart1 MOD interrupt missed\n");
                 *u1ctlr &= ~(MSIEN_MASK);
             }
         }
@@ -161,6 +165,7 @@ int handleInterrupt() {
             } else {
                 // TODO: no waiting task -> input is faster than we are reading
                 // should mask interrupt, send stop bit to sender
+                sys_log_f("uart2 rcv interrupt missed\n");
                 *u2ctlr &= ~(RIEN_MASK);
             }
 
@@ -171,12 +176,12 @@ int handleInterrupt() {
             // disable xmit interrupt
             *u2ctlr &= ~(TIEN_MASK);
             task = interruptTable[type].blockedTask;
+            if (!task) {
+                sys_log_f("uart2 xmt interrupt missed\n");
+            }
             result = 1;
         }
     }
-#if LOG 
-    sys_log_f("got intr of type %d, task: %d\n", type, task == NULL ? 0 : task->tid);
-#endif
 
     if (task) {
         addTask(task);
@@ -226,10 +231,6 @@ int addInterruptListener(int eventType, Task_t *t, void *buf, int buflen) {
             *u2ctlr |= TIEN_MASK;
             break;
     }
-
-#if LOG
-    sys_log_f("task %d reg for event %d\n", t->tid, eventType);
-#endif
 
     taskEntry->blockedTask = t;
     taskEntry->buf = buf;

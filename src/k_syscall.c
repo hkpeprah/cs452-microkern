@@ -9,6 +9,7 @@
 #include <interrupt.h>
 #include <idle.h>
 #include <null.h>
+#include <logger.h>
 
 #define INIT_SPSR   0x10
 #define REGS_SAVE   13
@@ -20,6 +21,10 @@ int sys_create(int priority, void (*code)(), uint32_t *retval) {
     uint32_t *sp;
 
     task = createTaskD(priority);
+
+#if LOG
+        sys_log_f("create task tid {%d} sp {0x%x} fn {0x%x} priority {%d} parent {%d}\n", task->tid, task->sp, code, task->priority, task->parentTid);
+#endif
 
     if (task != NULL) {
         sp = (uint32_t*)task->sp;
@@ -214,7 +219,22 @@ void sys_pass() {
 
 
 void sys_exit() {
-    destroyTaskD();
+    destroyTaskD(getCurrentTask());
+}
+
+int sys_destroy(uint32_t tid) {
+    Task_t *currentTask = getCurrentTask();
+    Task_t *target = getTaskByTid(tid);
+
+    if (target->parentTid != currentTask->tid) {
+        return DESTROY_NOT_CHILD;
+    }
+
+#if LOG
+    sys_log_f("deleting task %d\n", tid);
+#endif
+    destroyTaskD(target);
+    return 0;
 }
 
 
