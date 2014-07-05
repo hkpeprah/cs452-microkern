@@ -12,7 +12,6 @@
 #define TRAIN_AUX_GO          96
 #define TRAIN_AUX_STOP        97
 #define TRAIN_AUX_SNSRESET    192
-
 #define MAX_TRAINS            8
 
 #define SWITCH_INDEX_TO_ID(x) ((x >= TRAIN_SWITCH_COUNT - 4 ? x + MULTI_SWITCH_OFFSET : x) + 1)

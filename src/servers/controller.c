@@ -115,6 +115,7 @@ void TrainController() {
             case CNTRL_ADD:
                 /* add a train to the track */
                 i = sensorToInt(request.arg1, request.arg2);
+                repl = -1;
                 if (i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
                     edge = &track[i].edge[DIR_AHEAD];
                     for (i = 0; i < id; ++i) {
@@ -129,13 +130,9 @@ void TrainController() {
                             trains[id].tid = tid;
                             trains[id].tr_number = request.arg1;
                             id++;
-                        } else {
-                            repl = -1;
+                            repl = 1;
                         }
                     }
-                } else {
-                    error("TrainController: Invalid Sensor: %c%u", request.arg1, request.arg2);
-                    repl = -1;
                 }
                 break;
             default:
