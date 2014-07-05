@@ -17,11 +17,21 @@
 #include <sensor_server.h>
 
 
+static unsigned int Continue() {
+    char ch;
+    printf("Press c to continue: ");
+    ch = getchar();
+    printf("%c\r\n", ch);
+    if (ch == 'c') return 1;
+    return 0;
+}
+
+
 void SpeedTest() {
     int status;
-    char buf[50];
+    char ch, buf[50];
     Sensor_t *sensor;
-    unsigned int i, speed, tr_number, startTime, endTime;
+    unsigned int speed, tr_number, startTime, endTime;
 
     Delay(10);
     trainSwitch(10, 'S');
@@ -43,27 +53,37 @@ void SpeedTest() {
         if (tr_number >= 0) {
             TrSpeed(tr_number, 0);
             for (speed = 3; speed <= TRAIN_MAX_SPEED; ++speed) {
+                printf("Speed or acceleration test? (s|a|c) ");
+                ch = getchar();
+                printf("%c\r\n", ch);
                 TrSpeed(tr_number, speed);
-                status = WaitAnySensor();
-                if (status == 0) {
+                if (ch == 'a' || ch == 'A') {
+                    printf("Acceleration/Deceleration for speed %u\r\n", speed);
+                    WaitOnSensor('D', 13);
+                    printf("Stopping beginning at sensor D13.\r\n");
+                    WaitOnSensor('D', 13);
+                    TrSpeed(tr_number, 0);
+                } else if (ch == 'c' || ch == 'C') {
+                    printf("Skipping speed %u\r\n", speed);
                     continue;
+                } else {
+                    printf("Measuring for speed %u\r\n", speed);
+                    status = WaitAnySensor();
+                    if (status == 0) {
+                        continue;
+                    }
+                    sensor = getSensorFromIndex(status);
+                    if (sensor == NULL) {
+                        break;
+                    }
+                    printf("Using Sensor: %c%u\r\n", sensor->module, sensor->id);
+                    WaitOnSensor(sensor->module, sensor->id);
+                    startTime = Time();
+                    WaitOnSensor(sensor->module, sensor->id);
+                    endTime = Time();
+                    printf("Speed %d, Time %d\r\n", speed, endTime - startTime);
                 }
-                sensor = getSensorFromIndex(status);
-                printf("Using Sensor: %c%u\r\n", sensor->module, sensor->id);
-                WaitOnSensor(sensor->module, sensor->id);
-                startTime = Time();
-                WaitOnSensor(sensor->module, sensor->id);
-                endTime = Time();
-                printf("Speed %d, Time %d\r\n", speed, endTime - startTime);
-                printf("Stopping in.... ");
-                for (i = 0; i < 10; ++i) {
-                    printf(" %u", i);
-                }
-                printf("NOW!\r\n");
-                TrSpeed(tr_number, 0);
-                printf("Press c to continue: ");
-                gets(IO, buf, 50);
-                if (strcmp(buf, "c") != 0) {
+                if (!Continue()) {
                     break;
                 }
             }
@@ -89,6 +109,7 @@ int main() {
     sys_create(11, TrainController, &tid);
     sys_create(13, TimerTask, &tid);
     sys_create(4, SpeedTest, &tid);
+    sys_create(12, SensorServer, &tid);
 
     kernel_main();
 

@@ -1,210 +1,83 @@
 #include <train_speed.h>
 #include <types.h>
 #include <term.h>
+#include <stdlib.h>
+#include <clock.h>
+
+#define MEASUREMENT_TOTAL   15
+#define TRAIN_COUNT         6
 
 static struct train_speed_state trainSpeeds[6];
 
 
 void initTrainSpeeds() {
-    trainSpeeds[0].train = "45";
-    trainSpeeds[0].ticks[0] = 0;
-    trainSpeeds[0].speed[0] = 0;
-    trainSpeeds[0].ticks[1] = 0;
-    trainSpeeds[0].speed[1] = 0;
-    trainSpeeds[0].ticks[2] = 0;
-    trainSpeeds[0].speed[2] = 0;
-    trainSpeeds[0].ticks[3] = 0;
-    trainSpeeds[0].speed[3] = 0;
-    trainSpeeds[0].ticks[4] = 0;
-    trainSpeeds[0].speed[4] = 0;
-    trainSpeeds[0].ticks[5] = 0;
-    trainSpeeds[0].speed[5] = 0;
-    trainSpeeds[0].ticks[6] = 0;
-    trainSpeeds[0].speed[6] = 0;
-    trainSpeeds[0].ticks[7] = 0;
-    trainSpeeds[0].speed[7] = 0;
-    trainSpeeds[0].ticks[8] = 0;
-    trainSpeeds[0].speed[8] = 0;
-    trainSpeeds[0].ticks[9] = 0;
-    trainSpeeds[0].speed[9] = 0;
-    trainSpeeds[0].ticks[10] = 0;
-    trainSpeeds[0].speed[10] = 0;
-    trainSpeeds[0].ticks[11] = 0;
-    trainSpeeds[0].speed[11] = 0;
-    trainSpeeds[0].ticks[12] = 0;
-    trainSpeeds[0].speed[12] = 0;
-    trainSpeeds[0].ticks[13] = 0;
-    trainSpeeds[0].speed[13] = 0;
-    trainSpeeds[0].ticks[14] = 0;
-    trainSpeeds[0].speed[14] = 0;
+    char *trains[] = {"45", "47", "48", "49", "50", "51"};
+    struct train_speed_state *state;
+    unsigned int i, j;
+    unsigned int *speeds, *ticks, *stoppingDistances, *stoppingTicks;
+    /*
+     * Indices 0 to 5 for Trains 45 ... 51
+     */
+    unsigned int measured_speeds[][MEASUREMENT_TOTAL] = {
+        {0, 1171, 1171, 1171, 1809, 2385, 2936, 3517, 3896, 4338, 4744, 5299, 5571, 5694, 5785},
+        {0, 1303, 1303, 1303, 1798, 2373, 2892, 3541, 3819, 4338, 4710, 5124, 5158, 5228, 5268},
+        {0, 1146, 1146, 1146, 1678, 2350, 2882, 3364, 3782, 4197, 4710, 5193, 5341, 5416, 5538},
+        {0, 1275, 1275, 1275, 1704, 2321, 2846, 3426, 3935, 4518, 4993, 5454, 5498, 5538, 5700},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 429, 429, 429, 819, 1138, 1530, 1890, 2240, 2797, 3335, 4127, 4802, 5743, 6586}
+    };
 
-    trainSpeeds[1].train = "47";
-    trainSpeeds[1].ticks[0] = 0;
-    trainSpeeds[1].speed[0] = 0;
-    trainSpeeds[1].ticks[1] = 3578;
-    trainSpeeds[1].speed[1] = 1303;
-    trainSpeeds[1].ticks[2] = 3578;
-    trainSpeeds[1].speed[2] = 1303;
-    trainSpeeds[1].ticks[3] = 3578;
-    trainSpeeds[1].speed[3] = 1303;
-    trainSpeeds[1].ticks[4] = 2594;
-    trainSpeeds[1].speed[4] = 1798;
-    trainSpeeds[1].ticks[5] = 1965;
-    trainSpeeds[1].speed[5] = 2373;
-    trainSpeeds[1].ticks[6] = 1612;
-    trainSpeeds[1].speed[6] = 2892;
-    trainSpeeds[1].ticks[7] = 1350;
-    trainSpeeds[1].speed[7] = 3541;
-    trainSpeeds[1].ticks[8] = 1221;
-    trainSpeeds[1].speed[8] = 3819;
-    trainSpeeds[1].ticks[9] = 1075;
-    trainSpeeds[1].speed[9] = 4338;
-    trainSpeeds[1].ticks[10] = 990;
-    trainSpeeds[1].speed[10] = 4710;
-    trainSpeeds[1].ticks[11] = 910;
-    trainSpeeds[1].speed[11] = 5124;
-    trainSpeeds[1].ticks[12] = 904;
-    trainSpeeds[1].speed[12] = 5158;
-    trainSpeeds[1].ticks[13] = 892;
-    trainSpeeds[1].speed[13] = 5228;
-    trainSpeeds[1].ticks[14] = 885;
-    trainSpeeds[1].speed[14] = 5268;
+    unsigned int measured_ticks[][MEASUREMENT_TOTAL] = {
+        {0, 3982, 3892, 3892, 2578, 1955, 1588, 1326, 1197, 1075, 983, 880, 837, 819, 806},
+        {0, 3578, 3578, 3578, 2594, 1965, 1612, 1350, 1221, 1075, 990, 910, 904, 892, 885},
+        {0, 4068, 4068, 4068, 2779, 1984, 1618, 1386, 1233, 1111, 990, 898, 873, 861, 842},
+        {0, 3657, 3657, 3657, 2736, 2009, 1637, 1361, 1185, 1032, 934, 855, 848, 842, 818},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 10880, 10880, 10880, 5696, 4097, 3047, 2467, 2082, 1667, 1398, 1130, 971, 812, 708}
+    };
 
-    trainSpeeds[2].train = "48";
-    trainSpeeds[2].ticks[0] = 0;
-    trainSpeeds[2].speed[0] = 0;
-    trainSpeeds[2].ticks[1] = 0;
-    trainSpeeds[2].speed[1] = 0;
-    trainSpeeds[2].ticks[2] = 0;
-    trainSpeeds[2].speed[2] = 0;
-    trainSpeeds[2].ticks[3] = 0;
-    trainSpeeds[2].speed[3] = 0;
-    trainSpeeds[2].ticks[4] = 0;
-    trainSpeeds[2].speed[4] = 0;
-    trainSpeeds[2].ticks[5] = 1984;
-    trainSpeeds[2].speed[5] = 2350;
-    trainSpeeds[2].ticks[6] = 1618;
-    trainSpeeds[2].speed[6] = 2882;
-    trainSpeeds[2].ticks[7] = 1386;
-    trainSpeeds[2].speed[7] = 3364;
-    trainSpeeds[2].ticks[8] = 1233;
-    trainSpeeds[2].speed[8] = 3782;
-    trainSpeeds[2].ticks[9] = 1111;
-    trainSpeeds[2].speed[9] = 4197;
-    trainSpeeds[2].ticks[10] = 990;
-    trainSpeeds[2].speed[10] = 4710;
-    trainSpeeds[2].ticks[11] = 898;
-    trainSpeeds[2].speed[11] = 5193;
-    trainSpeeds[2].ticks[12] = 873;
-    trainSpeeds[2].speed[12] = 5341;
-    trainSpeeds[2].ticks[13] = 861;
-    trainSpeeds[2].speed[13] = 5416;
-    trainSpeeds[2].ticks[14] = 842;
-    trainSpeeds[2].speed[14] = 5538;
+    unsigned int measured_stopping_distances[][MEASUREMENT_TOTAL] = {
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 17, 17, 17, 26, 31, 39, 48, 54, 66, 64, 72, 79, 83, 82},
+        {0, 16, 16, 16, 20, 28, 36, 44, 50, 58, 62, 72, 80, 87, 88},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 15, 15, 15, 33, 40, 45, 54, 58, 65, 70, 78, 85, 90, 89},
+        {0, 3, 4, 5, 8, 12, 18, 26, 34, 45, 56, 73, 89, 114, 137}
+    };
 
-    trainSpeeds[3].train = "49";
-    trainSpeeds[3].ticks[0] = 0;
-    trainSpeeds[3].speed[0] = 0;
-    trainSpeeds[3].ticks[1] = 3657;
-    trainSpeeds[3].speed[1] = 1275;
-    trainSpeeds[3].ticks[2] = 3657;
-    trainSpeeds[3].speed[2] = 1275;
-    trainSpeeds[3].ticks[3] = 3657;
-    trainSpeeds[3].speed[3] = 1275;
-    trainSpeeds[3].ticks[4] = 2736;
-    trainSpeeds[3].speed[4] = 1704;
-    trainSpeeds[3].ticks[5] = 2009;
-    trainSpeeds[3].speed[5] = 2321;
-    trainSpeeds[3].ticks[6] = 1637;
-    trainSpeeds[3].speed[6] = 2846;
-    trainSpeeds[3].ticks[7] = 1361;
-    trainSpeeds[3].speed[7] = 3426;
-    trainSpeeds[3].ticks[8] = 1185;
-    trainSpeeds[3].speed[8] = 3935;
-    trainSpeeds[3].ticks[9] = 1032;
-    trainSpeeds[3].speed[9] = 4518;
-    trainSpeeds[3].ticks[10] = 934;
-    trainSpeeds[3].speed[10] = 4993;
-    trainSpeeds[3].ticks[11] = 855;
-    trainSpeeds[3].speed[11] = 5454;
-    trainSpeeds[3].ticks[12] = 848;
-    trainSpeeds[3].speed[12] = 5498;
-    trainSpeeds[3].ticks[13] = 842;
-    trainSpeeds[3].speed[13] = 5538;
-    trainSpeeds[3].ticks[14] = 818;
-    trainSpeeds[3].speed[14] = 5700;
+    unsigned int measured_stopping_ticks[][MEASUREMENT_TOTAL] = {
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 206, 206, 206, 265, 271, 336, 331, 347, 375, 352, 400, 405, 356, 386},
+        {0, 208, 208, 208, 275, 323, 339, 365, 388, 390, 396, 435, 436, 433, 461},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 193, 193, 193, 285, 311, 343, 358, 362, 351, 370, 395, 412, 399, 389},
+        {0, 123, 123, 123, 124, 156, 160, 230, 252, 298, 295, 343, 416, 456, 497}
+    };
 
-    trainSpeeds[4].train = "50";
-    trainSpeeds[4].ticks[0] = 0;
-    trainSpeeds[4].speed[0] = 0;
-    trainSpeeds[4].ticks[1] = 0;
-    trainSpeeds[4].speed[1] = 0;
-    trainSpeeds[4].ticks[2] = 0;
-    trainSpeeds[4].speed[2] = 0;
-    trainSpeeds[4].ticks[3] = 0;
-    trainSpeeds[4].speed[3] = 0;
-    trainSpeeds[4].ticks[4] = 0;
-    trainSpeeds[4].speed[4] = 0;
-    trainSpeeds[4].ticks[5] = 0;
-    trainSpeeds[4].speed[5] = 0;
-    trainSpeeds[4].ticks[6] = 0;
-    trainSpeeds[4].speed[6] = 0;
-    trainSpeeds[4].ticks[7] = 0;
-    trainSpeeds[4].speed[7] = 0;
-    trainSpeeds[4].ticks[8] = 0;
-    trainSpeeds[4].speed[8] = 0;
-    trainSpeeds[4].ticks[9] = 0;
-    trainSpeeds[4].speed[9] = 0;
-    trainSpeeds[4].ticks[10] = 0;
-    trainSpeeds[4].speed[10] = 0;
-    trainSpeeds[4].ticks[11] = 0;
-    trainSpeeds[4].speed[11] = 0;
-    trainSpeeds[4].ticks[12] = 0;
-    trainSpeeds[4].speed[12] = 0;
-    trainSpeeds[4].ticks[13] = 0;
-    trainSpeeds[4].speed[13] = 0;
-    trainSpeeds[4].ticks[14] = 0;
-    trainSpeeds[4].speed[14] = 0;
 
-    trainSpeeds[5].train = "51";
-    trainSpeeds[5].ticks[0] = 0;
-    trainSpeeds[5].speed[0] = 0;
-    trainSpeeds[5].ticks[1] = 10880;
-    trainSpeeds[5].speed[1] = 429;
-    trainSpeeds[5].ticks[2] = 10880;
-    trainSpeeds[5].speed[2] = 429;
-    trainSpeeds[5].ticks[3] = 10880;
-    trainSpeeds[5].speed[3] = 429;
-    trainSpeeds[5].ticks[4] = 5696;
-    trainSpeeds[5].speed[4] = 819;
-    trainSpeeds[5].ticks[5] = 4097;
-    trainSpeeds[5].speed[5] = 1138;
-    trainSpeeds[5].ticks[6] = 3047;
-    trainSpeeds[5].speed[6] = 1530;
-    trainSpeeds[5].ticks[7] = 2467;
-    trainSpeeds[5].speed[7] = 1890;
-    trainSpeeds[5].ticks[8] = 2082;
-    trainSpeeds[5].speed[8] = 2240;
-    trainSpeeds[5].ticks[9] = 1667;
-    trainSpeeds[5].speed[9] = 2797;
-    trainSpeeds[5].ticks[10] = 1398;
-    trainSpeeds[5].speed[10] = 3335;
-    trainSpeeds[5].ticks[11] = 1130;
-    trainSpeeds[5].speed[11] = 4127;
-    trainSpeeds[5].ticks[12] = 971;
-    trainSpeeds[5].speed[12] = 4802;
-    trainSpeeds[5].ticks[13] = 812;
-    trainSpeeds[5].speed[13] = 5743;
-    trainSpeeds[5].ticks[14] = 708;
-    trainSpeeds[5].speed[14] = 6586;
+
+    for (i = 0; i < TRAIN_COUNT; ++i) {
+        state = &trainSpeeds[i];
+        state->train = trains[i];
+        speeds = measured_speeds[i];
+        ticks = measured_ticks[i];
+        stoppingDistances = measured_stopping_distances[i];
+        stoppingTicks = measured_stopping_ticks[i];
+        for (j = 0; j < MEASUREMENT_TOTAL; ++j) {
+            state->ticks[j] = ticks[j];
+            state->speed[j] = speeds[j];
+            state->stoppingDistances[j] = stoppingDistances[j];
+            state->stoppingTicks[j] = stoppingTicks[j];
+        }
+    }
 }
 
 
-bool isValidTrainId(unsigned int id) {
+bool isValidTrainId(unsigned int tr) {
     bool valid;
 
     valid = false;
-    switch (id) {
+    switch (tr) {
         case 45:
         case 47:
         case 48:
@@ -251,4 +124,31 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
     }
 
     return trainSpeeds[id].speed[sp];
+}
+
+
+unsigned int getTransitionDistance(unsigned int tr, unsigned int startsp, unsigned int destsp, unsigned int ticks) {
+    unsigned int curTicks, totalTime, distance;
+
+    if (!isValidTrainId(tr)) {
+        return 0;
+    }
+
+    curTicks = Time();
+    totalTime = getTransitionTicks(tr, startsp, destsp);
+    distance = trainSpeeds[tr].stoppingDistances[startsp];
+    return (distance / totalTime) * (curTicks - ticks);
+}
+
+
+unsigned int getTransitionTicks(unsigned int tr, unsigned int startsp, unsigned int destsp) {
+    unsigned int totalTicks;
+
+    if (!isValidTrainId(tr)) {
+        return 0;
+    }
+
+    totalTicks = trainSpeeds[tr].stoppingTicks[startsp];
+    totalTicks *= ((float)(MAX(startsp, destsp) - MIN(startsp, destsp))) / MAX(startsp, destsp);
+    return totalTicks;
 }

@@ -66,14 +66,10 @@ static void SensorSlave() {
 
 void SensorServer() {
     SensorRequest_t req, reply;
-    bool hasNotify;
-    unsigned int timeout;
-    unsigned int time = 0;
-    unsigned int i;
-    int callee, status;
     char calleeByte;
+    int tid, callee, status;
+    unsigned int i, timeout, sensor, time = 0;
     unsigned int bytes, notifier, *sensors;
-    int tid;
     unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
     SensorQueue_t sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {{0}};
     CircularBuffer_t waitAnyQueue;
@@ -82,7 +78,6 @@ void SensorServer() {
     (void)reply; /* TODO: May use this in future */
 
     initcb(&waitAnyQueue);
-
     RegisterAs(SENSOR_SERVER);
     sensor_server_tid = MyTid();
     notifier = Create(13, SensorSlave);
@@ -99,11 +94,10 @@ void SensorServer() {
         }
 
         timeout = 0;
-        hasNotify = 0;
-
+        sensor = 0;
         switch (req.type) {
             case SENSOR_WAIT_ANY:
-                calleeByte = (char) callee;
+                calleeByte = (char)callee;
                 write(&waitAnyQueue, &calleeByte, 1);
                 break;
             case SENSOR_WAIT_TIMEOUT:
@@ -139,17 +133,12 @@ void SensorServer() {
                     for (i = 0; i < maxId; ++i) {
                         tid = -1;
                         if (sensors[i] && !lastPoll[i]) {
-                            #if debug
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
                                         (i % TRAIN_SENSOR_COUNT) + 1);      // index in module
-                            #endif
-
                             tid = sensorQueue[i].tid;
                             sensorQueue[i].tid = -1;
                             status = SENSOR_TRIP;
-
-                            hasNotify = 1;
-                            
+                            sensor = (sensor ? sensor : i);
                         } else if (sensorQueue[i].timeout > 0 && sensorQueue[i].timeout < time) {
                             tid = sensorQueue[i].tid;
                             sensorQueue[i].tid = -1;
@@ -163,13 +152,13 @@ void SensorServer() {
                         lastPoll[i] = sensors[i];
                     }
 
-                    if (hasNotify) {
-                        status = SENSOR_TRIP;
+                    if ((status = sensor)) {
                         while (length(&waitAnyQueue) > 0) {
                             read(&waitAnyQueue, &calleeByte, 1);
                             Reply(calleeByte, &status, sizeof(status));
                         }
                     }
+                    sensor = 0;
                 } else {
                     status = -1;
                 }
@@ -228,6 +217,7 @@ int WaitOnSensor(char module, unsigned int id) {
     return WaitOnSensorN(sensorToInt(module, id));
 }
 
+
 int WaitAnySensor() {
     int errno, status;
     SensorRequest_t wait;
@@ -238,7 +228,6 @@ int WaitAnySensor() {
 
     wait.type = SENSOR_WAIT_ANY;
     errno = Send(sensor_server_tid, &wait, sizeof(wait), &status, sizeof(status));
-
     if (errno < 0) {
         error("WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
         return -2;

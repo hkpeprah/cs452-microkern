@@ -42,7 +42,11 @@ profile: upload
 test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
 test:
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
-	@$(MAKE) debug SILENT=true
+	@-if [ "$(SILENT)" != "false" ]; then \
+		$(MAKE) SILENT=true; \
+	else \
+		$(MAKE) debug SILENT=true; \
+	fi
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
 	@$(AS) $(ASFLAGS) $(builddir)/main.s -o $(builddir)/main.o

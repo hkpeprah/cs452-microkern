@@ -34,7 +34,7 @@ char Getc(int channel) {
 
     result = Getcn(channel, &ch, 1);
     if (result < 0) {
-        error("Error on send: %d", result);
+        kerror("Error on send: %d", result);
     }
     return ch;
 }

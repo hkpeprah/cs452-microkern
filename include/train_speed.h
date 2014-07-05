@@ -6,11 +6,15 @@ struct train_speed_state {
     const char *train;
     unsigned int ticks[15];
     unsigned int speed[15];
+    unsigned int stoppingDistances[15];
+    unsigned int stoppingTicks[15];
 };
 
 
-bool isValidTrainId(unsigned int);
 void initTrainSpeeds();
-unsigned int getTrainVelocity(unsigned int, unsigned int);
+bool isValidTrainId(unsigned int tr);
+unsigned int getTrainVelocity(unsigned tr, unsigned int sp);
+unsigned int getTransitionDistance(unsigned int tr, unsigned int startsp, unsigned int destsp, unsigned int ticks);
+unsigned int getTransitionTicks(unsigned int tr, unsigned int startsp, unsigned int destsp);
 
 #endif /* __TRAIN_SPEED_H__ */

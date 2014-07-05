@@ -228,7 +228,7 @@ int sys_await(int eventType, void *buf, int buflen) {
     errno = addInterruptListener(eventType, target, buf, buflen);
 
     if (errno < 0) {
-        error("AwaitEvent: Error: Got %d adding task %d", errno, target->tid);
+        kerror("AwaitEvent: Error: Got %d adding task %d", errno, target->tid);
     } else {
         target->state = EVENT_BL;
     }
@@ -245,7 +245,7 @@ int sys_waittid(uint32_t tid) {
     currentTask = getCurrentTask();
 
     if (target == NULL || currentTask->tid != tid) {
-        error("WaitTid: Task does not exist or exited already.");
+        kerror("WaitTid: Task does not exist or exited already.");
         return TASK_DOES_NOT_EXIST;
     }
 
