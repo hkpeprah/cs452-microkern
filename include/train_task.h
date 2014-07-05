@@ -4,7 +4,7 @@
 #include <track_node.h>
 
 typedef enum {
-    TRM_INIT,               // sent on creation, pass tr number (a0)  and init location (a1)
+    TRM_INIT = 0,           // sent on creation, pass tr number (a0)  and init location (a1)
     TRM_EXIT,               // no args, stop the train
     TRM_SENSOR_WAIT,        // sensor in arg0, time in arg1
     TRM_TIME_WAIT,          // arg1 ticks to wait, arg0 not used
@@ -12,13 +12,15 @@ typedef enum {
     TRM_SPEED,              // speed in arg0
     TRM_RV,                 // no args
     TRM_GET_LOCATION,       // train_edge ptr in arg0, dist (mm) in arg1
-    TRM_AUX                 // auxiliary train function
+    TRM_AUX,                // auxiliary train function, train number in arg0, aux in arg1
+    TRM_ADD                 // add a train to controller, train number in arg0, sensor module in arg1, sensor id in arg2
 } TrainMessageType;
 
 typedef struct TrainMessage {
     TrainMessageType type;
     int arg0;
     int arg1;
+    int arg2;
 } TrainMessage_t;
 
 

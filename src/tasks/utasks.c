@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <controller.h>
 #include <train_task.h>
-#include <track_node.h>
 
 
 void firstTask() {
@@ -32,6 +31,7 @@ void firstTask() {
     id = Create(5, TrainUserTask);
     id = Create(13, TimerTask);
     id = Create(10, TrainController);
+    id = Create(11, SensorController);
 
     debug("FirstTask: Exiting.");
     Exit();
@@ -117,7 +117,6 @@ void TrainUserTask() {
     bool sigkill;
     TrainMessage t;
     int status, cmd, callee, bytes, tid;
-    track_edge *edge;
 
     sigkill = false;
     RegisterAs("TrainHandler");
@@ -199,14 +198,11 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_ADD:
-                // TODO: figure out priority
-                edge = NearestSensorEdge(t.args[2], t.args[3]);
-                if (edge == NULL) {
-                    printf("Error: Invalid sensor passed.\r\n");
+                status = AddTrainToTrack(t.args[1], t.args[2], t.args[3]);
+                if (status < 0) {
+                    printf("Error: Invalid train or sensor.\r\n");
                 } else {
-                    if (!TrCreate(6, t.args[1], edge)) {
-                        printf("Error: Invalid train id.\r\n");
-                    }
+                    debug("Added Train %u to track near %c%u", t.args[1], t.args[2], t.args[3]);
                 }
                 break;
         }
