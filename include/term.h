@@ -89,6 +89,7 @@
 #define SET_WINDOW               "\033]2;\"%s\"ST"
 #define SET_COLS_80              "\033[?3l"
 #define SET_COLS_132             "\033[?3h"
+#define MOVE_TO_COL              "\033[%dG"
 
 #define restore_cursor()         puts(RESTORE_CURSOR)
 #define save_cursor()            puts(SAVE_CURSOR)
@@ -124,6 +125,7 @@ void initDebug();
 void debug(char*, ...);
 void debugc(char*, unsigned int, ...);
 void displayInfo();
+unsigned int getTermOffset();
 void printSwitch(unsigned int, char);
 void printSensor(char, unsigned int);
 void updateTime(unsigned int, unsigned int);

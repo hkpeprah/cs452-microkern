@@ -22,6 +22,7 @@
 
 static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
 static Sensor_t trainSensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
+static int BW_MASK;
 
 int sensorToInt(char module, unsigned int id) {
     return (toUpperCase(module) - 'A') * TRAIN_SENSOR_COUNT + id - 1;
@@ -40,22 +41,30 @@ void resetSensors() {
 
 static inline void setTrainSwitchState(int index, int state, int swstate) {
     int id = SWITCH_INDEX_TO_ID(index);
-
     trainSwitches[index].id = id;
     trainSwitches[index].state = swstate;
-
-    trbwputc(state);
-    trbwputc(id);
 }
 
 
-void clearTrainSet() {
+void setTrainSetState() {
+    unsigned int i;
+
+    debug("Setting the state of switches.");
+
+    for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
+        trainSwitch(trainSwitches[i].id, SWITCH_CHAR(trainSwitches[i].state));
+    }
+
+    trputch(TRAIN_AUX_SOLENOID);
+    trputch(TRAIN_AUX_SNSRESET);
+}
+
+
+void initTrainSet() {
     /* resets the entire state of the train controller */
     unsigned int i, index;
     char straight[] = {13, 19, 21};
     char curved[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20};
-
-    kdebug("Setting the state of switches.");
 
     for (i = 0; i < sizeof(straight) / sizeof(straight[0]); ++i) {
         index = straight[i];
@@ -67,25 +76,24 @@ void clearTrainSet() {
         setTrainSwitchState(index, TRAIN_AUX_CURVE, DIR_CURVED);
     }
 
-    trbwputc(TRAIN_AUX_SOLENOID);
-    trbwputc(TRAIN_AUX_SNSRESET);
-
     for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
         trainSensors[i].id = (i % TRAIN_SENSOR_COUNT) + 1;
         trainSensors[i].module = (i / TRAIN_SENSOR_COUNT) + 'A';
     }
 
-    kdebug("Switches set.  Train Controller setup complete.");
+    kdebug("Initialized train set.");
 }
 
 
 void turnOnTrainSet() {
-    bwputc(TRAIN, TRAIN_AUX_GO);
+    BW_MASK = 0xFFFFFFFF;
+    trbwputc(TRAIN_AUX_GO);
 }
 
 
 void turnOffTrainSet() {
     // TODO: Figure out why this sometimes works
+    BW_MASK = 0xFFFFFFFF;
     trbwputc(TRAIN_AUX_STOP);
     Delay(10);
 }
@@ -224,7 +232,7 @@ int trainSwitch(unsigned int sw, char ch) {
             ss = DIR_STRAIGHT;
             break;
         default:
-            error("INVALID SWITCH CHARACTER: %c", ch);
+            kerror("Invalid switch character: %c", ch);
             return -1;
     }
 
@@ -248,9 +256,10 @@ void trbwputc(char ch) {
     flags = (int*)(UART1_BASE + UART_FLAG_OFFSET);
 
     while (true) {
-        if (*flags & CTS_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
+        if (*flags & BW_MASK && !(*flags & TXBUSY_MASK || *flags & RXFF_MASK)) {
             data = (int*)(UART1_BASE + UART_DATA_OFFSET);
             *data = ch;
+            BW_MASK = CTS_MASK;
             break;
         }
     }

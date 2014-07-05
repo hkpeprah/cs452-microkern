@@ -78,14 +78,16 @@ static void TrainSensorSlave() {
 void TrainController() {
     track_edge *edge;
     TrainCtrnl_t trains[7];
-    int bytes, repl, callee;
-    unsigned int tid, id, i;
+    int bytes, repl, callee, tid;
+    unsigned int id, i;
     track_node track[TRACK_MAX];
     TrainCntrlMessage_t request, message;
 
     init_track(track);
     RegisterAs(TRAIN_CONTROLLER);
     train_controller_tid = MyTid();
+    turnOnTrainSet();
+    setTrainSetState();
 
     id = 0;
     while (true) {
@@ -119,10 +121,13 @@ void TrainController() {
                     }
                     if (i == id && id < 7) {
                         tid = TrCreate(6, request.arg0, edge);
+                        notice("TrainController: Notice: Received %d in create", tid);
                         if (tid > 0) {
                             trains[id].tid = tid;
                             trains[id].tr_number = request.arg1;
                             id++;
+                        } else {
+                            repl = -1;
                         }
                     }
                 }
