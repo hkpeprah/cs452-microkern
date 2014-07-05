@@ -38,7 +38,8 @@ void cpuIdle(bool isIdle) {
             /*
              * TODO: Figure out why we need this, some race conditioning
              */
-            idle = count;
+            idle = 0;
+            count = 1;
         }
     }
 }

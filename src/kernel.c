@@ -130,8 +130,7 @@ void boot () {
     initSWI();
     initLogger();
     initTrainSpeeds();
-    turnOnTrainSet();
-    clearTrainSet();
+    initTrainSet();
     displayInfo();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
@@ -149,7 +148,7 @@ int shutdown() {
     kputstr("Cleaning up tasks....\r\n");
     clearTasks();
     disableIdleTimer();
-    kprintf("%s\033[0;0r%s\r\nExiting...\r\n", SAVE_CURSOR, RESTORE_CURSOR);
+    kputstr(SAVE_CURSOR "\033[0;0r" RESTORE_CURSOR "\r\nExiting...\r\n");
     dumpLog();
 
     return 0;

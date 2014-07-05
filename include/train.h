@@ -51,7 +51,8 @@ typedef struct {
 int trainSwitch(unsigned int, char);
 void turnOnTrainSet();
 void turnOffTrainSet();
-void clearTrainSet();
+void setTrainSetState();
+void initTrainSet();
 int sensorToInt(char, unsigned int);
 void pollSensors();
 void resetSensors();

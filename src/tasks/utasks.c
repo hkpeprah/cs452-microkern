@@ -140,8 +140,8 @@ void TrainUserTask() {
                 debug("Starting Train Controller");
                 break;
             case TRAIN_STOP:
-                turnOffTrainSet();
                 debug("Stopping Train Controller");
+                turnOffTrainSet();
                 sigkill = true;
                 break;
             case TRAIN_SPEED:

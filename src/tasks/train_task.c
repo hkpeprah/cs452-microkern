@@ -7,6 +7,7 @@
 #include <term.h>
 #include <train.h>
 #include <train_speed.h>
+#include <calibration.h>
 
 #define WAIT_TIME(microPerTick, dist) ((dist * 1000 / microPerTick))
 
@@ -23,6 +24,7 @@ typedef struct __Train_t {
 
 
 static void TrainTask();
+static void CalibrationSnapshot(Train_t*);
 
 
 int TrCreate(int priority, int tr, track_edge *start) {
@@ -207,6 +209,7 @@ static void TrainTask() {
     name[6] = (train.id % 10) + '0';
     RegisterAs(name);
     Reply(sender, NULL, 0);
+    CalibrationSnapshot(&train);
 
     // TODO: are these the right priorities?
     sensorCourier = Create(1, TrainCourierTask);
@@ -232,6 +235,7 @@ static void TrainTask() {
                     }
 
                     updateLocation(&train);
+                    CalibrationSnapshot(&train);
                 }
 
                 // if the train is driving, send courier out to wait for next sensor/time trip
@@ -284,6 +288,7 @@ static void TrainTask() {
 
                 debug("Train Speed: %u micrometers/tick", train.microPerTick);
                 debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
+                CalibrationSnapshot(&train);
 
                 // send bytes
                 cmdbuf[0] = train.speed + train.aux;
@@ -341,6 +346,17 @@ static void TrainTask() {
             error("TrainTask: request: %d, got bad reply result %d", msg.type, result);
         }
     }
+}
+
+
+void CalibrationSnapshot(Train_t *train) {
+    CalibrationSnapshot_t snapshot;
+    snapshot.tr = train->id;
+    snapshot.sp = train->speed;
+    snapshot.dist = train->edgeDistanceMM;
+    snapshot.landmark = train->currentEdge->src->name;
+    snapshot.nextmark = train->currentEdge->dest->name;
+    printTrainSnapshot(&snapshot);
 }
 
 
