@@ -18,6 +18,7 @@
 #include <uart.h>
 #include <stdlib.h>
 #include <controller.h>
+#include <train_task.h>
 
 
 void firstTask() {
@@ -30,6 +31,7 @@ void firstTask() {
     id = Create(5, TrainUserTask);
     id = Create(13, TimerTask);
     id = Create(10, TrainController);
+    id = Create(11, SensorController);
 
     debug("FirstTask: Exiting.");
     Exit();
@@ -114,7 +116,7 @@ void TimerTask() {
 void TrainUserTask() {
     bool sigkill;
     TrainMessage t;
-    int status, cmd, callee, bytes;
+    int status, cmd, callee, bytes, tid;
 
     sigkill = false;
     RegisterAs("TrainHandler");
@@ -188,7 +190,12 @@ void TrainUserTask() {
                 }
                 break;
             case TRAIN_ADD:
-                // TODO: use train_task
+                status = AddTrainToTrack(t.args[1], t.args[2], t.args[3]);
+                if (status < 0) {
+                    printf("Error: Invalid train or sensor.\r\n");
+                } else {
+                    debug("Added Train %u to track near %c%u", t.args[1], t.args[2], t.args[3]);
+                }
                 break;
         }
         Reply(callee, &status, sizeof(status));

@@ -295,6 +295,10 @@ static void TrainTask() {
                 } while (result != TASK_DOES_NOT_EXIST);
                 break;
 
+            case TRM_FREE_COURIER:
+                notice("TrainTask %d, TRM_FREE_COURIER not implemented.", train.id);
+                break;
+
             default:
                 error("TrainTask %d, incorrect msg type %d", train.id, msg.type);
         }

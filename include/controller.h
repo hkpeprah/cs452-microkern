@@ -2,8 +2,8 @@
 #define __TRAIN_CONTROLLER_H__
 #include <types.h>
 
-#define TRAIN_CONTROLLER "TrainController"
-
+#define TRAIN_CONTROLLER   "TrainController"
+#define SENSOR_CONTROLLER  "SensorController"
 
 typedef struct {
     short type;
@@ -12,8 +12,11 @@ typedef struct {
 
 
 void TrainController();
-int WaitOnSensorN(unsigned int);
-int WaitOnSensor(char, unsigned int);
+void SensorController();
+int WaitOnSensorN(unsigned int num);
+int WaitOnSensor(char module, unsigned int id);
 int WaitAnySensor();
+int AddTrainToTrack(unsigned int tr, char module, unsigned int id);
+track_edge *NearestSensorEdge(char module, unsigned int id);
 
 #endif /* __TRAIN_CONTROLLER_H__ */

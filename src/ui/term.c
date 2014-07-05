@@ -35,28 +35,50 @@ void initDebug() {
 }
 
 
+static void debugformatted(char *fmt, va_list va) {
+    #if DEBUG
+        char buffer[100] = {0};
+
+        strcpy(buffer, SAVE_CURSOR "\033[0;");
+        uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
+        strcat(buffer, "r" "\033[");
+        uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
+        strcat(buffer, ";0H\r\n");
+        strcat(buffer, fmt);
+        strcat(buffer, "\033[");
+        uitoa(BOTTOM_HALF + 1, 10, &buffer[strlen(buffer)]);
+        strcat(buffer, ";");
+        uitoa(TERMINAL_HEIGHT, 10, &buffer[strlen(buffer)]);
+        strcat(buffer, "r" "\033[");
+        uitoa(BOTTOM_HALF + 1, 10, &buffer[strlen(buffer)]);
+        strcat(buffer, ";0H" RESTORE_CURSOR);
+
+        printformatted(IO, buffer, va);
+    #endif
+}
+
 void debug(char *fmt, ...) {
     #if DEBUG
         va_list va;
         va_start(va, fmt);
-        move_to_debug();
-        newline();
-        printformatted(IO, fmt, va);
-        return_to_term();
+        debugformatted(fmt, va);
         va_end(va);
     #endif
 }
 
 void debugc(char *fmt, unsigned int color, ...) {
     #if DEBUG
+        char buffer[100] = {0};
         va_list va;
         va_start(va, color);
-        change_color(color);
-        move_to_debug();
-        newline();
-        printformatted(IO, fmt, va);
-        return_to_term();
-        end_color();
+
+        strcpy(buffer, "\033[");
+        uitoa(color, 10, &buffer[strlen(buffer)]);
+        strcat(buffer, "m");
+        strcat(buffer, fmt);
+        strcat(buffer, "\033[0m");
+
+        debugformatted(buffer, va);
         va_end(va);
     #endif
 }
@@ -76,8 +98,7 @@ void printSwitch(unsigned int id, char state) {
         }
     }
 
-    printf("%s\033[%d;%dH%c%s", SAVE_CURSOR, lines, 6 + (10 * (id - 1)),
-           toUpperCase(state), RESTORE_CURSOR);
+    printf(SAVE_CURSOR MOVE_CURSOR "%c" RESTORE_CURSOR, lines, 6 + (10 * (id - 1)));
 }
 
 
@@ -97,7 +118,7 @@ void printSensor(char module, unsigned int id) {
     buffer[1] = (id / 10) + '0';
     buffer[2] = (id % 10) + '0';
 
-    printf("\033[s\033[%d;0H%s\033[u", TERM_OFFSET + 6, buffer);
+    printf(SAVE_CURSOR "\033[%d;0H" "%s" RESTORE_CURSOR, TERM_OFFSET + 6, buffer);
     index = (index + 4) % 25;
 }
 
@@ -123,9 +144,7 @@ void displayInfo() {
         kputstr(NEW_LINE);
     }
     kputstr("\r\n====Sensors====\r\n\r\n\r\n");
-    kputstr(SAVE_CURSOR);
-    kprintf(SET_SCROLL, TERM_OFFSET + 9, TERMINAL_HEIGHT);
-    kputstr(RESTORE_CURSOR);
+    kprintf(SAVE_CURSOR SET_SCROLL RESTORE_CURSOR, TERM_OFFSET + 9, TERMINAL_HEIGHT);
 }
 
 
@@ -137,6 +156,6 @@ void updateTime(unsigned int count, unsigned int cpu) {
     minutes = count / 6000;
     seconds = (count / 100) % 60;
     t_seconds = count % 100;
-    printf("\033[s\033[%d;7H%d%d:%d%d:%d%d \033[11C%d%%            \033[u", TERM_OFFSET - 2, minutes / 10, minutes % 10,
-           seconds / 10, seconds % 10, t_seconds / 10, t_seconds % 10, cpu);
+    printf(SAVE_CURSOR "\033[%d;7H" "%d%d:%d%d:%d%d \033[11C%d%%            " RESTORE_CURSOR,
+           TERM_OFFSET - 2, minutes / 10, minutes % 10, seconds / 10, seconds % 10, t_seconds / 10, t_seconds % 10, cpu);
 }
