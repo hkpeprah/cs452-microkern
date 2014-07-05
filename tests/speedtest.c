@@ -42,12 +42,15 @@ void SpeedTest() {
 
     printf("Instructions:\r\n");
     while (true) {
-        printf("Enter Train Number (or q to quit): ");
-        gets(IO, buf, 50);
-        if (strcmp(buf, "q") == 0) {
-            break;
+        tr_number = 0;
+        while (tr_number == 0) {
+            printf("Enter Train Number (or q to quit): ");
+            gets(IO, buf, 50);
+            if (strcmp(buf, "q") == 0) {
+                goto exit;
+            }
+            tr_number = atoin(buf, &status);
         }
-        tr_number = atoin(buf, &status);
         printf("Speed Calculations for Train %u\r\n", tr_number);
         tr_number = TrCreate(6, tr_number, NearestSensorEdge('B', 9));
         if (tr_number >= 0) {
@@ -87,9 +90,11 @@ void SpeedTest() {
                     break;
                 }
             }
+            TrSpeed(tr_number, 0);
         }
     }
 
+ exit:
     turnOffTrainSet();
     Delay(10);
     SigTerm();
