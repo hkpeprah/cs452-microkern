@@ -13,8 +13,8 @@
 #define MULTI_SWITCH_OFFSET  134    /* we have four multi switches */
 #define TRAIN_LIGHT_OFFSET   16     /* offset for lights */
 #define TRAIN_HORN_OFFSET    17     /* offset for horn */
-#define TRAIN_MAX_SPEED      14
 #define TRAIN_AUX_REVERSE    15
+#define TRAIN_MAX_SPEED      14
 
 
 struct __Train_t;

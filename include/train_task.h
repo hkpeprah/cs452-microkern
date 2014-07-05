@@ -31,4 +31,4 @@ int TrAuxiliary(unsigned int tid, unsigned int aux);
 int TrGetLocation(unsigned int tid, TrainMessage_t *msg);
 int LookupTrain(unsigned int tid);
 
-#endif
+#endif /* __TRAIN_TASK_H__ */
