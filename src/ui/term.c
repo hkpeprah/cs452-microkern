@@ -119,7 +119,7 @@ void printSensor(char module, unsigned int id) {
     buffer[1] = (id / 10) + '0';
     buffer[2] = (id % 10) + '0';
 
-    printf(SAVE_CURSOR "\033[%d;0H" "%s" RESTORE_CURSOR, TERM_OFFSET + 6, buffer);
+    printf(SAVE_CURSOR "\033[%d;0H" "%s" RESTORE_CURSOR, TERM_BOTTOM - 2, buffer);
     index = (index + 4) % 25;
 }
 

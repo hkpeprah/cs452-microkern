@@ -38,8 +38,8 @@ void printTrainSnapshot(CalibrationSnapshot_t *snapshot) {
         /* print the snapshot since we have space on this line */
         offset += index;
         snapshots[index] = snapshot->tr;
-        printf(SAVE_CURSOR MOVE_CURSOR "| %u" "\033[%dG" "| %u" "\033[%dG" "| %s" "\033[%dG"
-               "| %u" "\033[%dG" "| %s \033[%dG|" RESTORE_CURSOR, offset, RIGHT_HALF + 5, snapshot->tr, RIGHT_HALF + 16,
+        printf(SAVE_CURSOR MOVE_CURSOR "| %u " "\033[%dG" "| %u      " "\033[%dG" "| %s      " "\033[%dG"
+               "| %u    " "\033[%dG" "| %s     \033[%dG|" RESTORE_CURSOR, offset, RIGHT_HALF + 5, snapshot->tr, RIGHT_HALF + 16,
                getTrainVelocity(snapshot->tr, snapshot->sp), RIGHT_HALF + 35, snapshot->landmark, RIGHT_HALF + 46, 
                snapshot->dist, RIGHT_HALF + 62, snapshot->nextmark, RIGHT_HALF + 78);
     }

@@ -130,6 +130,7 @@ void boot () {
     initLogger();
     initTrainSpeeds();
     initTrainSet();
+    turnOnTrainSet();
     displayInfo();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
