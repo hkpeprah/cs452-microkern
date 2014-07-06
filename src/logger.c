@@ -14,7 +14,7 @@ void initLogger() {
     int mem = getMem()->addr - MEM_BLOCK_SIZE + 4;
     tail = (uint32_t*) mem;
     logp = (char*) (mem + 4);
-    kdebug("log at 0x%x, length at 0x%x\n", logp, tail);
+    kdebug("Log at 0x%x, length at 0x%x", logp, tail);
     *tail = 0;
 }
 
@@ -30,7 +30,7 @@ void printLog(uint32_t start, uint32_t end) {
 }
 
 void dumpLog() {
-    kprintf("\r\nLog at: 0x%x of length: %d\n", logp, *tail);
+    kprintf("\r\nLog at: 0x%x of length: %d\r\n", logp, *tail);
     printLog(0, *tail);
 }
 

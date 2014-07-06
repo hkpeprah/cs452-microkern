@@ -17,7 +17,9 @@ static int availableQueues;
 static int highestTaskPriority;
 
 static void findHighestTaskPriority();
+#if LOG
 static void queueState(int priority);
+#endif
 
 void initTasks() {
     uint32_t i;
@@ -186,9 +188,9 @@ void destroyTaskD(Task_t *task) {
                 findHighestTaskPriority();
             }
         }
-#if LOG
-        queueState(task->priority);
-#endif
+        #if LOG
+            queueState(task->priority);
+        #endif
     }
 
     task->state = FREE;
@@ -220,6 +222,8 @@ void destroyTaskD(Task_t *task) {
     taskBank = task;
 }
 
+
+#if LOG
 static void queueState(int priority) {
     Task_t *t;
 
@@ -232,6 +236,8 @@ static void queueState(int priority) {
     sys_log_f("availableQueues: 0x%x, highestTaskPriority: %d\n", availableQueues, highestTaskPriority);
 
 }
+#endif
+
 
 static void findHighestTaskPriority() {
     int high, mid;
@@ -275,9 +281,9 @@ Task_t *schedule() {
         return NULL;
     }
 
-#if LOG
-    queueState(highestTaskPriority);
-#endif
+    #if LOG
+        queueState(highestTaskPriority);
+    #endif
 
     // get queue with highest priority. this is guaranteed to not be empty
     TaskQueue_t *queue = &taskQueue[highestTaskPriority];

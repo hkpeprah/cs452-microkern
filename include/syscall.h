@@ -9,7 +9,7 @@ int MyParentTid();
 void Pass();
 void Exit();
 int Destroy(uint32_t tid);
-int Send(int, void*, int, void*, int);
+int Send(int tid, void*, int, void*, int);
 int Receive(int*, void*, int);
 int Reply(int, void*, int);
 int AwaitEvent(int, void*, int);

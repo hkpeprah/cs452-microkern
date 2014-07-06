@@ -106,7 +106,6 @@ void SensorServer() {
             case SENSOR_WAIT:
                 if (req.sensor < maxId && sensorQueue[req.sensor].tid < 0) {
                     status = 0;
-                    debug("%d waiting on %d with timeout %d", callee, req.sensor, timeout);
                     sensorQueue[req.sensor].tid = callee;
                     sensorQueue[req.sensor].timeout = timeout;
                 } else {
@@ -122,7 +121,6 @@ void SensorServer() {
                 status = TIMER_TRIP;
                 Reply(sensorQueue[req.sensor].tid, &status, sizeof(status));
                 sensorQueue[req.sensor].tid = -1;
-
                 break;
             case SENSOR_RETURNED:
                 /* TODO: Would be optimal if knew which train triggered ? */
@@ -157,7 +155,6 @@ void SensorServer() {
                         }
 
                         if (tid >= 0) {
-                            debug("Freeing %d at time %d", tid, time);
                             Reply(tid, &status, sizeof(status));
                         }
                         lastPoll[i] = sensors[i];
@@ -241,6 +238,27 @@ int WaitAnySensor() {
     errno = Send(sensor_server_tid, &wait, sizeof(wait), &status, sizeof(status));
     if (errno < 0) {
         error("WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
+        return -2;
+    }
+
+    return status;
+}
+
+
+int FreeSensor(unsigned int id) {
+    int errno, status;
+    SensorRequest_t wait;
+
+    if (sensor_server_tid < 0) {
+        return -1;
+    }
+
+    wait.type = SENSOR_FREE;
+    wait.sensor = id;
+    errno = Send(sensor_server_tid, &wait, sizeof(wait), &status, sizeof(status));
+
+    if (errno < 0) {
+        error("FreeSensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
         return -2;
     }
 

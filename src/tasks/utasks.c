@@ -152,7 +152,7 @@ void TrainUserTask() {
                     if (TrSpeed(tid, t.args[2]) < 0) {
                         printf("Error: Invalid train speed.\r\n");
                     } else {
-                        debug("Setting speed  %u for Train %u", t.args[1], t.args[2]);
+                        debug("Setting speed %u for Train %u", t.args[1], t.args[2]);
                     }
                 } else {
                     printf("Error: Invalid train.\r\n");

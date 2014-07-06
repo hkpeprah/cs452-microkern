@@ -66,7 +66,7 @@ void initTrainSpeeds() {
         for (j = 0; j < MEASUREMENT_TOTAL; ++j) {
             state->ticks[j] = ticks[j];
             state->speed[j] = speeds[j];
-            state->stoppingDistances[j] = stoppingDistances[j];
+            state->stoppingDistances[j] = stoppingDistances[j] * 10;
             state->stoppingTicks[j] = stoppingTicks[j];
         }
     }
@@ -90,14 +90,8 @@ bool isValidTrainId(unsigned int tr) {
     return valid;
 }
 
-
-unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
+static int getTrainId(unsigned int tr) {
     unsigned int id;
-
-    if (sp > 14) {
-        error("getTrainVelocity: Speed out of range.");
-        return 0;
-    }
 
     switch (tr) {
         case 45:
@@ -120,35 +114,60 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
             break;
         default:
             error("getTrainVelocity: Unknown train.");
-            return 0;
+            return -1;
     }
 
-    return trainSpeeds[id].speed[sp];
+    return id;
+}
+
+
+unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
+    int id;
+
+    if (sp > 14) {
+        error("getTrainVelocity: Speed out of range.");
+        return 0;
+    }
+
+    if ((id = getTrainId(tr)) > 0) {
+        return trainSpeeds[id].speed[sp];
+    }
+    return 0;
 }
 
 
 unsigned int getTransitionDistance(unsigned int tr, unsigned int startsp, unsigned int destsp, unsigned int ticks) {
+    int id;
     unsigned int curTicks, totalTime, distance;
 
     if (!isValidTrainId(tr)) {
         return 0;
     }
 
+    if ((id = getTrainId(tr)) < 0) {
+        return 0;
+    }
+
     curTicks = Time();
     totalTime = getTransitionTicks(tr, startsp, destsp);
-    distance = trainSpeeds[tr].stoppingDistances[startsp];
+    distance = trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)];
     return (distance / totalTime) * (curTicks - ticks);
 }
 
 
 unsigned int getTransitionTicks(unsigned int tr, unsigned int startsp, unsigned int destsp) {
+    int id;
     unsigned int totalTicks;
 
     if (!isValidTrainId(tr)) {
         return 0;
     }
 
-    totalTicks = trainSpeeds[tr].stoppingTicks[startsp];
+    if ((id = getTrainId(tr)) < 0) {
+        return 0;
+    }
+
+    totalTicks = trainSpeeds[id].stoppingTicks[MAX(startsp, destsp)];
     totalTicks *= ((float)(MAX(startsp, destsp) - MIN(startsp, destsp))) / MAX(startsp, destsp);
     return totalTicks;
 }

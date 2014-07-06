@@ -242,7 +242,7 @@ void OutputServer() {
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
         if (result != sizeof(req)) {
-            kerror("OutputServer: Error: Incorrect message received");
+            kerror("OutputServer: Error: Incorrect message received: %d", result);
             continue;
         }
 
