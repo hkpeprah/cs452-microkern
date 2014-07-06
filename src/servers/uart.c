@@ -225,8 +225,8 @@ void OutputServer() {
         return;
     }
 
-    uart1xmt = Create (15, Uart1XMTHandler);
-    uart2xmt = Create (15, Uart2XMTHandler);
+    uart1xmt = Create(15, Uart1XMTHandler);
+    uart2xmt = Create(15, Uart2XMTHandler);
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));

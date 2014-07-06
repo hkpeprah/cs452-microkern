@@ -8,31 +8,43 @@
 #include <train.h>
 #include <train_speed.h>
 #include <calibration.h>
+#include <types.h>
 
 #define TIMEOUT_BUFFER 20
+
+typedef struct {
+    bool valid;
+    unsigned int start_speed : 8;
+    unsigned int dest_speed : 8;
+    unsigned int time_issued;
+} TransitionState_t;
+
 
 typedef struct __Train_t {
     unsigned int id : 16;
     unsigned int speed : 8;
-    unsigned int aux : 8;
+    unsigned int aux : 16;
     track_edge *currentEdge;
-    unsigned int edgeDistanceMM : 16;       // distance from src of edge, updated on speed change
-    unsigned int lastDistUpdateTick;        // time of above update
-    unsigned int microPerTick: 16;          // micrometer / clock tick speed
+    unsigned int edgeDistance : 16;
+    unsigned int lastUpdateTick;
+    unsigned int microPerTick : 16;
+    TransitionState_t *transition;
 } Train_t;
 
+
 typedef enum {
-    TRM_INIT = 8372,        // sent on creation, pass tr number (a0)  and init location (a1)
-    TRM_EXIT,               // no args, stop the train
-    TRM_SENSOR_WAIT,        // sensor in arg0, time in arg1
-    TRM_TIME_WAIT,          // arg1 ticks to wait, arg0 not used
-    TRM_FREE_COURIER,       // optimistic courier free from time/sensor wait
-    TRM_SPEED,              // speed in arg0
-    TRM_AUX,                // auxiliary train function
-    TRM_RV,                 // no args
-    TRM_GET_LOCATION,       // track_edge ptr in arg0, dist (mm) in arg1
-    TRM_GET_SPEED           // no args
+    TRM_INIT = 1337,
+    TRM_EXIT,
+    TRM_SENSOR_WAIT,
+    TRM_TIME_WAIT,
+    TRM_SPEED,
+    TRM_AUX,
+    TRM_RV,
+    TRM_GET_LOCATION,
+    TRM_GET_SPEED,
+    TRM_DIR
 } TrainMessageType;
+
 
 typedef struct TrainMessage {
     TrainMessageType type;
@@ -118,298 +130,11 @@ int TrAuxiliary(unsigned int tid, unsigned int aux) {
 }
 
 
-static inline void traverseNode(Train_t *train) {
-    Switch_t *sw;
-    track_node *dest = train->currentEdge->dest;
-
-    switch (dest->type) {
-        case NODE_SENSOR:
-        case NODE_MERGE:
-        case NODE_ENTER:
-        case NODE_EXIT:
-            train->currentEdge = &(dest->edge[DIR_AHEAD]);
-            break;
-        case NODE_BRANCH:
-            sw = getSwitch(dest->num);
-            debug("Switch %d, State: %c", sw->id, sw->state == DIR_STRAIGHT ? 's' : 'c');
-            train->currentEdge = &(dest->edge[sw->state]);
-            break;
-        case NODE_NONE:
-        default:
-            error("BAD NODE TYPE");
-    }
-}
-
-static inline void syncWithSensor(Train_t *train) {
-    traverseNode(train);
-    train->edgeDistanceMM = 0;
-    train->lastDistUpdateTick = Time();
-    CalibrationSnapshot(train);
-}
-
-static inline void updateLocation(Train_t *train) {
-    // TODO: account for acceleration
-    unsigned int currentTick = Time();
-
-    debug("Updating Location: Prev tick: %d, CurrentTick: %d, Prev Dist: %d",
-          train->lastDistUpdateTick, currentTick, train->edgeDistanceMM);
-
-    if (currentTick == train->lastDistUpdateTick) {
-        return;
-    }
-
-    train->edgeDistanceMM += (currentTick - train->lastDistUpdateTick) * train->microPerTick / 1000;
-    train->lastDistUpdateTick = currentTick;
-
-    debug("New Distance: %d", train->edgeDistanceMM);
-
-    while (train->edgeDistanceMM >= train->currentEdge->dist) {
-        debug("Edge Dist %d, Actual %d, Traversing to %s", train->edgeDistanceMM,
-              train->currentEdge->dist, train->currentEdge->dest->name);
-        train->edgeDistanceMM -= train->currentEdge->dist;
-        traverseNode(train);
-    }
-}
-
-
-static inline void waitOnNextSensor(Train_t *train, int sensorCourier) {
-    int result;
-    TrainMessage_t msg;
-    updateLocation(train);
-    track_node *dest = train->currentEdge->dest;
-
-    msg.arg1 = train->lastDistUpdateTick;
-    msg.arg1 += ((train->currentEdge->dist - train->edgeDistanceMM) * 1000 / train->microPerTick) + TIMEOUT_BUFFER;
-
-    if (dest->type == NODE_SENSOR) {
-        msg.type = TRM_SENSOR_WAIT;
-        msg.arg0 = dest->num;
-        msg.arg1 = msg.arg1 + 200; // temporary - remove when acceleration is added
-    } else {
-        msg.type = TRM_TIME_WAIT;
-    }
-
-    debug("NEXT WAIT: %s for %d (current time %d) waiting for time %d", dest->name, msg.arg1, train->lastDistUpdateTick,
-          msg.arg1 - train->lastDistUpdateTick);
-
-    if ((result = Reply(sensorCourier, &msg, sizeof(msg)) < 0)) {
-        error("TrainTask: waitOnNextSensor: Reply returned %d", result);
-    }
-}
-
-
-static void TrainCourierTask() {
-    int result;
-    int boss = MyParentTid();
-    TrainMessage_t msg;
-    msg.type = TRM_SENSOR_WAIT;
-
-    for(;;) {
-        result = Send(boss, &msg, sizeof(msg), &msg, sizeof(msg));
-
-        if (result < 0) {
-            debug("TrainCourierTask: Warning: send result %d, exiting", result);
-            return;
-        }
-
-        switch (msg.type) {
-            case TRM_SENSOR_WAIT:
-                result = WaitWithTimeout(msg.arg0, msg.arg1);
-                msg.arg0 = result;
-                break;
-
-            case TRM_TIME_WAIT:
-                DelayUntil(msg.arg1);
-                msg.arg0 = TIMER_TRIP;
-                break;
-
-            case TRM_FREE_COURIER:
-                break;
-
-            case TRM_EXIT:
-                return;
-
-            default:
-                error("TrainCourierTask: Invalid message type %d", msg.type);
-        }
-    }
-}
-
-
-static void TrainTask() {
-    int sensorCourier;
-    bool courierReady = 0;
-    bool running = 1;
-    int result, sender;
-    char cmdbuf[2];
-    TrainMessage_t msg;
-    Train_t train = {0};
-    track_node *dest;
-    char name[] = "TrainXX";
-
-    result = Receive(&sender, &msg, sizeof(msg));
-    if (result < 0 || msg.type != TRM_INIT) {
-        error("TrainTask: Receive error: %d or incorrect msg type (not TRM_INIT): %d", result, msg.type);
-    }
-
-    train.id = msg.arg0;
-    train.aux = 0;
-    train.speed = 0;
-    train.currentEdge = (track_edge*)msg.arg1;
-    train.lastDistUpdateTick = 0;
-    train.microPerTick = 0;
-    name[5] = (train.id / 10) + '0';
-    name[6] = (train.id % 10) + '0';
-    RegisterAs(name);
-    Reply(sender, NULL, 0);
-    CalibrationSnapshot(&train);
-
-    // TODO: are these the right priorities?
-    sensorCourier = Create(1, TrainCourierTask);
-    while (running) {
-        result = Receive(&sender, &msg, sizeof(msg));
-        if (result < 0) {
-            error("TrainTask: Receive error: %d", result);
-        }
-
-        dest = train.currentEdge->dest;
-        switch (msg.type) {
-            case TRM_TIME_WAIT:
-                // TODO: something about time offset? also fall through here
-            case TRM_SENSOR_WAIT:
-                if (sender != sensorCourier) {
-                    // bad msg, discard
-                    Reply(sender, NULL, 0);
-                }
-
-                debug("Train %u: Courier returned!", train.id);
-                if (msg.arg0 == SENSOR_TRIP) {
-                    syncWithSensor(&train);
-                }
-
-                // if the train is driving, send courier out to wait for next sensor/time trip
-                // this can be triggered either by an actual sensor trip or an invalidated
-                // courier wait (ie. speed changes, train reverses)
-                if (train.speed > 0) {
-                    courierReady = 0;
-                    waitOnNextSensor(&train, sensorCourier);
-                } else {
-                    courierReady = 1;
-                }
-
-                break;
-
-            case TRM_AUX:
-                // toggles an auxiliary function, don't have to worry about speed/location stuff
-                train.aux = msg.arg0;
-                cmdbuf[0] = train.speed + train.aux;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
-
-                result = Reply(sender, NULL, 0);
-                break;
-
-            case TRM_SPEED:
-                debug("Train speed setting to: %d", msg.arg0);
-                // previously driving -> update location, get courier back
-                // courier should send back and get picked up by TRM_SENSOR/TIME_WAIT
-                updateLocation(&train);
-                if (train.speed > 0) {
-                    msg.type = TRM_FREE_COURIER;
-                    result = Reply(sensorCourier, &msg, sizeof(msg));
-
-                    if (result < 0) {
-                        error("TrainTask: TRM_SPEED: bad reply result %d", result);
-                    }
-                }
-
-                // update to new speed
-                train.speed = msg.arg0;
-                train.microPerTick = getTrainVelocity(train.id, train.speed);
-
-                debug("Train Speed: %u micrometers/tick", train.microPerTick);
-                debug("Location: %s + %u micrometers", train.currentEdge->src->name, train.edgeDistanceMM);
-
-                // if previously stationary, use new data to wait
-                if (courierReady && train.speed > 0) {
-                    // deal with acceleration
-                    courierReady = 0;
-                    waitOnNextSensor(&train, sensorCourier);
-                } else if (train.speed == 0) {
-                    // deal with deceleration
-                }
-
-                // send bytes
-                cmdbuf[0] = train.speed + train.aux;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
-
-                result = Reply(sender, NULL, 0);
-                break;
-
-            case TRM_RV:
-                if (train.speed != 0) {
-                    error("TrainTask: RV when speed is not 0");
-                }
-                train.currentEdge = train.currentEdge->reverse;
-                train.edgeDistanceMM = train.currentEdge->dist - train.edgeDistanceMM;
-
-                cmdbuf[0] = TRAIN_AUX_REVERSE;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
-
-                result = Reply(sender, NULL, 0);
-                break;
-
-            case TRM_GET_SPEED:
-                msg.arg0 = train.microPerTick;
-                result = Reply(sender, &msg, sizeof(msg));
-                break;
-
-            case TRM_GET_LOCATION:
-                if (train.speed > 0) {
-                    updateLocation(&train);
-                }
-                msg.arg0 = (int) train.currentEdge;
-                msg.arg1 = train.edgeDistanceMM;
-                result = Reply(sender, &msg, sizeof(msg));
-                break;
-
-            case TRM_EXIT:
-                running = 0;
-                cmdbuf[0] = 0;
-                cmdbuf[1] = train.id;
-                trnputs(cmdbuf, 2);
-                Reply(sender, NULL, 0);
-                do {
-                    debug("Freeing child courier");
-                    result = Reply(sensorCourier, &msg, sizeof(msg));
-                    Delay(10);
-                } while (result != TASK_DOES_NOT_EXIST);
-                break;
-
-            case TRM_FREE_COURIER:
-                notice("TrainTask %d, TRM_FREE_COURIER not implemented.", train.id);
-                break;
-
-            default:
-                error("TrainTask %d, incorrect msg type %d", train.id, msg.type);
-        }
-
-        CalibrationSnapshot(&train);
-
-        if (result < 0) {
-            error("TrainTask: request: %d, got bad reply result %d", msg.type, result);
-        }
-    }
-}
-
-
-void CalibrationSnapshot(Train_t *train) {
+static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
     snapshot.tr = train->id;
     snapshot.sp = train->speed;
-    snapshot.dist = train->edgeDistanceMM;
+    snapshot.dist = train->edgeDistance;
     snapshot.landmark = train->currentEdge->src->name;
     snapshot.nextmark = train->currentEdge->dest->name;
     printTrainSnapshot(&snapshot);
@@ -421,4 +146,311 @@ int LookupTrain(unsigned int id) {
     name[5] = (id / 10) + '0';
     name[6] = (id % 10) + '0';
     return WhoIs(name);
+}
+
+
+static void TrainWatchDog() {
+    TrainMessage_t request;
+    unsigned int wait;
+    int bytes, train;
+
+    train = MyParentTid();
+    while (true) {
+        request.type = TRM_TIME_WAIT;
+        bytes = Send(train, &request, sizeof(request), &request, sizeof(request));
+
+        if (request.type == TRM_TIME_WAIT) {
+            wait = request.arg0;
+            Delay(wait);
+        } else if (request.type == TRM_EXIT) {
+            break;
+        }
+    }
+    Exit();
+}
+
+
+static void TrainReverseCourier() {
+    TrainMessage_t request, message = {.type = TRM_DIR};
+    int status, callee;
+
+    Receive(&callee, &request, sizeof(request));
+    Reply(callee, &request, sizeof(request));
+    if (callee == MyParentTid()) {
+        TrSpeed(callee, 0);
+        Delay(getTransitionTicks(request.arg1, request.arg0, 0));
+        Send(callee, &message, sizeof(message), &status, sizeof(status));
+        Delay(10);
+        TrSpeed(callee, request.arg0);
+        Delay(getTransitionTicks(request.arg1, 0, request.arg0));
+    }
+    Exit();
+}
+
+
+static void TrainCourierTask() {
+    /*
+     * IMPORTANT IMPLEMENTATION NOTE: While the WatchDog is perfectly fine being killed by time,
+     * this does not hold true for the courier task which may never wake up and thus must be killed.
+     */
+    int status, train;
+    TrainMessage_t request;
+
+    train = MyParentTid();
+    request.type = TRM_SENSOR_WAIT;
+
+    while (true) {
+        if ((status = Send(train, &request, sizeof(request), &request, sizeof(request))) < 0) {
+            notice("TrainCourierTask: Warning: Send returned %d to %d, Exiting....", status, train);
+            break;
+        }
+
+        request.type = TRM_SENSOR_WAIT;
+        switch (request.type) {
+            case TRM_SENSOR_WAIT:
+                WaitOnSensorN(request.arg0);
+                request.type = SENSOR_TRIP;
+                break;
+            case TRM_EXIT:
+                Exit();
+                break;
+            default:
+                error("TrainCourierTask: Error: Invalid message type %d", request.type);
+        }
+
+    }
+    Exit();
+}
+
+
+static void traverseNode(Train_t *train, track_node *dest) {
+    Switch_t *swtch;
+    switch (dest->type) {
+        case NODE_SENSOR:
+        case NODE_MERGE:
+        case NODE_ENTER:
+        case NODE_EXIT:
+            train->currentEdge = &(dest->edge[DIR_AHEAD]);
+            train->edgeDistance = 0;
+            break;
+        case NODE_BRANCH:
+            swtch = getSwitch(dest->num);
+            train->currentEdge = &(dest->edge[swtch->state]);
+            train->edgeDistance = 0;
+            break;
+        case NODE_NONE:
+            break;
+        default:
+            error("UpdateLocation: Error: Bad node type %u", dest->type);
+    }
+}
+
+
+static void updateLocation(Train_t *train) {
+    unsigned int ticks, dist, tdist, transition_ticks;
+
+    ticks = Time();
+    if (ticks == train->lastUpdateTick) return;
+
+    /* account for acceleration/deceleration by considering
+     * the transition state */
+    dist = train->edgeDistance;
+    if (train->transition->valid) {
+        transition_ticks = getTransitionTicks(train->id, train->transition->start_speed, train->transition->dest_speed);
+        if (transition_ticks <= (ticks - train->lastUpdateTick)) {
+            /* we've passed our transition period */
+            train->transition->valid = false;
+            dist += (ticks - transition_ticks - train->lastUpdateTick) * train->microPerTick / 1000;
+        } else {
+            /* otherwise we're still in it */
+            transition_ticks = ticks - train->lastUpdateTick;
+        }
+        tdist = getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, transition_ticks);
+        dist += tdist;
+    } else {
+        dist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
+    }
+
+    while (dist >= train->currentEdge->dist) {
+        /* update the location of the train by traversing nodes */
+        dist -= train->currentEdge->dist;
+        traverseNode(train, train->currentEdge->dest);
+    }
+
+    train->lastUpdateTick = ticks;
+    train->edgeDistance = dist;
+    CalibrationSnapshot(train);
+}
+
+
+static void WaitOnNextTarget(Train_t *train, unsigned int SensorCourier, unsigned int WatchDog) {
+    unsigned int ticks, timeout, velocity;
+    TrainMessage_t msg1, msg2;
+    track_node *dest;
+
+    dest = train->currentEdge->dest;
+    if (train->transition->valid) {
+        ticks = getTransitionTicks(train->id, train->transition->start_speed, train->transition->dest_speed);
+        velocity = getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, ticks) / ticks;
+    } else {
+        velocity = train->microPerTick;
+    }
+
+    ticks = train->lastUpdateTick;
+    timeout = ((train->currentEdge->dist - train->edgeDistance) * 1000 / velocity);
+    if (dest->type == NODE_SENSOR) {
+        msg1.type = TRM_SENSOR_WAIT;
+        msg1.arg0 = dest->num;
+        Reply(SensorCourier, &msg1, sizeof(msg1));
+    }
+
+    if (WatchDog != 0) {
+        msg2.type = TRM_TIME_WAIT;
+        msg2.arg0 = dest->num;
+        msg2.arg1 = dest->type;
+        Reply(WatchDog, &msg2, sizeof(msg2));
+    }
+}
+
+
+static void TrainTask() {
+    int status, bytes, callee;
+    TrainMessage_t request;
+    Train_t train = {0};
+    track_node *destination;
+    char command[2], name[] = "TrainXX";
+    short sBusy, rBusy, wBusy, speed;
+    unsigned int SensorCourier, ReverseCourier, WatchDog;
+    TransitionState_t state;
+
+    status = Receive(&callee, &request, sizeof(request));
+    if (status < 0) {
+        error("TrainTask: Error: Received %d from %d", status, callee);
+        Exit();
+    } else if (request.type != TRM_INIT) {
+        error("TrainTask: Error: Received message not of form TRM_INIT: %d from %d", status, callee);
+        Exit();
+    }
+
+    train.id = request.arg0;
+    train.aux = 0;
+    train.speed = 0;
+    train.currentEdge = (track_edge*)request.arg1;
+    train.lastUpdateTick = 0;
+    train.microPerTick = 0;
+    name[5] = (train.id / 10) + '0';
+    name[6] = (train.id % 10) + '0';
+    RegisterAs(name);
+    ReverseCourier = 0;
+    SensorCourier = Create(3, TrainCourierTask);
+    WatchDog = Create(3, TrainWatchDog);
+    sBusy = 0;
+    rBusy = 0;
+    wBusy = 0;
+    train.transition = &state;
+    Reply(callee, NULL, 0);
+
+    while (true) {
+        if ((bytes = Receive(&callee, &request, sizeof(request))) < 0) {
+            error("TrainTask: Error: Received %d from %d", bytes, callee);
+            Reply(callee, &status, sizeof(status));
+            continue;
+        }
+
+        status = 0;
+        updateLocation(&train);
+        destination = train.currentEdge->dest;
+        switch (request.type) {
+            case TRM_SENSOR_WAIT:
+                if (callee != SensorCourier) {
+                    request.type = TRM_EXIT;
+                    Reply(callee, &request, sizeof(request));
+                    break;
+                } else if (request.arg0 == SENSOR_TRIP) {
+                    /* sensor was tripped by some train */
+                    sBusy = 0;
+                    traverseNode(&train, train.currentEdge->dest);
+                    train.lastUpdateTick = Time();
+                }
+
+                /* sensor is waiting for something to wait on */
+                if (train.speed > 0) {
+                    WaitOnNextTarget(&train, SensorCourier, WatchDog);
+                    sBusy = 1;
+                }
+                break;
+            case TRM_TIME_WAIT:
+                if (callee != WatchDog) {
+                    request.type = TRM_EXIT;
+                    Reply(callee, &request, sizeof(request));
+                    break;
+                } else if (request.arg0 == train.currentEdge->src->num &&
+                           request.arg1 == train.currentEdge->src->type) {
+                    /* previous sensor is no longer valid, figure out what
+                       is going on with our movement. */
+                    SensorCourier = Create(3, TrainCourierTask);
+                    wBusy = 0;
+                    sBusy = 0;
+                } else {
+                    wBusy = 0;
+                }
+                break;
+            case TRM_SPEED:
+                speed = request.arg0;
+                /* don't care if the speeds are the same */
+                if (speed != train.speed) {
+                    /* compensate for acceleration */
+                    train.transition->valid = true;
+                    train.transition->start_speed = train.speed;
+                    train.transition->dest_speed = speed;
+                    train.transition->time_issued = Time();
+                }
+                train.speed = speed;
+                train.microPerTick = getTrainVelocity(train.id, train.speed);
+                if (sBusy == 0 && wBusy == 0 && train.speed > 0) {
+                    WaitOnNextTarget(&train, SensorCourier, WatchDog);
+                    sBusy = 1;
+                    wBusy = 1;
+                }
+
+                command[0] = train.speed + train.aux;
+                command[1] = train.id;
+                trnputs(command, 2);
+                Reply(callee, &status, sizeof(status));
+                updateLocation(&train);
+                break;
+            case TRM_AUX:
+                train.aux = request.arg0;
+                command[0] = train.speed + train.aux;
+                command[1] = train.id;
+                trnputs(command, 2);
+                Reply(callee, &status, sizeof(status));
+                break;
+            case TRM_DIR:
+                if (callee == ReverseCourier) {
+                    command[0] = TRAIN_AUX_REVERSE;
+                    command[1] = train.id;
+                    trnputs(command, 2);
+                    ReverseCourier = 0;
+                }
+                Reply(callee, &status, sizeof(status));
+                break;
+            case TRM_RV:
+                ReverseCourier = Create(3, TrainReverseCourier);
+                request.type = TRM_RV;
+                request.arg0 = train.speed;
+                request.arg1 = train.id;
+                Send(ReverseCourier, &request, sizeof(request), &request, sizeof(request));
+                break;
+            case TRM_GET_LOCATION:
+            case TRM_GET_SPEED:
+                /* TODO: Write these */
+                Reply(callee, &status, sizeof(status));
+                break;
+            default:
+                error("TrainTask: Error: Bad request type %d from %d", request.type, callee);
+        }
+    }
+
+    Exit();
 }

@@ -26,7 +26,7 @@ int length(CircularBuffer_t *cbuf) {
 /* TODO: optimize these a-la memcpy */
 int write(CircularBuffer_t *cbuf, const volatile char *buf, uint32_t len) {
     if (cbuf->remaining < len) {
-        error("CircularBuffer: Insufficient space to copy message");
+        kerror("CircularBuffer: Insufficient space to copy message");
         return -1; // TODO: define this
     }
 
