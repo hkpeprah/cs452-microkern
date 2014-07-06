@@ -37,5 +37,7 @@ typedef enum {
 #define BUFFER_SPACE_INSUFF     -4      /* insufficient space for entire reply in sender's reply buffer */
 #define NO_AVAILABLE_MESSAGES   -5      /* task called receive, but no messages, blocked */
 #define TASK_NOT_EXPECTING_MSG  -6      /* tried to reply to a task which didn't send */
+#define TASK_DESTROYED          -7      /* sending to task when it was destroyed */
+#define DESTROY_NOT_CHILD       -8      /* called sys destroy on target that isn't direct child */
 
 #endif /* __TYPES_H__ */

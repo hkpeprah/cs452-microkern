@@ -83,6 +83,9 @@ static int handleRequest(Args_t *args) {
         case SYS_EXIT:
             sys_exit();
             break;
+        case SYS_DESTROY:
+            errno = sys_destroy(args->a0);
+            break;
         case SYS_AWAIT:
             errno = sys_await(args->a0, (void *)args->a1, args->a2);
             break;
@@ -146,11 +149,9 @@ int shutdown() {
     kputstr("Disabling interrupts..\r\n");
     disableInterrupts();
     kputstr("Turning off the train controller...\r\n");
-    kputstr("Cleaning up tasks....\r\n");
-    clearTasks();
     disableIdleTimer();
+    *((uint32_t*)TIMER_CONTROL) = 0;
     kputstr(SAVE_CURSOR "\033[0;0r" RESTORE_CURSOR "\r\nExiting...\r\n");
-    dumpLog();
 
     return 0;
 }
@@ -193,7 +194,7 @@ void kernel_main() {
         task->sp = taskSP;
 
         result = handleRequest(args);
-        if (args->code != SYS_INTERRUPT) {
+        if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT) {
             setResult(task, result);
         }
     }

@@ -4,14 +4,17 @@
 #include <vargs.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <term.h>
 #include <bwio.h>
 
 static char *logp;
 static uint32_t *tail;
 
 void initLogger() {
-    logp = (char*) (getMem()->addr - MEM_BLOCK_SIZE + 8);
-    tail = (uint32_t*) logp - 4;
+    int mem = getMem()->addr - MEM_BLOCK_SIZE + 4;
+    tail = (uint32_t*) mem;
+    logp = (char*) (mem + 4);
+    kdebug("log at 0x%x, length at 0x%x\n", logp, tail);
     *tail = 0;
 }
 
@@ -27,14 +30,13 @@ void printLog(uint32_t start, uint32_t end) {
 }
 
 void dumpLog() {
-    bwprintf(COM2, "\r\nLog at: 0x%x of length: %d\n", logp, *tail);
+    kprintf("\r\nLog at: 0x%x of length: %d\n", logp, *tail);
     printLog(0, *tail);
 }
 
 
 int sys_log(const char *buf, int len) {
     if (*tail + len > (MEM_BLOCK_SIZE - 4)) {
-        bwprintf(COM2, "Oh noes out of space\n");
         return OUT_OF_SPACE;
     }
 

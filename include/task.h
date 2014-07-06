@@ -3,6 +3,8 @@
 #include <types.h>
 #include <mem.h>
 
+#define PRIORITY_BITS 4
+
 struct __task_t;
 
 typedef enum {
@@ -23,9 +25,9 @@ struct __envelope_t;
 
 typedef struct __task_t {
     TaskState_t state;
-    uint32_t tid : 8;
-    uint32_t parentTid : 8;
-    int priority;
+    unsigned int tid : 13;
+    int parentTid : 14;
+    uint32_t priority : PRIORITY_BITS;
     uint32_t sp;
     struct __task_t *next;
     struct __task_t *waitQueue;
@@ -52,7 +54,6 @@ typedef struct __envelope_t {
 
 
 void initTasks();
-void clearTasks();
 Envelope_t *getEnvelope();
 void releaseEnvelope(Envelope_t *envelope);
 Task_t *createTaskD(uint32_t);

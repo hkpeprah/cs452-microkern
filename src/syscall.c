@@ -44,6 +44,13 @@ void Exit() {
     swi_call(0, &args);
 }
 
+int Destroy(uint32_t tid) {
+    Args_t args;
+    args.code = SYS_DESTROY;
+    args.a0 = tid;
+    return swi_call(0, &args);
+}
+
 
 int Send(int tid, void *msg, int msglen, void *reply, int replylen) {
     Args_t args;
