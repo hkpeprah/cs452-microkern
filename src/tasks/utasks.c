@@ -131,6 +131,9 @@ void TrainUserTask() {
         /* switches on the command and validates it */
         status = 0;
         switch (cmd) {
+            case TRAIN_NULL:
+                debug("Received NULL message from %u", callee);
+                break;
             case TRAIN_WAIT:
                 if (WaitOnSensor(t.args[1], t.args[2]) > 0) {
                     printf("Sensor Triggered: %c%u\r\n", t.args[1], t.args[2]);
@@ -208,6 +211,24 @@ void TrainUserTask() {
                     debug("Added Train %u to track near %c%u", t.args[1], t.args[2], t.args[3]);
                 }
                 break;
+            case TRAIN_GOTO:
+                t.args[4] = 0;
+            case TRAIN_GOTO_AFTER:
+                tid = LookupTrain(t.args[1]);
+                if (tid >= 0) {
+                    status = MoveTrainToDestination(t.args[1], t.args[2], t.args[3], t.args[4]);
+                    if (status < 0) {
+                        printf("Error: No paht found to destination.\r\n");
+                    } else {
+                        debug("Found path for Train %u to destination %c%u", t.args[1], t.args[2], t.args[3]);
+                    }
+                } else {
+                    printf("Error: Invalid train.\r\n");
+                }
+                break;
+            default:
+                error("TrainController: Received %d from %u", cmd, callee);
+                status = -1;
         }
         Reply(callee, &status, sizeof(status));
     }

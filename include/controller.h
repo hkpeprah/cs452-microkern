@@ -9,6 +9,7 @@
 
 void TrainController();
 int AddTrainToTrack(unsigned int tr, char module, unsigned int id);
+int MoveTrainToDestination(unsigned int tr, char module, unsigned int id, unsigned int dist);
 track_edge *NearestSensorEdge(char module, unsigned int id);
 
 #endif /* __TRAIN_CONTROLLER_H__ */

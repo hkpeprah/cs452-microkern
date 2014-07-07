@@ -32,6 +32,8 @@ typedef enum {
     TRAIN_HORN,
     TRAIN_ADD,
     TRAIN_WAIT,
+    TRAIN_GOTO,
+    TRAIN_GOTO_AFTER,
     NUM_TRAIN_COMMANDS,
 } TrainCommands;
 

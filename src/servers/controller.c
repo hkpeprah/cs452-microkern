@@ -24,10 +24,15 @@ typedef struct {
 
 typedef struct {
     TrainControllerMessageType type;
-    int arg0;
-    int arg1;
+    int arg0 : 16;
+    int arg1 : 16;
     int arg2;
 } TrainCntrlMessage_t;
+
+
+static int TrGoTo(unsigned int tid, void *node) {
+    return 0;
+}
 
 
 void TrainController() {
@@ -57,6 +62,13 @@ void TrainController() {
         switch (request.type) {
             case CNTRL_GOTO:
                 /* tell the train controller to route a train to a location */
+                /* TODO: pass the distance as well */
+                if (request.arg1 < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
+                    edge = &track[request.arg1].edge[DIR_AHEAD];
+                    repl = TrGoTo(request.arg0, edge->dest);
+                } else {
+                    repl = -1;
+                }
                 break;
             case CNTRL_STOP:
                 /* tell the train controller to stop routing the specified train */
@@ -68,10 +80,9 @@ void TrainController() {
                 break;
             case CNTRL_ADD:
                 /* add a train to the track */
-                i = sensorToInt(request.arg1, request.arg2);
                 repl = -1;
-                if (i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
-                    edge = &track[i].edge[DIR_AHEAD];
+                if (request.arg1 < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
+                    edge = &track[request.arg1].edge[DIR_AHEAD];
                     for (i = 0; i < id; ++i) {
                         if (trains[i].tr_number == request.arg0) {
                             break;
@@ -133,11 +144,32 @@ int AddTrainToTrack(unsigned int tr, char module, unsigned int id) {
 
     msg.type = CNTRL_ADD;
     msg.arg0 = tr;
-    msg.arg1 = module;
-    msg.arg2 = id;
+    msg.arg1 = sensorToInt(module, id);
     errno = Send(train_controller_tid, &msg, sizeof(msg), &status, sizeof(status));
     if (errno < 0) {
         error("AddTrainToTrack: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, train_controller_tid);
+        return -2;
+    }
+
+    return status;
+}
+
+
+int MoveTrainToDestination(unsigned int tr, char module, unsigned int id, unsigned int dist) {
+    int errno, status;
+    TrainCntrlMessage_t msg;
+
+    if (train_controller_tid < 0) {
+        return -1;
+    }
+
+    msg.type = CNTRL_GOTO;
+    msg.arg0 = tr;
+    msg.arg1 = sensorToInt(module, id);
+    msg.arg2 = dist;
+    errno = Send(train_controller_tid, &msg, sizeof(msg), &status, sizeof(status));
+    if (errno < 0) {
+        error("MoveTrainToDestination: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, train_controller_tid);
         return -2;
     }
 

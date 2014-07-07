@@ -15,27 +15,39 @@
 #include <uart.h>
 
 #define FOREVER            for (;;)
+#define HELP_MESSAGES      16
+
+static void print_help() {
+    static char *help[HELP_MESSAGES];
+    help[0] = "sl                          -   Steam locomotive\r\n";
+    help[1] = "rps                         -   Play a game of Rock-Paper-Scissors\r\n";
+    help[2] = "go                          -   Start the train set\r\n";
+    help[3] = "stop                        -   Stop the train set\r\n";
+    help[4] = "tr TRAIN SPEED              -   Set train TRAIN to move at speed SPEED\r\n";
+    help[5] = "sw SWITCH {C, S}            -   Set the specified switch to curve or straight\r\n";
+    help[6] = "ax TRAIN INT                -   Run the auxiliary function on the train\r\n";
+    help[7] = "rv TRAIN                    -   Reverse the specified train\r\n";
+    help[8] = "li TRAIN                    -   Turn on/off the lights on the specified train\r\n";
+    help[9] = "ho TRAIN                    -   Signal the horn on the specified train\r\n";
+    help[10] = "time                        -   Get the current formatted time\r\n";
+    help[11] = "add TRAIN SNSR              -   Add a train to the track at specified sensor\r\n";
+    help[12] = "goto TRAIN SNSR             -   Tell train to go to specified sensor\r\n";
+    help[13] = "goto-after TRAIN SNSR dist  -   Tell train to go to specified distance after sensor\r\n";
+    help[14] = "help                        -   Display this help dialog\r\n";
+    help[15] = "?                           -   Display this help dialog\r\n";
+    unsigned int i;
+
+    for (i = 0; i < 16; ++i) {
+        puts(help[i]);
+    }
+}
 
 
 void Shell() {
-    int args[4];
+    int args[5];
     char ch, buf[80];
     unsigned int i, tid;
-    char *help =
-        "sl               -   Steam locomotive\r\n"
-        "rps              -   Play a game of Rock-Paper-Scissors\r\n"
-        "go               -   Start the train set\r\n"
-        "stop             -   Stop the train set\r\n"
-        "tr TRAIN SPEED   -   Set train TRAIN to move at speed SPEED\r\n"
-        "sw SWITCH {C, S} -   Set the specified switch to curve or straight\r\n"
-        "ax TRAIN INT     -   Run the auxiliary function on the train\r\n"
-        "rv TRAIN         -   Reverse the specified train\r\n"
-        "li TRAIN         -   Turn on/off the lights on the specified train\r\n"
-        "ho TRAIN         -   Signal the horn on the specified train\r\n"
-        "time             -   Get the current formatted time\r\n"
-        "add TRAIN        -   Add a train to the track\r\n"
-        "?                -   Display this help dialog\r\n";
-    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u"};
+    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u"};
     HashTable commands;
     int command, status;
     unsigned int TrainController;
@@ -53,6 +65,8 @@ void Shell() {
     insert_ht(&commands, "ho", TRAIN_HORN);
     insert_ht(&commands, "add", TRAIN_ADD);
     insert_ht(&commands, "wait", TRAIN_WAIT);
+    insert_ht(&commands, "goto", TRAIN_GOTO);
+    insert_ht(&commands, "goto-after", TRAIN_GOTO_AFTER);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -87,8 +101,8 @@ void Shell() {
             if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
                 /* quit the terminal and stop the kernel */
                 break;
-            } else if (strcmp(buf, "?") == 0) {
-                puts(help);
+            } else if (strcmp(buf, "?") == 0 || strcmp(buf, "help") == 0) {
+                print_help();
             } else if (strcmp(buf, "time") == 0) {
                 i = Time();
                 printf("%d:%d:%d\r\n", i / 6000, (i / 100) % 60, i % 100);
@@ -120,7 +134,11 @@ void Shell() {
                             i = 4;
                             break;
                         case TRAIN_ADD:
+                        case TRAIN_GOTO:
                             i = 5;
+                            break;
+                        case TRAIN_GOTO_AFTER:
+                            i = 6;
                             break;
                         default:
                             i = -1;
@@ -129,7 +147,7 @@ void Shell() {
                     if (i >= 0) {
                         /* this is a parser command */
                         ++tmp;
-                        if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3]) != -1) {
+                        if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3], &args[4]) != -1) {
                             args[0] = command;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
                         }
