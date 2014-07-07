@@ -39,10 +39,13 @@ debug: upload
 profile: CFLAGS += -DPROFILE $(PROFILING)
 profile: upload
 
+debugtest: CFLAGS += -DDEBUG -DTEST
+debugtest: all
+
 test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
 test:
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
-	@$(MAKE) debug SILENT=true
+	@$(MAKE) debugtest SILENT=true
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
 	@$(AS) $(ASFLAGS) $(builddir)/main.s -o $(builddir)/main.o
