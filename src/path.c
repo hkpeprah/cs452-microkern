@@ -220,7 +220,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
         kprintf("processing node %s dist %d\n", currentTrackNode->name, currentNode->dist);
         bwgetc(COM2);
 #endif
-        if (currentTrackNode == end) {
+        if (currentTrackNode == end || currentTrackNode->reverse == end) {
             break;
         }
 
@@ -246,6 +246,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
     }
 
     i = finalPathLen;
+    path[i] = NULL;
 
     while (i --> 0) {
         path[i] = currentNode->trackNode;

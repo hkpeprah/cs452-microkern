@@ -29,12 +29,6 @@ typedef struct {
     int arg2;
 } TrainCntrlMessage_t;
 
-
-static int TrGoTo(unsigned int tid, void *node) {
-    return 0;
-}
-
-
 void TrainController() {
     track_edge *edge;
     TrainCtrnl_t trains[7];
@@ -64,8 +58,7 @@ void TrainController() {
                 /* tell the train controller to route a train to a location */
                 /* TODO: pass the distance as well */
                 if (request.arg1 < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
-                    edge = &track[request.arg1].edge[DIR_AHEAD];
-                    repl = TrGoTo(request.arg0, edge->dest);
+                    repl = TrGoTo(request.arg0, &track[request.arg1]);
                 } else {
                     repl = -1;
                 }
