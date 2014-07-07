@@ -56,7 +56,6 @@ typedef struct TrainMessage {
 
 
 static void TrainTask();
-static void CalibrationSnapshot(Train_t*);
 
 
 int TrCreate(int priority, int tr, track_edge *start) {
@@ -136,6 +135,7 @@ static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
     snapshot.tr = train->id;
     snapshot.sp = train->speed;
+    //snapshot.dist = ABS(train->edgeDistance - train->currentEdge->dist);
     snapshot.dist = train->edgeDistance;
     snapshot.landmark = train->currentEdge->src->name;
     snapshot.nextmark = train->currentEdge->dest->name;
@@ -329,15 +329,19 @@ static unsigned int WaitOnNextTarget(Train_t *train, unsigned int SensorCourier,
         velocity = train->microPerTick;
     }
 
-    timeout = (train->currentEdge->dist - train->edgeDistance) * 1000;
-    timeout /= velocity;
-    if (dest->type == NODE_SENSOR) {
-        debug("TrainTask: SensorCourier blocking on %s", dest->name);
-        msg1.type = TRM_SENSOR_WAIT;
-        msg1.arg0 = dest->num;
-        Reply(SensorCourier, &msg1, sizeof(msg1));
-        busy_status = dest->num;
+    distance = (train->currentEdge->dist - train->edgeDistance);
+    while (dest->type != NODE_SENSOR) {
+        traverseNode(train, dest);
+        dest = train->currentEdge->dest;
+        distance += train->currentEdge->dist;
     }
+
+    timeout = (distance * 1000) / velocity;
+    debug("TrainTask: SensorCourier blocking on %s", dest->name);
+    msg1.type = TRM_SENSOR_WAIT;
+    msg1.arg0 = dest->num;
+    Reply(SensorCourier, &msg1, sizeof(msg1));
+    busy_status = dest->num;
 
     if (timeout > 0 && (train->speed > 0 || train->transition->valid)) {
         msg2.type = TRM_TIME_WAIT;
@@ -489,6 +493,8 @@ static void TrainTask() {
                 break;
             case TRM_DIR:
                 if (callee == ReverseCourier) {
+                    train.currentEdge = train.currentEdge->reverse;
+                    train.edgeDistance = train.currentEdge->dist - train.edgeDistance;
                     command[0] = TRAIN_AUX_REVERSE;
                     command[1] = train.id;
                     trnputs(command, 2);

@@ -212,6 +212,9 @@ void destroyTaskD(Task_t *task) {
     }
 
     task->inboxTail = NULL;
+    if (task->outbox != NULL) {
+        releaseEnvelope(task->outbox);
+    }
     task->outbox = NULL;
 
     if (currentTask == task) {
