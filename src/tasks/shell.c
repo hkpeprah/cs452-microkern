@@ -90,7 +90,6 @@ void Shell() {
                 }
                 i--;
                 backspace();
-                save_cursor();
             }
         } else if (ch == CR || ch == LF) {
             newline();
@@ -165,7 +164,6 @@ void Shell() {
             puts("> ");
             for (i = 0; i < 80; ++i) buf[i] = 0;
             i = 0;
-            save_cursor();
         } else {
             /* print character to the screen */
             if (i < 79) {
@@ -175,8 +173,8 @@ void Shell() {
             // Log("PutChar called with: %c", ch);
             putchar(ch);
             i++;
-            save_cursor();
         }
+        save_cursor();
     }
 
     args[0] = TRAIN_STOP;

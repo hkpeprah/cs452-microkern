@@ -216,9 +216,10 @@ void TrainUserTask() {
             case TRAIN_GOTO_AFTER:
                 tid = LookupTrain(t.args[1]);
                 if (tid >= 0) {
-                    status = MoveTrainToDestination(t.args[1], t.args[2], t.args[3], t.args[4]);
+                    status = MoveTrainToDestination(tid, t.args[2], t.args[3], t.args[4]);
                     if (status < 0) {
-                        printf("Error: No paht found to destination.\r\n");
+                        error("TrainHandler: Error: Received %d sending.", status);
+                        printf("Error: No path found to destination.\r\n");
                     } else {
                         debug("Found path for Train %u to destination %c%u", t.args[1], t.args[2], t.args[3]);
                     }

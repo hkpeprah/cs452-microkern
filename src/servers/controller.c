@@ -71,7 +71,8 @@ void TrainController() {
                 }
                 break;
             case CNTRL_STOP:
-                /* tell the train controller to stop routing the specified train */
+                /* tell the train controller to stop routing the specified train
+                 * frees the train from the worker */
                 break;
             case CNTRL_NEAREST_EDGE:
                 if (request.arg0 < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
