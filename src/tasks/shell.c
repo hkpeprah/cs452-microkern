@@ -37,7 +37,8 @@ static void print_help() {
     help[15] = "?                           -   Display this help dialog\r\n";
     unsigned int i;
 
-    for (i = 0; i < 16; ++i) {
+    // TODO: Figure out why can't send sl to be printed....
+    for (i = 1; i < 16; ++i) {
         puts(help[i]);
     }
 }

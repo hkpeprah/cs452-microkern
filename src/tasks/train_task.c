@@ -271,6 +271,10 @@ static void updateLocation(Train_t *train) {
     unsigned int ticks, dist, transition_ticks;
 
     ticks = Time();
+    if (ticks == train->lastUpdateTick) {
+        CalibrationSnapshot(train);
+        return;
+    }
 
     /* account for acceleration/deceleration by considering
      * the transition state */

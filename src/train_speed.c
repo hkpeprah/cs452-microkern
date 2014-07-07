@@ -182,5 +182,10 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
     totalTicks = trainSpeeds[id].stoppingTicks[MAX(startsp, destsp)];
     totalTicks *= ABS(startsp - destsp);
     totalTicks /= MAX(startsp, destsp);
+
+    if (startsp > destsp) {
+        totalTicks -= (totalTicks / (totalTicks * 10));
+    }
+
     return totalTicks;
 }
