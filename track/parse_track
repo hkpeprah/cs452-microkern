@@ -331,6 +331,8 @@ void %s(track_node *track) {
     fh.write("  track[%d].type = %s;\n" % (idx, nodetype))
     if nd.num != None:
       fh.write("  track[%d].num = %s;\n" % (idx, nd.num))
+    else:
+      fh.write("  track[%d].num = %d;\n" % (idx, idx))
     fh.write("  track[%d].reverse = &track[%d];\n" % \
       (idx, nd.reverse.index))
     for dir in ['ahead', 'straight', 'curved']:

@@ -17,6 +17,7 @@
 #include <track_node.h>
 #include <track_data.h>
 #include <train_task.h>
+#include <controller.h>
 
 
 void go() {
@@ -78,6 +79,7 @@ int main() {
     sys_create(13, TimerTask, &tid);
     sys_create(1, go, &tid);
     sys_create(10, SensorServer, &tid);
+    sys_create(10, TrainController, &tid);
 
     kernel_main();
 

@@ -39,13 +39,16 @@ debug: upload
 profile: CFLAGS += -DPROFILE $(PROFILING)
 profile: upload
 
+debugtest: CFLAGS += -DDEBUG -DTEST
+debugtest: all
+
 test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
 test:
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
 	@-if [ "$(SILENT)" != "false" ]; then \
-		$(MAKE) SILENT=true TRACK=$(TRACK); \
+		$(MAKE) debugtest SILENT=true TRACK=$(TRACK); \
 	else \
-		$(MAKE) debug SILENT=true TRACK=$(TRACK); \
+		$(MAKE) debugtest SILENT=true TRACK=$(TRACK); \
 	fi
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
