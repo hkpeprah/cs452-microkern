@@ -90,6 +90,8 @@
 #define SET_COLS_80              "\033[?3l"
 #define SET_COLS_132             "\033[?3h"
 #define MOVE_TO_COL              "\033[%dG"
+#define HIDE_CURSOR              "\033[?25l"
+#define SHOW_CURSOR              "\033[?25h"
 
 #define restore_cursor()         puts(RESTORE_CURSOR)
 #define save_cursor()            puts(SAVE_CURSOR)

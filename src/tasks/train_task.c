@@ -163,6 +163,7 @@ static void TrainWatchDog() {
         wait = request.arg0;
         status = Reply(callee, &request, sizeof(request));
         if (request.type == TRM_TIME_WAIT) {
+            debug("WatchDog: Delaying for %u ticks", wait);
             if (Delay(wait) < 0) {
                 error("WatchDog: Something went wrong with delay.");
             }
@@ -218,10 +219,9 @@ static void TrainCourierTask() {
             case TRM_SENSOR_WAIT:
                 debug("TrainCourierTask: Waiting on Next Sensor");
                 status = WaitOnSensorN(request.arg0);
-                if (status == -3) {
+                if (status == TIMER_TRIP) {
                     /* TrainTask told us to give up... */
                     request.type = TRM_SENSOR_WAIT;
-                    FreeSensor(request.arg0);
                 } else {
                     request.type = TRM_SENSOR_WAIT;
                     request.arg0 = SENSOR_TRIP;
@@ -305,11 +305,9 @@ static void updateLocation(Train_t *train) {
 
 static unsigned int WaitOnNextTarget(Train_t *train, unsigned int SensorCourier, unsigned int WatchDog) {
     TrainMessage_t msg1, msg2;
-    Switch_t *swtch;
-    track_edge *edge;
     track_node *dest;
     int start_speed, dest_speed;
-    unsigned int ticks, timeout, velocity, busy_status, distance, end_of_track;
+    unsigned int ticks, timeout, velocity, busy_status, distance;
 
     /* update the location of the train prior to computations */
     updateLocation(train);
@@ -333,29 +331,7 @@ static unsigned int WaitOnNextTarget(Train_t *train, unsigned int SensorCourier,
 
     timeout = (train->currentEdge->dist - train->edgeDistance) * 1000;
     timeout /= velocity;
-    end_of_track = 0;
-    edge = train->currentEdge;
-    msg2.arg1 = dest->num;
-    while (dest->type != NODE_SENSOR && !end_of_track) {
-        switch (dest->type) {
-            case NODE_SENSOR:
-            case NODE_MERGE:
-            case NODE_ENTER:
-            case NODE_EXIT:
-                edge = &(dest->edge[DIR_AHEAD]);
-                break;
-            case NODE_BRANCH:
-                swtch = getSwitch(dest->num);
-                edge = &(dest->edge[swtch->state]);
-                break;
-            case NODE_NONE:
-                end_of_track = 1;
-                break;
-        }
-        dest = edge->dest;
-    }
-
-    if (end_of_track == 0) {
+    if (dest->type == NODE_SENSOR) {
         debug("TrainTask: SensorCourier blocking on %s", dest->name);
         msg1.type = TRM_SENSOR_WAIT;
         msg1.arg0 = dest->num;
@@ -452,14 +428,13 @@ static void TrainTask() {
                     /* previous sensor is no longer valid, figure out what
                        is going on with our movement. */
                     if (train.speed != 0) {
-                        debug("TrainTask: WatchDog awoke.  Traversing to %s.", train.currentEdge->dest->name);
+                        debug("TrainTask: WatchDog awoke.  Traversing to %s.  Courier Waiting: %d", train.currentEdge->dest->name, courier_busy);
                         traverseNode(&train, train.currentEdge->dest);
                         updateLocation(&train);
                         Reply(WatchDog, NULL, 0);
                         WatchDog = 0;
-                        if (courier_busy == request.arg1) {
-                            status = -3;
-                            Reply(SensorCourier, &status, sizeof(status));
+                        if (courier_busy > 0) {
+                            FreeSensor(courier_busy);
                             courier_busy = 0;
                         } else if (courier_busy == 0) {
                             WatchDog = Create(3, TrainWatchDog);
@@ -485,8 +460,7 @@ static void TrainTask() {
                         WatchDog = 0;
                     }
                     if (courier_busy > 0) {
-                        status = -3;
-                        Reply(SensorCourier, &status, sizeof(status));
+                        FreeSensor(courier_busy);
                         courier_busy = 0;
                     } else {
                         WatchDog = Create(3, TrainWatchDog);

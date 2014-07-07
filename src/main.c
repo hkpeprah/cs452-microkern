@@ -5,7 +5,7 @@
 #include <k_syscall.h>
 #include <kernel.h>
 
-#define FIRST_PRIORITY     11
+#define FIRST_PRIORITY     9
 
 
 int main() {

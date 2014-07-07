@@ -121,6 +121,7 @@ void SensorServer() {
                 status = TIMER_TRIP;
                 Reply(sensorQueue[req.sensor].tid, &status, sizeof(status));
                 sensorQueue[req.sensor].tid = -1;
+                Reply(callee, &status, sizeof(status));
                 break;
             case SENSOR_RETURNED:
                 /* TODO: Would be optimal if knew which train triggered ? */

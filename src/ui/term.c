@@ -14,6 +14,7 @@ static unsigned int SENSORS_PER_LINE;
 
 void initDebug() {
     initCalibration();
+    kputstr(HIDE_CURSOR);
     kputstr(ERASE_SCREEN);
     kprintf(CHANGE_COLOR, 0);
     #if DEBUG
