@@ -31,7 +31,7 @@ typedef struct {
 
 
 typedef struct DelayQueue_t {
-    uint32_t tid : 8;
+    uint32_t tid;
     uint32_t delay;
     struct DelayQueue_t *next;
 } DelayQueue;

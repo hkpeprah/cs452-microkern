@@ -12,7 +12,8 @@
 #define TRAIN_SENSOR_BASE    192    /* sensor base addr */
 #define MULTI_SWITCH_OFFSET  134    /* we have four multi switches */
 #define TRAIN_LIGHT_OFFSET   16     /* offset for lights */
-#define TRAIN_HORN_OFFSET    17     /* offset for horn */
+#define TRAIN_HORN_OFFSET    118    /* offset for horn */
+#define TRAIN_HORN_OFF       112
 #define TRAIN_AUX_REVERSE    15
 #define TRAIN_MAX_SPEED      14
 

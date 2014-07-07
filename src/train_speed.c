@@ -136,28 +136,40 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
 }
 
 
-unsigned int getTransitionDistance(unsigned int tr, unsigned int startsp, unsigned int destsp, unsigned int ticks) {
+unsigned int getStoppingDistance(unsigned int tr, int startsp, int destsp) {
     int id;
-    unsigned int curTicks, totalTime, distance;
 
-    if (!isValidTrainId(tr)) {
+    if (!isValidTrainId(tr) || (id = getTrainId(tr)) < 0) {
         return 0;
     }
 
-    if ((id = getTrainId(tr)) < 0) {
-        return 0;
-    }
-
-    curTicks = Time();
-    totalTime = getTransitionTicks(tr, startsp, destsp);
-    distance = trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)];
-    return (distance / totalTime) * (curTicks - ticks);
+    return trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)];
 }
 
 
-unsigned int getTransitionTicks(unsigned int tr, unsigned int startsp, unsigned int destsp) {
+unsigned int getTransitionDistance(unsigned int tr, int startsp, int destsp, int ticks) {
+    /* returns the distance in millimeters */
     int id;
-    unsigned int totalTicks;
+    unsigned int totalTime, distance;
+
+    if (!isValidTrainId(tr) || (id = getTrainId(tr)) < 0) {
+        return 0;
+    }
+
+    /* get the total time it takes to transition between speeds */
+    totalTime = getTransitionTicks(tr, startsp, destsp);
+    /* determint the stopping distance, which is equivalent to acceleration distance */
+    distance = trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)];
+    /* distance travelled accelerating/decelerating is product of distance multiplied by the time spent
+     * travelling, divided by the total time it takes to travel */
+    distance *= ticks;
+    distance /= totalTime;
+    return distance;
+}
+
+
+unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
+    int id, totalTicks;
 
     if (!isValidTrainId(tr)) {
         return 0;
@@ -168,6 +180,7 @@ unsigned int getTransitionTicks(unsigned int tr, unsigned int startsp, unsigned 
     }
 
     totalTicks = trainSpeeds[id].stoppingTicks[MAX(startsp, destsp)];
-    totalTicks *= ((float)(MAX(startsp, destsp) - MIN(startsp, destsp))) / MAX(startsp, destsp);
+    totalTicks *= ABS(startsp - destsp);
+    totalTicks /= MAX(startsp, destsp);
     return totalTicks;
 }

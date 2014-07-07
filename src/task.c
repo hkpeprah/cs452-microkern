@@ -2,9 +2,9 @@
 #include <term.h>
 #include <logger.h>
 #include <stdlib.h>
-#define TASK_QUEUE_SIZE (1 << PRIORITY_BITS)
-#define TASK_BANK_SIZE 64
-#define MESSAGE_QUEUE_SIZE 64
+#define TASK_QUEUE_SIZE     (1 << PRIORITY_BITS)
+#define TASK_BANK_SIZE      64
+#define MESSAGE_QUEUE_SIZE  64
 
 static TaskQueue_t taskQueue[TASK_QUEUE_SIZE];
 static uint32_t bankPtr;

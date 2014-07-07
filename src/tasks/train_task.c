@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <server.h>
 #include <syscall.h>
 #include <clock.h>
@@ -123,7 +124,7 @@ int TrGetLocation(unsigned int tid, track_edge **edge, unsigned int *edgeDistMM)
 int TrAuxiliary(unsigned int tid, unsigned int aux) {
     TrainMessage_t msg = {.type = TRM_AUX, .arg0 = aux};
     int status;
-    if (aux >= 16 && aux < 32) {
+    if ((aux >= 16 && aux < 32) || aux == TRAIN_HORN_OFFSET) {
         Send(tid, &msg, sizeof(msg), &status, sizeof(status));
         return status;
     }
@@ -162,7 +163,6 @@ static void TrainWatchDog() {
         wait = request.arg0;
         status = Reply(callee, &request, sizeof(request));
         if (request.type == TRM_TIME_WAIT) {
-            debug("WatchDog: Waiting for %u ticks", wait);
             if (Delay(wait) < 0) {
                 error("WatchDog: Something went wrong with delay.");
             }
@@ -214,7 +214,6 @@ static void TrainCourierTask() {
             break;
         }
 
-        // something wrong here....
         switch (request.type) {
             case TRM_SENSOR_WAIT:
                 debug("TrainCourierTask: Waiting on Next Sensor");
@@ -243,6 +242,7 @@ static void TrainCourierTask() {
 
 static void traverseNode(Train_t *train, track_node *dest) {
     Switch_t *swtch;
+    train->lastUpdateTick = Time();
     switch (dest->type) {
         case NODE_SENSOR:
         case NODE_MERGE:
@@ -265,7 +265,7 @@ static void traverseNode(Train_t *train, track_node *dest) {
 
 
 static void updateLocation(Train_t *train) {
-    unsigned int ticks, dist, tdist, transition_ticks;
+    unsigned int ticks, dist, transition_ticks;
 
     ticks = Time();
     if (ticks == train->lastUpdateTick) {
@@ -278,16 +278,16 @@ static void updateLocation(Train_t *train) {
     dist = train->edgeDistance;
     if (train->transition->valid) {
         transition_ticks = getTransitionTicks(train->id, train->transition->start_speed, train->transition->dest_speed);
-        if (transition_ticks <= (ticks - train->lastUpdateTick)) {
+        if (transition_ticks <= (ticks - train->transition->time_issued)) {
             /* we've passed our transition period */
             train->transition->valid = false;
-            dist += (ticks - transition_ticks - train->lastUpdateTick) * train->microPerTick / 1000;
+            dist += (ticks - transition_ticks - train->transition->time_issued) * train->microPerTick / 1000;
+            dist += getStoppingDistance(train->id, train->transition->start_speed, train->transition->dest_speed);
         } else {
             /* otherwise we're still in it */
-            transition_ticks = ticks - train->lastUpdateTick;
+            transition_ticks = ticks - train->transition->time_issued;
+            dist += getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, transition_ticks);
         }
-        tdist = getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, transition_ticks);
-        dist += tdist;
     } else {
         dist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
     }
@@ -298,34 +298,69 @@ static void updateLocation(Train_t *train) {
         traverseNode(train, train->currentEdge->dest);
     }
 
-    train->lastUpdateTick = ticks;
     train->edgeDistance = dist;
     CalibrationSnapshot(train);
 }
 
 
 static unsigned int WaitOnNextTarget(Train_t *train, unsigned int SensorCourier, unsigned int WatchDog) {
-    unsigned int ticks, timeout, velocity, busy_status;
     TrainMessage_t msg1, msg2;
+    Switch_t *swtch;
+    track_edge *edge;
     track_node *dest;
+    int start_speed, dest_speed;
+    unsigned int ticks, timeout, velocity, busy_status, distance, end_of_track;
+
+    /* update the location of the train prior to computations */
+    updateLocation(train);
 
     dest = train->currentEdge->dest;
     busy_status = 0;
     if (train->transition->valid) {
-        ticks = getTransitionTicks(train->id, train->transition->start_speed, train->transition->dest_speed);
-        velocity = getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, ticks) / ticks;
+        start_speed = train->transition->start_speed;
+        dest_speed = train->transition->dest_speed;
+        /* compute distance travelled accelerating/decelerating, and the number
+         * of ticks it takes to make that. */
+        distance = getStoppingDistance(train->id, start_speed, dest_speed) * 1000;
+        ticks = getTransitionTicks(train->id, start_speed, dest_speed);
+        /* fix distance to be from the start speed to destination speed */
+        distance *= ABS(start_speed - dest_speed);
+        distance /= MAX(start_speed, dest_speed);
+        velocity = distance / ticks;
     } else {
         velocity = train->microPerTick;
     }
 
-    ticks = train->lastUpdateTick;
     timeout = (train->currentEdge->dist - train->edgeDistance) * 1000;
     timeout /= velocity;
-    if (dest->type == NODE_SENSOR) {
+    end_of_track = 0;
+    edge = train->currentEdge;
+    msg2.arg1 = dest->num;
+    while (dest->type != NODE_SENSOR && !end_of_track) {
+        switch (dest->type) {
+            case NODE_SENSOR:
+            case NODE_MERGE:
+            case NODE_ENTER:
+            case NODE_EXIT:
+                edge = &(dest->edge[DIR_AHEAD]);
+                break;
+            case NODE_BRANCH:
+                swtch = getSwitch(dest->num);
+                edge = &(dest->edge[swtch->state]);
+                break;
+            case NODE_NONE:
+                end_of_track = 1;
+                break;
+        }
+        dest = edge->dest;
+    }
+
+    if (end_of_track == 0) {
+        debug("TrainTask: SensorCourier blocking on %s", dest->name);
         msg1.type = TRM_SENSOR_WAIT;
         msg1.arg0 = dest->num;
         Reply(SensorCourier, &msg1, sizeof(msg1));
-        busy_status = 1;
+        busy_status = dest->num;
     }
 
     if (timeout > 0 && (train->speed > 0 || train->transition->valid)) {
@@ -364,14 +399,18 @@ static void TrainTask() {
     train.lastUpdateTick = 0;
     train.microPerTick = 0;
     train.edgeDistance = 0;
+    train.transition = &state;
+
+    state.valid = false;
+
     name[5] = (train.id / 10) + '0';
     name[6] = (train.id % 10) + '0';
-    RegisterAs(name);
     ReverseCourier = 0;
     courier_busy = 0;
     WatchDog = 0;
+
+    RegisterAs(name);
     SensorCourier = Create(4, TrainCourierTask);
-    train.transition = &state;
     Reply(callee, NULL, 0);
 
     while (true) {
@@ -392,7 +431,6 @@ static void TrainTask() {
                 } else if (request.arg0 == SENSOR_TRIP) {
                     /* sensor was tripped by some train */
                     traverseNode(&train, train.currentEdge->dest);
-                    train.lastUpdateTick = Time();
                     courier_busy = 0;
                 }
 
@@ -402,38 +440,31 @@ static void TrainTask() {
                     Destroy(WatchDog);
                 }
                 WatchDog = Create(3, TrainWatchDog);
-                debug("TrainTask: Creating a WatchDog: Tid %u", WatchDog);
                 courier_busy = WaitOnNextTarget(&train, SensorCourier, WatchDog);
-                updateLocation(&train);
                 break;
             case TRM_TIME_WAIT:
                 request.type = TRM_EXIT;
                 if (callee != WatchDog) {
-                    debug("TrainTask: Call from something not the WatchDog");
+                    error("TrainTask: Error: Call from something not the WatchDog");
                     Reply(callee, &request, sizeof(request));
                     break;
                 } else {
                     /* previous sensor is no longer valid, figure out what
                        is going on with our movement. */
                     if (train.speed != 0) {
-                        debug("TrainTask: WatchDog awoke.  Kicking off SensorCourier.");
+                        debug("TrainTask: WatchDog awoke.  Traversing to %s.", train.currentEdge->dest->name);
                         traverseNode(&train, train.currentEdge->dest);
-                        train.lastUpdateTick = Time();
                         updateLocation(&train);
                         Reply(WatchDog, NULL, 0);
                         WatchDog = 0;
-                        if (courier_busy == 1) {
+                        if (courier_busy == request.arg1) {
                             status = -3;
                             Reply(SensorCourier, &status, sizeof(status));
                             courier_busy = 0;
                         } else if (courier_busy == 0) {
                             WatchDog = Create(3, TrainWatchDog);
-                            debug("TrainTask: Sensor not busy, creating a WatchDog: Tid %u", WatchDog);
                             courier_busy = WaitOnNextTarget(&train, SensorCourier, WatchDog);
-                            updateLocation(&train);
                         }
-                    } else {
-                        debug("TrainTask: WatchDog awoke.");
                     }
                 }
             case TRM_TIME_READY:
@@ -450,14 +481,16 @@ static void TrainTask() {
                     train.speed = speed;
                     train.microPerTick = getTrainVelocity(train.id, train.speed);
                     if (WatchDog != 0) {
-                        debug("TrainTask: Speed changed, removing previous WatchDog.");
                         Destroy(WatchDog);
                         WatchDog = 0;
                     }
-                    if (courier_busy == 1) {
+                    if (courier_busy > 0) {
                         status = -3;
                         Reply(SensorCourier, &status, sizeof(status));
                         courier_busy = 0;
+                    } else {
+                        WatchDog = Create(3, TrainWatchDog);
+                        courier_busy = WaitOnNextTarget(&train, SensorCourier, WatchDog);
                     }
                 }
 
@@ -469,7 +502,11 @@ static void TrainTask() {
                 Reply(callee, &status, sizeof(status));
                 break;
             case TRM_AUX:
-                train.aux = request.arg0;
+                if (train.aux == TRAIN_HORN_OFFSET && request.arg0 == train.aux) {
+                    train.aux = TRAIN_HORN_OFF;
+                } else {
+                    train.aux = request.arg0;
+                }
                 command[0] = train.speed + train.aux;
                 command[1] = train.id;
                 trnputs(command, 2);

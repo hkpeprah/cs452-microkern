@@ -83,6 +83,7 @@ void TrainController() {
                         if (tid > 0) {
                             trains[id].tid = tid;
                             trains[id].tr_number = request.arg1;
+                            TrSpeed(request.arg1, 0);
                             id++;
                             repl = 1;
                         }

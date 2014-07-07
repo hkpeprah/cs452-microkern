@@ -7,7 +7,7 @@ XCC              = gcc
 AS               = as
 LD               = ld
 CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O3 -DBUFFEREDIO
-TRACK            = a
+TRACK            ?= a
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -43,9 +43,9 @@ test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
 test:
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))
 	@-if [ "$(SILENT)" != "false" ]; then \
-		$(MAKE) SILENT=true; \
+		$(MAKE) SILENT=true TRACK=$(TRACK); \
 	else \
-		$(MAKE) debug SILENT=true; \
+		$(MAKE) debug SILENT=true TRACK=$(TRACK); \
 	fi
 	rm $(builddir)/main.s $(builddir)/main.o
 	@$(XCC) -S $(CFLAGS) $(testdir)/$(TEST) -o $(builddir)/main.s
@@ -60,7 +60,15 @@ init:
 	@echo "CFLAGS: $(CFLAGS)"
 	@-rm -rf $(builddir)/*
 	@-cp -r $(srcdir)/*.s $(builddir)/
-	track/parse_track track/new/track$(TRACK)_new -C src/track_data.c -H include/track_data.h
+	@if [ "$(TRACK)" = "b" ]; then \
+		echo "Track Selected: Track B"; \
+	elif [ "$(TRACK)" = "a" ]; then \
+		echo "Track Selected: Track A"; \
+	else \
+		echo "Unknown Track Selected: $(TRACK)"; \
+		exit 1; \
+	fi
+	@track/parse_track track/new/track$(TRACK)_new -C src/track_data.c -H include/track_data.h
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 
