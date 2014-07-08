@@ -68,8 +68,29 @@ After the startup tasks have finished running, the user will reach a command pro
 \subsection{Algorithms and Data Structures}
 \\[1\baselineskip]
 \subsection{Path Finding}
+Dijkstra's is used to find path between a starting node and the destination. A wrapper structure is built for each
+provided \texttt{track\_node} that contains meta information such as the predecessor node, the distance from the source,
+the number of nodes in the path so far and some additional information about its position with respect to the heap.
+
+The nodes are stored in a binary heap implemented as a fixed size array. The heap is used by the algorithm to determine
+the next node to explore. For each node explored, the reverse and direct ahead nodes are always added, and in the case
+of branches, the curved destination is added as well.
+
+The result of pathfinding is a list of nodes from the provided to the destination. The operation required to travel from
+a node in the path to the next is implicit in the relation between the two nodes (ie. n + 1 is the destination of
+n(DIR\_STRAIGHT) -> flip switch to straight, n + 1 is the reverse -> reverse the train) and this information is used by
+the trains to navigate.
 \\[1\baselineskip]
 \subsection{Calibrating Train Position}
+Each train has its own task that maintains information about the train, and all communication between the program and
+the train (both model and physical) is handled through the task. The task employs 2 couriers, waiting on its expected
+next sensor as well as a timeout in the case that the sensor malfunctions. When the courier returns, the train knows
+that it has reached the next sensor and updates its position accordingly. In between sensors, the train's position is
+computed periodically using its last known position, its speed and the times elapsed since the last position update.
+
+When one courier wakes up, the other must be destroyed. This was a newly implemented kernel functionality that allows
+task descriptors to be recycled cleanly and reused. The two courier tasks are constantly being destroyed and recreated
+as a train traverses along the track.
 \\[1\baselineskip]
 \subsection{Error Recovery}
 \\[2\baselineskip]
