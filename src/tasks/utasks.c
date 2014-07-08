@@ -32,7 +32,6 @@ void firstTask() {
     id = Create(13, TimerTask);
     id = Create(12, SensorServer);
     id = Create(10, TrainController);
-    Delay(500);
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
 
