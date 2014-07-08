@@ -624,7 +624,7 @@ static void TrainTask() {
                 traverseNode(&train, train.nextSensor);
             }
 
-            // debug("trip - expect {%d} actual {%d}\n", expectSensorTripTime, train.lastUpdateTick);
+            debug("Sensor Trip: Expected {%d}, Actual {%d}", expectSensorTripTime, train.lastUpdateTick);
             CalibrationSnapshot(&train);
             if (train.currentEdge->src->num == engineerWaiting) {
                 Reply(Engineer, &status, sizeof(status));
