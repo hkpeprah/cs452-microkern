@@ -11,7 +11,7 @@
  *
  * return: actual size of path
  */
-int findPath(track_node *start, track_node *end, track_node **path, int pathlen, track_node **used, int usedlen);
+int findPath(track_node *start, track_node *end, track_node **path, int pathlen, track_node **used, int usedlen, unsigned int *length);
 
 #if TEST
 void testHeap();

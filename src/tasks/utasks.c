@@ -153,7 +153,10 @@ void TrainUserTask() {
             case TRAIN_SPEED:
                 tid = LookupTrain(t.args[1]);
                 if (tid >= 0) {
-                    if (TrSpeed(tid, t.args[2]) < 0) {
+                    status = TrSpeed(tid, t.args[2]);
+                    if (status == -2) {
+                        printf("Error: Train in route.  Cannot control.\r\n");
+                    } else if (status < 0) {
                         printf("Error: Invalid train speed.\r\n");
                     } else {
                         debug("Setting speed %u for Train %u", t.args[1], t.args[2]);
@@ -197,8 +200,12 @@ void TrainUserTask() {
             case TRAIN_RV:
                 tid = LookupTrain(t.args[1]);
                 if (tid >= 0) {
-                    TrReverse(tid);
-                    debug("Reversing train: %u", t.args[1]);
+                    status = TrReverse(tid);
+                    if (status == -2) {
+                        printf("Error: Train in route.  Cannot control.\r\n");
+                    } else {
+                        debug("Reversing train: %u", t.args[1]);
+                    }
                 } else {
                     printf("Error: Invalid train.\r\n");
                 }

@@ -184,7 +184,7 @@ static void addNode(Heap_t *heap, Node_t *nodes, Node_t *currentNode, unsigned i
 }
 
 
-int findPath(track_node *start, track_node *end, track_node **path, int pathlen, track_node **used, int usedlen) {
+int findPath(track_node *start, track_node *end, track_node **path, int pathlen, track_node **used, int usedlen, unsigned int *length) {
     int i;
     Node_t nodes[TRACK_MAX] = {{0}};
     Heap_t heap = {.arr = {0}, .size = 0};
@@ -220,7 +220,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
         kprintf("processing node %s dist %d\n", currentTrackNode->name, currentNode->dist);
         bwgetc(COM2);
 #endif
-        if (currentTrackNode == end || currentTrackNode->reverse == end) {
+        if (currentTrackNode == end) {
             break;
         }
 
@@ -238,6 +238,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
     }
 
     currentNode = &nodes[trackNodeToIndex(end)];
+    *length = currentNode->dist;
     finalPathLen = currentNode->pathLenNodes;
 
     if (finalPathLen > pathlen) {
@@ -260,6 +261,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
 
     return finalPathLen;
 }
+
 
 #if TEST
 void testHeap() {
