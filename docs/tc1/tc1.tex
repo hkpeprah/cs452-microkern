@@ -1,0 +1,72 @@
+\documentclass[12pt]{article}
+\usepackage{enumerate, amsmath, fullpage, hyperref, amsfonts, titlesec, listings, graphicx, enumitem, longtable}
+\renewcommand*\contentsname{Table of Contents}
+\newlength\tindent
+\setlength{\tindent}{\parindent}
+\setlength{\parindent}{0pt}
+\renewcommand{\indent}{\hspace*{\tindent}}
+\lstset{
+   breaklines=true,
+   basicstyle=\scriptsize\rmfamily}
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+  {\bf\Large Train Control Demo 1}\\
+  {\bf\large CS452 - Spring 2014}\\
+  Real-Time Programming\vspace{5cm}\\
+  {\bf Team }\\
+  Max Chen - mqchen\\
+  mqchen@uwaterloo.ca\\[1\baselineskip]
+  Ford Peprah - hkpeprah\\
+  ford.peprah@uwaterloo.ca\vspace{5cm}\\
+  Bill Cowan\\
+  University of Waterloo\\
+  {\bf Due Date:} Tuesday, $8^{th}$, July, $2014$
+\end{center}
+\newpage
+% Program Description: how to operate it, full pathname
+% Description fo structure of Kernel: algorithms, data structures, etc.
+% Location fo source code + MD5
+% Output produced by program and explanation of why it does
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+\section{Program Description}
+\subsection{Getting the Program}
+To run the program, one must have read/write access to the source code, as well as the ability to make and run the program.  Before attempting to run the pogram ensure that the following three conditions are met:
+\begin{itemize}
+  \item You are currently logged in as one of \texttt{cs452}, \texttt{mqchen}, or \texttt{hkpeprah}.
+  \item You have a directory in which to store the source code, \\ e.g. \texttt{\textasciitilde/cs452\_microkern\_mqchen\_hkpeprah}.
+  \item You have a folder on the FTP server with your username, e.g. \texttt{/u/cs452/tftp/ARM/cs452}.
+\end{itemize}
+First, you must get a copy of the code.  To to this, log into one of the aforementioned accounts and change directories to the directory you created above (using \texttt{cd}), then run one of
+\begin{center}
+  \begin{verbatim}
+    git clone file:////u8/hkpeprah/cs452-microkern -b demo1 .
+                           or
+    git clone file:////u7/mqchen/cs452/cs452-microkern -b demo1 .
+  \end{verbatim}
+\end{center}
+\vspace{-0.5cm}You will now have a working instance of our kernel4 source code in your current directory.  To make the application and upload it to the FTP server at the location listed above (\texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME}), run \texttt{make upload}.
+\\[1\baselineskip]
+
+\subsection{Running the Program}
+To run the application, you need to load it into the RedBoot terminal.  Ensure you've followed the steps listed above in the ``Getting the Program'' settings to ensure you have the correct directories and account set up.  Navigate to the directory in which you cloned the source code and run \texttt{make upload}.  The uploaded code should now be located at
+\begin{center}
+  \texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME/kernel.elf}
+\end{center}
+To run the application, go to the RedBoot terminal and run the command
+\begin{center}
+  \texttt{load -b 0x00218000 -h 10.15.167.4 ``ARM/YOUR\_USERNAME/kernel.elf''; go}
+\end{center}
+The application should now begin by running through the game tasks before reaching a prompt.  The generated files will be located in \texttt{DIR/build} where \texttt{DIR} is the directory you created in the earlier steps.  To access and download an existing version of the code, those can be found at \texttt{/u/cs452/tftp/ARM/mqchen/kernel.elf} and \texttt{/u/cs452/tftp/ARM/hkpeprah/kernel.elf}.
+\\
+\subsubsection{Command Prompt}
+After the startup tasks have finished running, the user will reach a command prompt where they will be able to enter commands.  A list of available commands the syntax are listed below in the \texttt{Shell} section.
+\\[2\baselineskip]
+\section{Train Calibration}
+
+
+\section{MD5 Hashes}
+\lstinputlisting{md5}
+\end{document}
