@@ -101,7 +101,7 @@ int TrGoTo(unsigned int tid, track_node *finalDestination) {
 
     if (finalDestination != NULL) {
         status = 0;
-        // Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+        Send(tid, &msg, sizeof(msg), &status, sizeof(status));
         return status;
     }
     return -1;
@@ -426,8 +426,7 @@ static void TrainTask() {
     track_node *destination, *pathNode, *finalDestination = NULL;
     track_node *path[32] = {0};
     char command[2], name[] = "TrainXX";
-    int status, bytes, callee;
-    int i;
+    int status, bytes, callee, i;
     short speed;
     unsigned int SensorCourier, ReverseCourier, WatchDog, waitingSensor;
     TransitionState_t state;
@@ -457,9 +456,9 @@ static void TrainTask() {
     ReverseCourier = 0;
     waitingSensor = 0;
     WatchDog = 0;
+    SensorCourier = 0;
 
     RegisterAs(name);
-    SensorCourier = 0;
     Reply(callee, NULL, 0);
 
     while (true) {
@@ -504,12 +503,12 @@ static void TrainTask() {
                 Reply(callee, &status, sizeof(status));
                 break;
             case TRM_GOTO:
-                debug("Train: Got Request: %s -> %s", destination->name, finalDestination->name);
                 finalDestination = (track_node*)request.arg0;
+                debug("Train %u: Got Request: %s -> %s", train.id, destination->name, finalDestination->name);
                 status = 0;
-                // status = findPath(destination, finalDestination, path, 32, NULL, 0);
+                status = findPath(destination, finalDestination, path, 32, NULL, 0);
                 if (status > 0) {
-                    debug("Train: Found path from %s to %s", destination->name, finalDestination->name);
+                    debug("Train %u: Found path from %s to %s", train.id, destination->name, finalDestination->name);
                 }
                 train.path = path;
                 Reply(callee, &status, sizeof(status));
@@ -549,6 +548,7 @@ static void TrainTask() {
             case TRM_GET_LOCATION:
             case TRM_GET_SPEED:
                 /* TODO: Write these */
+                updateLocation(&train);
                 status = 1;
                 Reply(callee, &status, sizeof(status));
                 break;
