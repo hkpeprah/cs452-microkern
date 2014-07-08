@@ -94,10 +94,19 @@ int TrSpeed(unsigned int tid, unsigned int speed) {
     return -1;
 }
 
+
 int TrGoTo(unsigned int tid, track_node *finalDestination) {
-    TrainMessage_t msg = {.type = TRM_GOTO, .arg0 = (int) finalDestination};
-    return Send(tid, &msg, sizeof(msg), NULL, 0);
+    TrainMessage_t msg = {.type = TRM_GOTO, .arg0 = (int)finalDestination};
+    int status;
+
+    if (finalDestination != NULL) {
+        status = 0;
+        // Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+        return status;
+    }
+    return -1;
 }
+
 
 int TrReverse(unsigned int tid) {
     TrainMessage_t msg = {.type = TRM_RV};
@@ -462,7 +471,6 @@ static void TrainTask() {
 
         status = 0;
         destination = train.currentEdge->dest;
-
         if (callee == SensorCourier || callee == WatchDog) {
             updatePath(&train, finalDestination);
             traverseNode(&train, train.currentEdge->dest);
@@ -496,11 +504,12 @@ static void TrainTask() {
                 Reply(callee, &status, sizeof(status));
                 break;
             case TRM_GOTO:
-                debug("req %s -> %s", destination->name, finalDestination->name);
-                finalDestination = (track_node*) request.arg0;
-                status = findPath(destination, finalDestination, path, 32, NULL, 0);
-                for (i = 0; i < status; ++i) {
-                    debug("%s\n", path[i]);
+                debug("Train: Got Request: %s -> %s", destination->name, finalDestination->name);
+                finalDestination = (track_node*)request.arg0;
+                status = 0;
+                // status = findPath(destination, finalDestination, path, 32, NULL, 0);
+                if (status > 0) {
+                    debug("Train: Found path from %s to %s", destination->name, finalDestination->name);
                 }
                 train.path = path;
                 Reply(callee, &status, sizeof(status));

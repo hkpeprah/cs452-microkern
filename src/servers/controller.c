@@ -29,6 +29,7 @@ typedef struct {
     int arg2;
 } TrainCntrlMessage_t;
 
+
 void TrainController() {
     track_edge *edge;
     TrainCtrnl_t trains[7];
@@ -84,14 +85,17 @@ void TrainController() {
                     }
                     if (i == id && id < 7) {
                         tid = TrCreate(6, request.arg0, edge);
-                        notice("TrainController: Notice: Received %d in create", tid);
                         if (tid > 0) {
                             trains[id].tid = tid;
-                            trains[id].tr_number = request.arg1;
-                            TrSpeed(request.arg1, 0);
-                            id++;
+                            trains[id++].tr_number = request.arg0;
+                            notice("TrainController: Created Train %u with Task ID %u, setting speed to 0", request.arg0, tid);
+                            TrSpeed(tid, 0);
                             repl = 1;
                         }
+                    } else if (i < id) {
+                        error("TrainController: Error: Tried to add Train %d when already on track", request.arg0);
+                    } else {
+                        error("TrainController: Error: Out of available train slots");
                     }
                 }
                 break;
