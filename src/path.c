@@ -229,7 +229,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
                 addNode(&heap, nodes, currentNode, DIR_CURVED);
             case NODE_MERGE:
             case NODE_SENSOR:
-                addNode(&heap, nodes, currentNode, DIR_REVERSE);
+                //addNode(&heap, nodes, currentNode, DIR_REVERSE);
                 addNode(&heap, nodes, currentNode, DIR_STRAIGHT);
                 break;
             default:

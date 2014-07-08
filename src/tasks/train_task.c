@@ -285,7 +285,7 @@ static void traverseNode(Train_t *train, track_node *dest) {
 
 
 static void updateLocation(Train_t *train) {
-    unsigned int ticks, dist, transition_ticks;
+    unsigned int ticks, transition_ticks;
 
     ticks = Time();
     /* account for acceleration/deceleration by considering
@@ -566,7 +566,7 @@ static void TrainTask() {
 
         status = 0;
         if (callee == SensorCourier || callee == WatchDog) {
-            if (nextSensor) {
+            if (train.nextSensor) {
                 traverseNode(&train, train.nextSensor);
             }
             debug("trip - expect {%d} actual {%d}", expectSensorTripTime, train.lastUpdateTick);
