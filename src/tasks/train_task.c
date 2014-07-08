@@ -290,32 +290,30 @@ static void updateLocation(Train_t *train) {
     ticks = Time();
     /* account for acceleration/deceleration by considering
      * the transition state */
-    dist = train->edgeDistance;
     if (train->transition->valid) {
         transition_ticks = getTransitionTicks(train->id, train->transition->start_speed, train->transition->dest_speed);
         if (transition_ticks <= (ticks - train->transition->time_issued)) {
             /* we've passed our transition period */
             train->transition->valid = false;
-            dist += (ticks - transition_ticks - train->transition->time_issued) * train->microPerTick / 1000;
-            dist += getStoppingDistance(train->id, train->transition->start_speed, train->transition->dest_speed);
+            train->edgeDistance += (ticks - transition_ticks - train->transition->time_issued) * train->microPerTick / 1000;
+            train->edgeDistance += getStoppingDistance(train->id, train->transition->start_speed, train->transition->dest_speed);
         } else {
             /* otherwise we're still in it */
             transition_ticks = ticks - train->transition->time_issued;
-            dist += getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, transition_ticks);
+            train->edgeDistance += getTransitionDistance(train->id, train->transition->start_speed, train->transition->dest_speed, transition_ticks);
         }
 
-        //debug("transition_ticks = %u, time_iussed = %u, dist = %u", transition_ticks, train->transition->time_issued, dist);
     } else {
-        dist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
+        train->edgeDistance += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
     }
 
-    train->edgeDistance = dist;
+    debug("edge: %s dist: %d", train->currentEdge->src->name, train->edgeDistance);
     train->lastUpdateTick = ticks;
     CalibrationSnapshot(train);
 }
 
 
-static int WaitOnNextTarget(Train_t *train, unsigned int *SensorCourier, unsigned int *WatchDog, int *waitingSensor) {
+static int WaitOnNextTarget(Train_t *train, int *SensorCourier, int *WatchDog, int *waitingSensor) {
     TrainMessage_t msg1, msg2;
     track_node *dest;
     track_edge *nextEdge;
@@ -327,16 +325,15 @@ static int WaitOnNextTarget(Train_t *train, unsigned int *SensorCourier, unsigne
         FreeSensor(*waitingSensor);
     }
 
-    if (*WatchDog != 0) {
+    if (*WatchDog >= 0) {
         Destroy(*WatchDog);
+        *WatchDog = -1;
     }
 
-    if (*SensorCourier != 0) {
+    if (*SensorCourier >= 0) {
         Destroy(*SensorCourier);
+        *SensorCourier = -1;
     }
-
-    /* update the location of the train prior to computations */
-    //updateLocation(train);
 
     if (train->speed == 0 && !train->transition->valid) {
         train->nextSensor = NULL;
@@ -521,7 +518,7 @@ static void TrainTask() {
     TransitionState_t state;
     int waitingSensor, engineerWaiting;
     int expectSensorTripTime = 0;
-    unsigned int SensorCourier, ReverseCourier, WatchDog, Engineer, timer;
+    int SensorCourier, ReverseCourier, WatchDog, Engineer, timer;
 
     status = Receive(&callee, &request, sizeof(request));
     if (status < 0) {
@@ -548,12 +545,12 @@ static void TrainTask() {
     name[6] = (train.id % 10) + '0';
     ReverseCourier = 0;
     waitingSensor = -1;
-    WatchDog = 0;
-    SensorCourier = 0;
+    WatchDog = -1;
+    SensorCourier = -1;
+    timer = -1;
     Engineer = 0;
     engineerWaiting = -1;
 
-    timer = Create(2, TrainTimer);
     message.type = TRM_TIME_WAIT;
     message.arg0 = (int)&train;
 
@@ -569,7 +566,9 @@ static void TrainTask() {
 
         status = 0;
         if (callee == SensorCourier || callee == WatchDog) {
-            traverseNode(&train, train.nextSensor);
+            if (nextSensor) {
+                traverseNode(&train, train.nextSensor);
+            }
             debug("trip - expect {%d} actual {%d}", expectSensorTripTime, train.lastUpdateTick);
             CalibrationSnapshot(&train);
             if (train.currentEdge->src->num == engineerWaiting) {
@@ -610,6 +609,13 @@ static void TrainTask() {
                     train.speed = speed;
                     train.microPerTick = getTrainVelocity(train.id, train.speed);
                     expectSensorTripTime = train.lastUpdateTick + WaitOnNextTarget(&train, &SensorCourier, &WatchDog, &waitingSensor);
+
+                    if (speed == 0 && timer != -1) {
+                        Destroy(timer);
+                        timer = -1;
+                    } else if (timer < 0) {
+                        timer = Create(2, TrainTimer);
+                    }
                 }
                 command[0] = train.speed + train.aux;
                 command[1] = train.id;
