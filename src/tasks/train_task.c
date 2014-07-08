@@ -25,7 +25,7 @@ typedef struct {
 
 typedef struct __Train_t {
     unsigned int id : 16;
-    unsigned int speed : 8;
+    int speed : 8;
     unsigned int aux : 16;
     track_edge *currentEdge;
     track_node *nextSensor;
@@ -223,11 +223,11 @@ static void SensorCourierTask() {
         return;
     }
 
-    //debug("Sensor Courier Task: waiting on sensor %d", wait);
+    // debug("Sensor Courier Task: waiting on sensor %d", wait);
     if ( (status = WaitOnSensorN(wait)) < 0) {
         error("SensorCourier: result from WaitOnSensorN: %d", status);
     }
-    //debug("sensor %d trip", wait);
+    notice("Sensor Trip: %d", wait);
     Send(train, NULL, 0, NULL, 0);
 }
 
@@ -578,7 +578,7 @@ static void TrainTask() {
 
     train.id = request.arg0;
     train.aux = 0;
-    train.speed = 0;
+    train.speed = -1;
     train.currentEdge = (track_edge*)request.arg1;
     train.nextSensor = NULL;
     train.lastUpdateTick = 0;
@@ -659,8 +659,8 @@ static void TrainTask() {
                 break;
             case TRM_SPEED:
                 speed = request.arg0;
-                trainSpeed(&train, speed);
                 if (speed != train.speed) {
+                    trainSpeed(&train, speed);
                     expectSensorTripTime += train.lastUpdateTick;
                     expectSensorTripTime += WaitOnNextTarget(&train, &SensorCourier, &WatchDog, &waitingSensor);
                 }
