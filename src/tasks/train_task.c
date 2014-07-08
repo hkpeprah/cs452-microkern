@@ -11,6 +11,7 @@
 #include <calibration.h>
 #include <types.h>
 #include <path.h>
+#include <random.h>
 
 #define TIMEOUT_BUFFER 20
 
@@ -191,11 +192,11 @@ static void TrainWatchDog() {
         return;
     }
 
-    debug("WatchDog: Delaying for %u ticks", wait);
+    //debug("WatchDog: Delaying for %u ticks", wait);
     if (Delay(wait + TIMEOUT_BUFFER) < 0) {
         error("WatchDog: Something went wrong with delay.");
     }
-    debug("WatchDog awoken after %u ticks", wait);
+    //debug("WatchDog awoken after %u ticks", wait);
     request.type = TRM_TIME_WAIT;
     Send(train, &request, sizeof(request), &status, sizeof(status));
 }
@@ -222,11 +223,11 @@ static void SensorCourierTask() {
         return;
     }
 
-    debug("Sensor Courier Task: waiting on sensor %d", wait);
+    //debug("Sensor Courier Task: waiting on sensor %d", wait);
     if ( (status = WaitOnSensorN(wait)) < 0) {
         error("SensorCourier: result from WaitOnSensorN: %d", status);
     }
-    debug("sensor %d trip", wait);
+    //debug("sensor %d trip", wait);
     Send(train, NULL, 0, NULL, 0);
 }
 
@@ -377,6 +378,54 @@ static int WaitOnNextTarget(Train_t *train, int *SensorCourier, int *WatchDog, i
     return timeout;
 }
 
+static void trainSpeed(Train_t *train, int speed) {
+    char command[2];
+    if (speed != train->speed) {
+        /* compensate for acceleration */
+        train->transition->valid = true;
+        train->transition->start_speed = train->speed;
+        train->transition->dest_speed = speed;
+        train->transition->time_issued = Time();
+        train->speed = speed;
+        train->microPerTick = getTrainVelocity(train->id, train->speed);
+        command[0] = train->speed + train->aux;
+        command[1] = train->id;
+        trnputs(command, 2);
+        updateLocation(train);
+    }
+}
+
+static void updatePath(track_node *src, track_node *dest) {
+    track_node *p[64] = {0};
+    track_node **path = p;
+    unsigned int len;
+    findPath(src, dest, path, 64, NULL, 0, &len);
+
+    track_node *currentNode;
+    track_node *nextNode;
+
+    while (*path) {
+        currentNode = *(path++);
+        nextNode = *path;
+        track_edge *edge = currentNode->edge;
+
+        if (currentNode == nextNode->reverse) {
+            // reverse, not implemented
+        } else if (currentNode->type == NODE_BRANCH) {
+            // branching switch
+            if (edge[DIR_CURVED].dest == nextNode) {
+                trainSwitch(currentNode->num, 'C');
+                // special tri-switches, switch their pair
+                if (currentNode->num == 154 || currentNode->num == 156) {
+                    trainSwitch(currentNode->num - 2, 'C');
+                }
+            } else if (edge[DIR_STRAIGHT].dest == nextNode) {
+                trainSwitch(currentNode->num, 'S');
+            }
+        }
+    }
+}
+
 
 static void TrainEngineer() {
     track_node *path[32] = {0};
@@ -509,6 +558,7 @@ static void TrainTimer() {
 static void TrainTask() {
     TrainMessage_t request, message;
     Train_t train = {0};
+    track_node *dest = NULL;
     char command[2], name[] = "TrainXX";
     int status, bytes, callee;
     short speed;
@@ -544,13 +594,14 @@ static void TrainTask() {
     waitingSensor = -1;
     WatchDog = -1;
     SensorCourier = -1;
-    timer = -1;
     Engineer = 0;
     engineerWaiting = -1;
     timer = Create(2, TrainTimer);
 
     message.type = TRM_TIME_WAIT;
     message.arg0 = (int)&train;
+
+    timer = Create(2, TrainTimer);
 
     RegisterAs(name);
     Reply(callee, NULL, 0);
@@ -564,16 +615,27 @@ static void TrainTask() {
 
         status = 0;
         if (callee == SensorCourier || callee == WatchDog) {
-            if (train.nextSensor && !(callee == WatchDog && train->transition->valid)) {
+            if (callee == WatchDog && train.speed == 0) {
+                continue;
+            }
+
+            if (train.nextSensor) {
                 // if (train.nextSensor && (train.speed > 0 || train.transition->valid)) {
                 traverseNode(&train, train.nextSensor);
             }
+
+            // debug("trip - expect {%d} actual {%d}\n", expectSensorTripTime, train.lastUpdateTick);
+            CalibrationSnapshot(&train);
             if (train.currentEdge->src->num == engineerWaiting) {
                 Reply(Engineer, &status, sizeof(status));
                 engineerWaiting = -1;
             }
             expectSensorTripTime = train.lastUpdateTick;
             expectSensorTripTime += WaitOnNextTarget(&train, &SensorCourier, &WatchDog, &waitingSensor);
+            if (train.nextSensor == dest) {
+                trainSpeed(&train, 0);
+                dest = NULL;
+            }
             continue;
         }
 
@@ -597,21 +659,11 @@ static void TrainTask() {
                 break;
             case TRM_SPEED:
                 speed = request.arg0;
-                /* don't care if the speeds are the same */
+                trainSpeed(&train, speed);
                 if (speed != train.speed) {
-                    /* compensate for acceleration */
-                    train.transition->valid = true;
-                    train.transition->start_speed = train.speed;
-                    train.transition->dest_speed = speed;
-                    train.transition->time_issued = Time();
-                    train.speed = speed;
-                    train.microPerTick = getTrainVelocity(train.id, train.speed);
-                    expectSensorTripTime = train.lastUpdateTick + WaitOnNextTarget(&train, &SensorCourier, &WatchDog, &waitingSensor);
+                    expectSensorTripTime += train.lastUpdateTick;
+                    expectSensorTripTime += WaitOnNextTarget(&train, &SensorCourier, &WatchDog, &waitingSensor);
                 }
-                command[0] = train.speed + train.aux;
-                command[1] = train.id;
-                trnputs(command, 2);
-                updateLocation(&train);
                 status = 1;
                 Reply(callee, &status, sizeof(status));
                 break;
@@ -619,12 +671,20 @@ static void TrainTask() {
                 Engineer = 0;
                 break;
             case TRM_GOTO:
-                Engineer = Create(6, TrainEngineer);
-                message.type = TRM_GET_PATH;
-                message.arg0 = (int)train.currentEdge->src;
-                message.arg1 = request.arg0;
-                message.arg2 = train.id;
-                Send(Engineer, &message, sizeof(message), &status, sizeof(status));
+                /*
+                  Engineer = Create(6, TrainEngineer);
+                  message.type = TRM_GET_PATH;
+                  message.arg0 = (int)train.currentEdge->src;
+                  message.arg1 = request.arg0;
+                  message.arg2 = train.id;
+                  Send(Engineer, &message, sizeof(message), &status, sizeof(status));
+                */
+                dest = (track_node*)request.arg0;
+                updatePath(train.currentEdge->dest, dest);
+                trainSpeed(&train, random_range(8, 10));
+                expectSensorTripTime = train.lastUpdateTick;
+                expectSensorTripTime += WaitOnNextTarget(&train, &SensorCourier, &WatchDog, &waitingSensor);
+                status = 1;
                 Reply(callee, &status, sizeof(status));
                 break;
             case TRM_AUX:
