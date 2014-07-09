@@ -130,9 +130,6 @@ void TrainUserTask() {
         /* switches on the command and validates it */
         status = 0;
         switch (cmd) {
-            case TRAIN_NULL:
-                debug("Received NULL message from %u", callee);
-                break;
             case TRAIN_WAIT:
                 if (WaitOnSensor(t.args[1], t.args[2]) > 0) {
                     printf("Sensor Triggered: %c%u\r\n", t.args[1], t.args[2]);

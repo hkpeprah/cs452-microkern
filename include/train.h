@@ -21,8 +21,7 @@
 struct __Train_t;
 
 typedef enum {
-    TRAIN_NULL = 0,
-    TRAIN_GO,
+    TRAIN_GO = 0,
     TRAIN_STOP,
     TRAIN_SPEED,
     TRAIN_SWITCH,
@@ -31,6 +30,7 @@ typedef enum {
     TRAIN_LI,
     TRAIN_HORN,
     TRAIN_ADD,
+    TRAIN_ADD_AT,
     TRAIN_WAIT,
     TRAIN_GOTO,
     TRAIN_GOTO_AFTER,

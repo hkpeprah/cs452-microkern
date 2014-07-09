@@ -75,7 +75,6 @@ void Shell() {
     tr.args = args;
     args[0] = TRAIN_NULL;
     TrainController = WhoIs("TrainHandler");
-    Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
     debug("Shell: Tid %d", MyTid());
     puts("> ");
     save_cursor();
