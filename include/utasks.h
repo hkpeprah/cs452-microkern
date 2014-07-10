@@ -5,6 +5,7 @@
 #include <server.h>
 #include <clock.h>
 
+#define USER_TRAIN_DISPATCH  "USER_TRAIN_HANDLER"
 
 typedef struct {
     unsigned int t : 8;
@@ -12,13 +13,11 @@ typedef struct {
     unsigned int complete : 8;
 } DelayMessage;
 
-typedef struct {
+typedef struct ControllerMessage {
     int *args;
-} TrainMessage;
+} ControllerMessage_t;
 
 
-void testTask();
-void testTask2();
 void firstTask();
 void TimerTask();
 void TrainUserTask();

@@ -62,11 +62,9 @@ To run the application, go to the RedBoot terminal and run the command
 The application should now begin by running through the game tasks before reaching a prompt.  The generated files will be located in \texttt{DIR/build} where \texttt{DIR} is the directory you created in the earlier steps.  To access and download an existing version of the code, those can be found at \texttt{/u/cs452/tftp/ARM/mqchen/kernel.elf} and \texttt{/u/cs452/tftp/ARM/hkpeprah/kernel.elf}.
 \\
 \subsubsection{Command Prompt}
-After the startup tasks have finished running, the user will reach a command prompt where they will be able to enter commands.  A list of available commands the syntax are listed below in the \texttt{Shell} section.
+After the startup tasks have finished running, the user will reach a command prompt where they will be able to enter commands.  A list of available commands and the syntax can be found at run-time by entering either ``?'' or ``help'' followed by the ``RETURN'' key.  All commands must be followed by the ``RETURN'' key for the {\tt Shell} to interpret them.
 \\[2\baselineskip]
 \section{Train Calibration}
-\subsection{Algorithms and Data Structures}
-\\[1\baselineskip]
 \subsection{Path Finding}
 Dijkstra's is used to find path between a starting node and the destination. A wrapper structure is built for each
 provided \texttt{track\_node} that contains meta information such as the predecessor node, the distance from the source,
@@ -81,11 +79,36 @@ a node in the path to the next is implicit in the relation between the two nodes
 n(DIR\_STRAIGHT) -> flip switch to straight, n + 1 is the reverse -> reverse the train) and this information is used by
 the trains to navigate.
 \\[1\baselineskip]
-\subsection{Calibrating Train Position}
-Each train has its own task that maintains information about the train, and all communication between the program and
-the train (both model and physical) is handled through the task. The task employs 2 couriers, waiting on its expected
-next sensor as well as a timeout in the case that the sensor malfunctions. When the courier returns, the train knows
-that it has reached the next sensor and updates its position accordingly. In between sensors, the train's position is
+\subsection{Measurements}
+Measuring the train speeds was done iteratively.  First, we determined a singular path that all the trains would follow and measured the distance around that path in millimeters.  We then used one sensor as a reference point, and allowed each train to do two laps around triggering that sensor, first lap to get rid of acceleration/deceleration effect and the second lap to measure the time, and took the time it took to go around the track as our time measurement.  By dividing the total distance by the time, it gave us a pretty good approximation of the number of millimeters the train could cover per tick of the clock at each individual speed from $0$ to $14$.  We used this measurement multipled by $1000$ to turn our units into micrometers per tick as this was a much more usable number that would not involve floating point computation as our measurement of velocity.  To then measure acceleration/deceleration, we timed the number of ticks it took from the trains at the various speeds to stop from full speed to $0$, and the total distance covered stopping.  This provided us two measurements for each train for each speed: {\tt stopping\_distance} and {\tt stopping\_time}.  These measurements allowed us to compuate when to send a stop command based on the distance that would be covered by stopping.  We took acceleration to be equivalent to deceleration across all trains.
+\\[1\baselineskip]
+\subsection{User Tasks}
+\subsubsection{TrainController}
+A {\tt TrainController} task is a server that is responsible for allocating portions of the track to trains, adding trains to the track, and routing trains to their desired locations as determined by the user.  The use-case of the {\tt TrainController} is to reserve peices of the track as resources; when a peice is unavailable, a train has the option of either re-routing or blocking on that resource if no alternate route is available.  It provies the following methods:
+\begin{center}
+  \begin{tabular}{|l|l|p{0.7\textwidth}}
+    \hline
+    {\bf Name} & {\bf Prototype} & {\bf Description} \\\hline
+    Nearest Sensor Edge & {\tt NearestSensorEdge(char module, unsigned int id)} & Returns the nearest edge to the specified sensor. \\\hline
+    Add a train to track & {\tt AddTrainToTrack(unsigned int tr, char module, unsigned int id)} & Add train to track at specified sensor. \\\hline
+    Move train & {\tt MoveTrainToDestination(unsigned int tr, unsigned int id, unsigned int dist)} & Move train to the specified sensor and some distance after. \\\hline
+  \end{tabular}
+\end{center}
+\\
+\subsubsection{SensorServer}
+A {\tt SensorServer} task is a server that is responsible for allowing tasks to query the state of the sensors on the track, waiting on particular sensors to trigger, or wait on a sensor with timeout.  It keeps track of the previous state of the sensors and only reports on a change in the sensors from $0$ to $1$ then back down to $0$ again; preventing it from alerting sensors that are always triggered or are being held down.  It provides the following methods:
+\begin{center}
+  \begin{tabular}{|l|l|p{0.7\textwidth}}
+    \hline
+    {\bf Name} & {\bf Prototype} & {\bf Description} \\\hline
+    WaitOnSensor & {\tt int WaitOnSensor(char module, unsigned int id)} & Block waiting for the specified sensor to trigger. \\\hline
+    WaitAnySensor & {\tt int WaitAnySensor()} & Block waiting for {\it any} sensor to trigger. \\\hline
+    FreeSensor & {\tt int FreeSensor(unsigned int sensor)} & Free the task waiting on the specified sensor. \\\hline
+  \end{tabular}
+\end{center}
+\\
+\subsubsection{TrainTask}
+A {\tt TrainTask} is a reprsentation in our model of a train on the track.  Each train (IDs $45$, $47$, $48$, $49$, $50$, and $51$) has a collection of velocities mapped to by speeds as defined as numeric constants from $0$ to $14$.  These velocities tell us the micrometers that a train travels per tick of the clock.  In addition, they have a collection of stopping distances (distances travelled when decelerating from a given speed to $0$) and the time it would take the train to decelerate from a given speed.  Each train has its own task that maintains information about the train, and all communication between the program and the train (both model and physical) is handled through the task. The task employs 2 couriers, waiting on its expected next sensor as well as a timeout in the case that the sensor malfunctions. When the courier returns, the train knows that it has reached the next sensor and updates its position accordingly. In between sensors, the train's position is
 computed periodically using its last known position, its speed and the times elapsed since the last position update.
 
 When one courier wakes up, the other must be destroyed. This was a newly implemented kernel functionality that allows
@@ -93,6 +116,9 @@ task descriptors to be recycled cleanly and reused. The two courier tasks are co
 as a train traverses along the track.
 \\[1\baselineskip]
 \subsection{Error Recovery}
+The {\tt TrainTask} was designed to handle situations where sensors are broken on the track.  To do this, the {\tt TrainTask} spawns a task that times out waiting on the estimated time to arrival at the next sensor.  If we do not trip the next sensor before the timeout expires, it assumes that the sensor is broken and uses the velocity and time to calculate where the train should be with respect to the previous sensor.  This allows us to deal with situations where a given sensor never reports along a train by moving the train forward in tme in the model.
+\\
+The {\tt SensorServer} handles the situation of a sensor always reporting by checking for a sensor going from $0$ to $1$ and back down to $0$ again.  In the event that a sensor is always triggering (always $1$), it will only be reported once by the {\tt SensorServer} thus preventing it from being attributed to a train too early; since the trains compensate for missed sensors, this does not affect the ability of the trains to navigate along the track.
 \\[2\baselineskip]
 \section{MD5 Hashes}
 \lstinputlisting{md5}

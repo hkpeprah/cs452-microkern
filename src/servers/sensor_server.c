@@ -16,6 +16,7 @@ typedef enum {
     SENSOR_WAIT_ANY,
     SENSOR_RETURNED,
     SENSOR_FREE,
+    SENSOR_LAST_POLL
 } SensorRequestType;
 
 
@@ -30,6 +31,7 @@ typedef struct SensorQueue {
     int tid : 16;
     uint32_t timeout : 16;
 } SensorQueue_t;
+
 
 static void SensorSlave() {
     SensorRequest_t t;
@@ -97,6 +99,13 @@ void SensorServer() {
         timeout = 0;
         sensor = 0;
         switch (req.type) {
+            case SENSOR_LAST_POLL:
+                for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
+                    *((uint32_t*)req.sensor + i) = lastPoll[i];
+                }
+                status = 1;
+                Reply(callee, &status, sizeof(status));
+                break;
             case SENSOR_WAIT_ANY:
                 calleeByte = (char)callee;
                 write(&waitAnyQueue, &calleeByte, 1);
@@ -260,6 +269,27 @@ int FreeSensor(unsigned int id) {
 
     if (errno < 0) {
         error("FreeSensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
+        return -2;
+    }
+
+    return status;
+}
+
+
+int LastSensorPoll(unsigned int *data) {
+    int errno, status;
+    SensorRequest_t poll;
+
+    if (sensor_server_tid < 0) {
+        return -1;
+    }
+
+    poll.type = SENSOR_LAST_POLL;
+    poll.sensor = (uint32_t)data;
+    errno = Send(sensor_server_tid, &poll, sizeof(poll), &status, sizeof(status));
+
+    if (errno < 0) {
+        error("LastSensorPoll: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
         return -2;
     }
 

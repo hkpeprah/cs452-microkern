@@ -14,5 +14,6 @@ int WaitOnSensorN(unsigned int id);
 int WaitOnSensor(char module, unsigned int id);
 int WaitAnySensor();
 int FreeSensor(unsigned int id);
+int LastSensorPoll(unsigned int *data);
 
 #endif /* __SENSOR_SERVER_H__ */
