@@ -4,7 +4,7 @@
 #include <track_data.h>
 #include <track_node.h>
 
-#define TRAIN_DISPATCHER   "Dispatcher"
+#define TRAIN_DISPATCHER   "TrainDispatcher"
 #define NUM_OF_TRAINS      8
 #define TIMEOUT_BUFFER     20
 
@@ -54,6 +54,6 @@ typedef struct TrainMessage {
 } TrainMessage_t;
 
 void Dispatcher();
-int CreateDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1);
+int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1);
 
 #endif /* __DISPATCHER_H__ */

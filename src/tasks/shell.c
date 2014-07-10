@@ -15,7 +15,7 @@
 #include <dispatcher.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      16
+#define HELP_MESSAGES      17
 
 static void print_help() {
     static char *help[HELP_MESSAGES];
@@ -33,14 +33,33 @@ static void print_help() {
     help[11] = "add TRAIN SNSR              -   Add a train to the track at specified sensor\r\n";
     help[12] = "goto TRAIN SNSR             -   Tell train to go to specified sensor\r\n";
     help[13] = "goto-after TRAIN SNSR dist  -   Tell train to go to specified distance after sensor\r\n";
-    help[14] = "help                        -   Display this help dialog\r\n";
-    help[15] = "?                           -   Display this help dialog\r\n";
+    help[14] = "whoami                      -   Prints the current user\r\n";
+    help[15] = "help                        -   Display this help dialog\r\n";
+    help[16] = "?                           -   Display this help dialog\r\n";
     unsigned int i;
 
     // TODO: Figure out why can't send sl to be printed....
     for (i = 1; i < 16; ++i) {
         puts(help[i]);
     }
+}
+
+
+static void whoami() {
+    static int id = -1;
+    char *names[] = {
+        "mqchen",
+        "hkpeprah",
+        "root",
+        "etivrusky"
+    };
+
+    if (id == -1) {
+        seed(Time());
+        id = random() % 4;
+    }
+
+    printf("%s\r\n", names[id]);
 }
 
 
@@ -73,8 +92,8 @@ void Shell() {
 
     i = 0;
     tr.args = args;
-    TrainController = WhoIs("TrainHandler");
-    debug("Shell: Tid %d", MyTid());
+    TrainController = WhoIs(USER_TRAIN_DISPATCH);
+    notice("Shell: Tid %d, User's Controller: %u", MyTid(), TrainController);
     puts("> ");
     save_cursor();
 
@@ -104,6 +123,8 @@ void Shell() {
             } else if (strcmp(buf, "time") == 0) {
                 i = Time();
                 printf("%d:%d:%d\r\n", i / 6000, (i / 100) % 60, i % 100);
+            } else if (strcmp(buf, "whoami") == 0) {
+                whoami();
             } else {
                 tmp = &buf[i];
                 while (!isspace(*tmp) && *tmp) tmp++;

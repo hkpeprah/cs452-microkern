@@ -158,6 +158,20 @@ int trainSwitch(unsigned int sw, char ch) {
 }
 
 
+int trainSpeed(unsigned int tr, unsigned int speed) {
+    char buf[2];
+
+    if (speed > TRAIN_MAX_SPEED) {
+        return INVALID_SPEED;
+    }
+
+    buf[0] = speed;
+    buf[1] = tr;
+    trnputs(buf, 2);
+    return 0;
+}
+
+
 void turnOffSolenoid() {
     trputch(TRAIN_AUX_SOLENOID);
 }

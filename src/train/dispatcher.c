@@ -7,6 +7,7 @@
 #include <clock.h>
 #include <term.h>
 #include <train.h>
+#include <sensor_server.h>
 
 static unsigned int train_dispatcher_tid = -1;
 static unsigned int num_of_trains = 0;
@@ -19,7 +20,7 @@ typedef struct {
 } DispatcherNode_t;
 
 
-int CreateDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1) {
+int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1) {
     int status, bytes;
     unsigned int dispatcher;
 
@@ -38,6 +39,7 @@ int CreateDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int 
             break;
     }
 
+    msg->type = type;
     msg->tr = tr;
     msg->arg0 = arg0;
     msg->arg1 = arg1;
@@ -76,12 +78,12 @@ static track_edge *getNearestEdge(char module, unsigned int id, track_node *trac
 }
 
 
-static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tr) {
+static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tr, track_edge *start_edge) {
     unsigned int i;
 
     if (num_of_trains < NUM_OF_TRAINS) {
         i = num_of_trains;
-        if ((nodes[i].train = TrCreate(6, tr)) >= 0) {
+        if ((nodes[i].train = TrCreate(6, tr, start_edge)) >= 0) {
             notice("Dispatcher: Created Train %u with tid %u", tr, nodes[i].train);
             nodes[i].tr_number = tr;
             nodes[i].conductor = -1;
@@ -107,16 +109,47 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, unsigned int
 }
 
 
+static track_edge *sensorAttribution(unsigned int tr, DispatcherNode_t *nodes, track_node *track) {
+    track_edge *edge;
+    uint32_t num_of_sensors, i, count;
+    uint32_t polled_sensors[TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT];
+
+    edge = NULL;
+    num_of_sensors = TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT;
+    trainSpeed(tr, 3);
+    for (count = 0; count < 10; ++count) {
+        WaitAnySensor();
+        LastSensorPoll(polled_sensors);
+        for (i = 0; i < num_of_sensors; ++i) {
+        }
+        for (i = 0; i < num_of_sensors; ++i) {
+            if (polled_sensors[i] != 0) {
+                edge = getNearestEdgeId(i, track);
+                break;
+            }
+        }
+        if (edge != NULL) {
+            break;
+        }
+    }
+    trainSpeed(tr, 0);
+    return edge;
+}
+
+
 void Dispatcher() {
-    TrainMessage_t request;
-    DispatcherNode_t trains[NUM_OF_TRAINS], *node;
     track_edge *edge;
     int callee, status;
+    TrainMessage_t request;
     track_node track[TRACK_MAX];
+    DispatcherNode_t trains[NUM_OF_TRAINS], *node;
 
     init_track(track);
     RegisterAs(TRAIN_DISPATCHER);
     train_dispatcher_tid = MyTid();
+    notice("Dispatcher: Tid %u", train_dispatcher_tid);
+    edge = NULL;
+    num_of_trains = 0;
     setTrainSetState();
 
     while (true) {
@@ -129,14 +162,16 @@ void Dispatcher() {
 
         switch (request.type) {
             case TRM_ADD:
-                /* TODO: sensor attribution */
-
-                break;
+                edge = sensorAttribution(request.tr, trains, track);
+                if (edge == NULL) {
+                    status = INVALID_TRAIN_ID;
+                    break;
+                }
             case TRM_ADD_AT:
                 if (edge || (edge = getNearestEdge(request.arg0, request.arg1, track))) {
                     node = getDispatcherNode(trains, request.tr);
                     if (node == NULL) {
-                        if ((node = addDispatcherNode(trains, request.tr))) {
+                        if ((node = addDispatcherNode(trains, request.tr, edge))) {
                             status = 1;
                         } else {
                             status = OUT_OF_DISPATCHER_NODES;
@@ -163,20 +198,24 @@ void Dispatcher() {
                 break;
             case TRM_GOTO:
             case TRM_GOTO_AFTER:
+                break;
             case TRM_AUX:
             case TRM_RV:
             case TRM_GET_SPEED:
             case TRM_GET_LOCATION:
             case TRM_SPEED:
-                if ((node = getDispatcherNode(trains, request.tr)) && node->conductor == -1) {
-                    Send(node->train, &request, sizeof(request), &status, sizeof(status));
-                } else if (node->conductor != -1) {
-                    status = TRAIN_BUSY;
+                if ((node = getDispatcherNode(trains, request.tr)) != NULL) {
+                    if (node->conductor == -1) {
+                        Send(node->train, &request, sizeof(request), &status, sizeof(status));
+                    } else {
+                        status = TRAIN_BUSY;
+                    }
                 } else {
                     status = INVALID_TRAIN_ID;
                 }
                 break;
             default:
+                error("Dispatcher: Unknown request of type %d from %u", request.type, callee);
                 status = -1;
         }
         Reply(callee, &status, sizeof(status));

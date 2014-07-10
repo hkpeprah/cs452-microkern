@@ -33,7 +33,7 @@ void initDebug() {
         TERM_OFFSET = TOP_HALF;
         kprintf(MOVE_CURSOR, TOP_HALF, 0);
     #endif
-    kputstr(SET_COLS_132 "\033[37mCS452 Real-Time Microkernel (Version 0.1.9)\r\n");
+    kputstr(SET_COLS_132 "\033[37mCS452 Real-Time Microkernel (Version 0.2.0)\r\n");
     kputstr("Copyright <c> Max Chen (mqchen), Ford Peprah (hkpeprah).  All rights reserved.\033[0m\r\n");
     kputstr("\033[32mTime:           \033[35mCPU Idle:\033[0m\r\n\r\n");
     TERM_OFFSET += 5;

@@ -34,21 +34,22 @@ typedef struct {
 } Sensor_t;
 
 
-int trainSwitch(unsigned int, char);
+int trainSpeed(unsigned int tr, unsigned int speed);
+int trainSwitch(unsigned int id, char state);
 void turnOnTrainSet();
 void turnOffTrainSet();
 void setTrainSetState();
 void initTrainSet();
-int sensorToInt(char, unsigned int);
+int sensorToInt(char module, unsigned int id);
 void pollSensors();
 void resetSensors();
 void turnOffSolenoid();
-Switch_t *getSwitch(unsigned int);
-Sensor_t *getSensor(char, unsigned int);
-Sensor_t *getSensorFromIndex(unsigned int);
+Switch_t *getSwitch(unsigned int id);
+Sensor_t *getSensor(char module, unsigned int id);
+Sensor_t *getSensorFromIndex(unsigned int index);
 
 /* Deprecated */
-void trbwputc(char);
+void trbwputc(char ch);
 int trbwflush();
 
 #endif /* __TRAIN_H__ */

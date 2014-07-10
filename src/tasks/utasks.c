@@ -40,66 +40,6 @@ void firstTask() {
 }
 
 
-void testTask() {
-    printf("Calling task with priority: %d\r\n", getCurrentTask()->priority);
-    Exit();
-}
-
-
-static void Client() {
-    unsigned int pTid;
-    unsigned int tid;
-    int errno;
-    DelayMessage msg, res;
-
-    pTid = MyParentTid();
-    msg.complete = 0;
-    errno = Send(pTid, &msg, sizeof(msg), &res, sizeof(res));
-    tid = MyTid();
-
-    if (errno >= 0) {
-        /*
-         * Client delays n times, each for a time interval of t, printing after
-         * each before exiting.
-         */
-        debug("Client: Task %d with (Interval %d, Number of Delays %d).", tid, res.t, res.n);
-        while (res.n--) {
-            Delay(res.t);
-            res.complete += 1;
-            printf("Tid: %d      Delay Interval: %d     Delays Complete: %d\r\n", tid, res.t, res.complete);
-        }
-    } else {
-        error("Client: Error: Task %d received status %d sending to %d", tid, errno, pTid);
-    }
-
-    Exit();
-}
-
-
-void testTask2() {
-    int i;
-    int callee;
-    DelayMessage msg, res;
-    int priorities[] = {3, 4, 5, 6};
-    int delay_t[] = {10, 23, 33, 71};
-    int delay_n[] = {20, 9, 6, 3};
-
-    for (i = 0; i < 4; ++i) {
-        Create(priorities[i], Client);
-        debug("TestTask2: Created task with priority: %d", priorities[i]);
-    }
-
-    for (i = 3; i >= 0; --i) {
-        Receive(&callee, &msg, sizeof(msg));
-        res.t = delay_t[i];
-        res.n = delay_n[i];
-        Reply(callee, &res, sizeof(res));
-    }
-
-    Exit();
-}
-
-
 void TimerTask() {
     unsigned int count;
     unsigned int cpuUsage;
@@ -121,8 +61,9 @@ void TrainUserTask() {
     int status, cmd, callee, bytes;
     unsigned int dispatcher;
 
-    RegisterAs("TrainHandler");
+    RegisterAs(USER_TRAIN_DISPATCH);
     dispatcher = WhoIs(TRAIN_DISPATCHER);
+    notice("TrainUserTask: Tid %u, TrainUserTask's Dispatcher: %u", MyTid(), dispatcher);
 
     while (true) {
         bytes = Receive(&callee, &req, sizeof(req));
@@ -143,11 +84,12 @@ void TrainUserTask() {
             case TRM_HORN:
                 req.args[2] = TRAIN_HORN_OFFSET;
                 break;
+            case TRM_ADD:
+            case TRM_ADD_AT:
             case TRM_SPEED:
             case TRM_AUX:
             case TRM_RV:
-                CreateDispatcherMessage(&message, cmd, req.args[1], req.args[2], req.args[3]);
-                Send(dispatcher, &message, sizeof(message), &status, sizeof(status));
+                status = SendDispatcherMessage(&message, cmd, req.args[1], req.args[2], req.args[3]);
                 break;
             case TRM_SWITCH:
                 status = trainSwitch((unsigned int)req.args[1], (int)req.args[2]);
@@ -166,10 +108,6 @@ void TrainUserTask() {
                 message.arg2 = req.args[4];
                 Send(dispatcher, &message, sizeof(message), &status, sizeof(status));
                 break;
-            case TRM_ADD:
-                break;
-            case TRM_ADD_AT:
-                break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);
                 status = -1;
@@ -178,29 +116,32 @@ void TrainUserTask() {
         }
 
         switch (status) {
+            case 0:
+            case 1:
+                break;
             case INVALID_TRAIN_ID:
-                printf("Error: Invalid train number.  Did you remember to do add?");
+                printf("Error: Invalid train number.  Did you remember to do add?\r\n");
                 break;
             case INVALID_SPEED:
-                printf("Error: Invalid train speed.");
+                printf("Error: Invalid train speed.\r\n");
                 break;
             case INVALID_SWITCH_ID:
-                printf("Error: Switch does not exist.");
+                printf("Error: Switch does not exist.\r\n");
                 break;
             case INVALID_SWITCH_STATE:
-                printf("Error: Switch state is not one of (C)urved or (S)traight.");
+                printf("Error: Switch state is not one of (C)urved or (S)traight.\r\n");
                 break;
             case INVALID_SENSOR_ID:
-                printf("Error: Sensor does not exist.");
+                printf("Error: Sensor does not exist.\r\n");
                 break;
             case TRAIN_BUSY:
-                printf("Error: Train is currently busy routing.");
+                printf("Error: Train is currently busy routing.\r\n");
                 break;
             case TRAIN_HAS_NO_CONDUCTOR:
-                printf("Error: Train does not have a conductor.");
+                printf("Error: Train does not have a conductor.\r\n");
                 break;
             case OUT_OF_DISPATCHER_NODES:
-                printf("Error: Out of slots for new trains.");
+                printf("Error: Out of slots for new trains.\r\n");
                 break;
             default:
                 error("TrainController: Error: Unknown status received %d", status);
