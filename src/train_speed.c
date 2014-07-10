@@ -90,6 +90,7 @@ bool isValidTrainId(unsigned int tr) {
     return valid;
 }
 
+
 static int getTrainId(unsigned int tr) {
     unsigned int id;
 
@@ -143,6 +144,7 @@ unsigned int getStoppingDistance(unsigned int tr, int startsp, int destsp) {
         return 0;
     }
 
+    /* stopping distance is measured in millimeters */
     return trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)];
 }
 
@@ -159,11 +161,13 @@ unsigned int getTransitionDistance(unsigned int tr, int startsp, int destsp, int
     /* get the total time it takes to transition between speeds */
     totalTime = getTransitionTicks(tr, startsp, destsp);
     /* determint the stopping distance, which is equivalent to acceleration distance */
-    distance = trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)];
+    distance = trainSpeeds[id].stoppingDistances[MAX(startsp, destsp)] * 1000;
     /* distance travelled accelerating/decelerating is product of distance multiplied by the time spent
      * travelling, divided by the total time it takes to travel */
-    distance *= ticks;
-    distance /= totalTime;
+    distance = (distance * ticks) / totalTime;
+    distance /= 1000;
+    /* adjust for triangle */
+    distance /= 2;
     return distance;
 }
 
@@ -180,12 +184,5 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
     }
 
     totalTicks = trainSpeeds[id].stoppingTicks[MAX(startsp, destsp)];
-    totalTicks *= ABS(startsp - destsp);
-    totalTicks /= MAX(startsp, destsp);
-
-    if (startsp > destsp) {
-        totalTicks -= (totalTicks / (totalTicks * 10));
-    }
-
     return totalTicks;
 }

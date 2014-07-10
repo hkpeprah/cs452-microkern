@@ -6,7 +6,6 @@
 
 int TrCreate(int priority, int tr, track_edge *start);
 int TrSpeed(unsigned int tid, unsigned int speed);
-int TrGoTo(unsigned int tid, track_node *finalDestination);
 int TrReverse(unsigned int tid);
 int TrAuxiliary(unsigned int tid, unsigned int aux);
 int TrGetLocation(unsigned int tid, track_edge **edge, unsigned int *edgeDistMM);

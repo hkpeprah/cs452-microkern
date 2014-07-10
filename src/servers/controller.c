@@ -58,11 +58,7 @@ void TrainController() {
             case CNTRL_GOTO:
                 /* tell the train controller to route a train to a location */
                 /* TODO: pass the distance as well */
-                if (request.arg1 < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
-                    repl = TrGoTo(request.arg0, &track[request.arg1]);
-                } else {
-                    repl = -1;
-                }
+                repl = 1;
                 break;
             case CNTRL_STOP:
                 /* tell the train controller to stop routing the specified train
