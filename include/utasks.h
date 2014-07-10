@@ -12,9 +12,9 @@ typedef struct {
     unsigned int complete : 8;
 } DelayMessage;
 
-typedef struct {
+typedef struct ControllerMessage {
     int *args;
-} TrainMessage;
+} ControllerMessage_t;
 
 
 void testTask();

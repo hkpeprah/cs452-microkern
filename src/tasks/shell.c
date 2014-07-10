@@ -9,10 +9,10 @@
 #include <syscall.h>
 #include <random.h>
 #include <clock.h>
-#include <sl.h>
 #include <hash.h>
 #include <utasks.h>
 #include <uart.h>
+#include <dispatcher.h>
 
 #define FOREVER            for (;;)
 #define HELP_MESSAGES      16
@@ -52,28 +52,27 @@ void Shell() {
     HashTable commands;
     int command, status;
     unsigned int TrainController;
-    TrainMessage tr;
+    ControllerMessage_t tr;
 
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors);
-    insert_ht(&commands, "go", TRAIN_GO);
-    insert_ht(&commands, "stop", TRAIN_STOP);
-    insert_ht(&commands, "tr", TRAIN_SPEED);
-    insert_ht(&commands, "ax", TRAIN_AUX);
-    insert_ht(&commands, "rv", TRAIN_RV);
-    insert_ht(&commands, "li", TRAIN_LI);
-    insert_ht(&commands, "sw", TRAIN_SWITCH);
-    insert_ht(&commands, "ho", TRAIN_HORN);
-    insert_ht(&commands, "add", TRAIN_ADD);
-    insert_ht(&commands, "wait", TRAIN_WAIT);
-    insert_ht(&commands, "goto", TRAIN_GOTO);
-    insert_ht(&commands, "goto-after", TRAIN_GOTO_AFTER);
+    insert_ht(&commands, "go", TRM_GO);
+    insert_ht(&commands, "stop", TRM_STOP);
+    insert_ht(&commands, "tr", TRM_SPEED);
+    insert_ht(&commands, "ax", TRM_AUX);
+    insert_ht(&commands, "rv", TRM_RV);
+    insert_ht(&commands, "li", TRM_LI);
+    insert_ht(&commands, "sw", TRM_SWITCH);
+    insert_ht(&commands, "ho", TRM_HORN);
+    insert_ht(&commands, "add", TRM_ADD);
+    insert_ht(&commands, "add-at", TRM_ADD_AT);
+    insert_ht(&commands, "goto", TRM_GOTO);
+    insert_ht(&commands, "goto-after", TRM_GOTO_AFTER);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
     i = 0;
     tr.args = args;
-    args[0] = TRAIN_NULL;
     TrainController = WhoIs("TrainHandler");
     debug("Shell: Tid %d", MyTid());
     puts("> ");
@@ -113,30 +112,28 @@ void Shell() {
                 command = lookup_ht(&commands, &buf[i]);
                 if (command > 0) {
                     switch (command) {
-                        case TRAIN_GO:
-                        case TRAIN_STOP:
+                        case TRM_GO:
+                        case TRM_STOP:
                             i = 0;
                             break;
-                        case TRAIN_RV:
-                        case TRAIN_LI:
-                        case TRAIN_HORN:
+                        case TRM_RV:
+                        case TRM_LI:
+                        case TRM_HORN:
+                        case TRM_ADD:
                             i = 1;
                             break;
-                        case TRAIN_SPEED:
-                        case TRAIN_AUX:
+                        case TRM_SPEED:
+                        case TRM_AUX:
                             i = 2;
                             break;
-                        case TRAIN_SWITCH:
+                        case TRM_SWITCH:
                             i = 3;
                             break;
-                        case TRAIN_WAIT:
-                            i = 4;
-                            break;
-                        case TRAIN_ADD:
-                        case TRAIN_GOTO:
+                        case TRM_ADD_AT:
+                        case TRM_GOTO:
                             i = 5;
                             break;
-                        case TRAIN_GOTO_AFTER:
+                        case TRM_GOTO_AFTER:
                             i = 6;
                             break;
                         default:
@@ -168,17 +165,11 @@ void Shell() {
             if (i < 79) {
                 buf[i] = ch;
             }
-
-            // Log("PutChar called with: %c", ch);
             putchar(ch);
             i++;
         }
         save_cursor();
     }
-
-    args[0] = TRAIN_STOP;
-    Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
-
     SigTerm();
     Exit();
 }

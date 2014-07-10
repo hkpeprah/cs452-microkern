@@ -17,27 +17,10 @@
 #define TRAIN_AUX_REVERSE    15
 #define TRAIN_MAX_SPEED      14
 
+#define SWITCH_CHAR(x) ((x == DIR_STRAIGHT) ? 'S' : 'C')
 
 struct __Train_t;
 
-typedef enum {
-    TRAIN_GO = 0,
-    TRAIN_STOP,
-    TRAIN_SPEED,
-    TRAIN_SWITCH,
-    TRAIN_AUX,
-    TRAIN_RV,
-    TRAIN_LI,
-    TRAIN_HORN,
-    TRAIN_ADD,
-    TRAIN_ADD_AT,
-    TRAIN_WAIT,
-    TRAIN_GOTO,
-    TRAIN_GOTO_AFTER,
-    NUM_TRAIN_COMMANDS,
-} TrainCommands;
-
-#define SWITCH_CHAR(x) ((x == DIR_STRAIGHT) ? 'S' : 'C')
 
 typedef struct {
     unsigned int state : 1;

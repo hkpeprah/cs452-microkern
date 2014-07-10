@@ -5,6 +5,7 @@
 #include <uart.h>
 #include <stdlib.h>
 #include <ts7200.h>
+#include <dispatcher.h>
 
 #define TRAIN_AUX_SOLENOID    32
 #define TRAIN_AUX_STRAIGHT    33
@@ -91,7 +92,6 @@ void turnOnTrainSet() {
 
 void turnOffTrainSet() {
     trbwputc(TRAIN_AUX_STOP);
-    Delay(10);
 }
 
 
@@ -145,7 +145,7 @@ int trainSwitch(unsigned int sw, char ch) {
             break;
         default:
             kerror("Invalid switch character: %c", ch);
-            return -1;
+            return INVALID_SWITCH_STATE;
     }
 
     if (buf[0] != 0  && sw >= 0 && sw <= 255) {
@@ -154,7 +154,7 @@ int trainSwitch(unsigned int sw, char ch) {
         getSwitch(sw)->state = ss;
         return 0;
     }
-    return 1;
+    return INVALID_SWITCH_ID;
 }
 
 

@@ -20,7 +20,7 @@
 #include <train_task.h>
 #include <track_node.h>
 #include <sensor_server.h>
-#include <controller.h>
+#include <dispatcher.h>
 
 
 void firstTask() {
@@ -31,7 +31,7 @@ void firstTask() {
     id = Create(12, OutputServer);
     id = Create(13, TimerTask);
     id = Create(12, SensorServer);
-    id = Create(10, TrainController);
+    id = Create(10, Dispatcher);
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
 
@@ -116,126 +116,96 @@ void TimerTask() {
 
 
 void TrainUserTask() {
-    bool sigkill;
-    TrainMessage t;
-    int status, cmd, callee, bytes, tid;
+    TrainMessage_t message;
+    ControllerMessage_t req;
+    int status, cmd, callee, bytes;
+    unsigned int dispatcher;
 
-    sigkill = false;
     RegisterAs("TrainHandler");
+    dispatcher = WhoIs(TRAIN_DISPATCHER);
 
-    while (sigkill == false) {
-        bytes = Receive(&callee, &t, sizeof(t));
-        cmd = t.args[0];
-
-        /* switches on the command and validates it */
+    while (true) {
+        bytes = Receive(&callee, &req, sizeof(req));
         status = 0;
-        switch (cmd) {
-            case TRAIN_WAIT:
-                if (WaitOnSensor(t.args[1], t.args[2]) > 0) {
-                    printf("Sensor Triggered: %c%u\r\n", t.args[1], t.args[2]);
-                } else {
-                    printf("Error: Invalid sensor passed.\r\n");
-                }
-                break;
-            case TRAIN_GO:
+
+        switch ((cmd = req.args[0])) {
+            case TRM_GO:
                 turnOnTrainSet();
                 debug("Starting Train Controller");
                 break;
-            case TRAIN_STOP:
+            case TRM_STOP:
                 debug("Stopping Train Controller");
                 turnOffTrainSet();
-                sigkill = true;
                 break;
-            case TRAIN_SPEED:
-                tid = LookupTrain(t.args[1]);
-                if (tid >= 0) {
-                    status = TrSpeed(tid, t.args[2]);
-                    if (status == -2) {
-                        printf("Error: Train in route.  Cannot control.\r\n");
-                    } else if (status < 0) {
-                        printf("Error: Invalid train speed.\r\n");
-                    } else {
-                        debug("Setting speed %u for Train %u", t.args[1], t.args[2]);
-                    }
-                } else {
-                    printf("Error: Invalid train.\r\n");
-                }
+            case TRM_LI:
+                req.args[2] = TRAIN_LIGHT_OFFSET;
                 break;
-            case TRAIN_SWITCH:
-                status = trainSwitch((unsigned int)t.args[1], (int)t.args[2]);
+            case TRM_HORN:
+                req.args[2] = TRAIN_HORN_OFFSET;
+                break;
+            case TRM_SPEED:
+            case TRM_AUX:
+            case TRM_RV:
+                CreateDispatcherMessage(&message, cmd, req.args[1], req.args[2], req.args[3]);
+                Send(dispatcher, &message, sizeof(message), &status, sizeof(status));
+                break;
+            case TRM_SWITCH:
+                status = trainSwitch((unsigned int)req.args[1], (int)req.args[2]);
                 if (status == 0) {
-                    printSwitch((unsigned int)t.args[1], (char)t.args[2]);
-                    debug("Toggling Switch %u to State %c", t.args[1], toUpperCase(t.args[2]));
+                    printSwitch((unsigned int)req.args[1], (char)req.args[2]);
                     Delay(30);
                     turnOffSolenoid();
-                } else {
-                    printf("Error: Invalid state or switch.\r\n");
                 }
                 break;
-            case TRAIN_LI:
-                t.args[2] = TRAIN_LIGHT_OFFSET;
-                goto auxiliary;
+            case TRM_GOTO:
+                req.args[4] = 0;
+            case TRM_GOTO_AFTER:
+                message.tr = req.args[1];
+                message.arg0 = req.args[2];
+                message.arg1 = req.args[3];
+                message.arg2 = req.args[4];
+                Send(dispatcher, &message, sizeof(message), &status, sizeof(status));
                 break;
-            case TRAIN_HORN:
-                t.args[2] = TRAIN_HORN_OFFSET;
-                goto auxiliary;
+            case TRM_ADD:
                 break;
-        auxiliary:
-            case TRAIN_AUX:
-                tid = LookupTrain(t.args[1]);
-                if (tid >= 0) {
-                    if (TrAuxiliary(tid, t.args[2]) < 0) {
-                        printf("Error: Invalid auxiliary function.\r\n");
-                    } else {
-                        debug("Toggling auxiliary function %u for Train %u", t.args[1], t.args[2]);
-                    }
-                } else {
-                    printf("Error: Invalid train.\r\n");
-                }
-                break;
-            case TRAIN_RV:
-                tid = LookupTrain(t.args[1]);
-                if (tid >= 0) {
-                    status = TrReverse(tid);
-                    if (status == -2) {
-                        printf("Error: Train in route.  Cannot control.\r\n");
-                    } else {
-                        debug("Reversing train: %u", t.args[1]);
-                    }
-                } else {
-                    printf("Error: Invalid train.\r\n");
-                }
-                break;
-            case TRAIN_ADD:
-                status = AddTrainToTrack(t.args[1], t.args[2], t.args[3]);
-                if (status < 0) {
-                    printf("Error: Invalid train or sensor.\r\n");
-                } else {
-                    debug("Added Train %u to track near %c%u", t.args[1], t.args[2], t.args[3]);
-                }
-                break;
-            case TRAIN_GOTO:
-                t.args[4] = 0;
-            case TRAIN_GOTO_AFTER:
-                tid = LookupTrain(t.args[1]);
-                if (tid >= 0) {
-                    status = MoveTrainToDestination(tid, t.args[2], t.args[3], t.args[4]);
-                    if (status < 0) {
-                        error("TrainHandler: Error: Received %d sending.", status);
-                        printf("Error: No path found to destination.\r\n");
-                    } else {
-                        debug("Found path for Train %u to destination %c%u", t.args[1], t.args[2], t.args[3]);
-                    }
-                } else {
-                    printf("Error: Invalid train.\r\n");
-                }
+            case TRM_ADD_AT:
                 break;
             default:
-                error("TrainController: Received %d from %u", cmd, callee);
+                error("TrainController: Error: Received %d from %u", cmd, callee);
                 status = -1;
+                Reply(callee, &status, sizeof(status));
+                continue;
+        }
+
+        switch (status) {
+            case INVALID_TRAIN_ID:
+                printf("Error: Invalid train number.  Did you remember to do add?");
+                break;
+            case INVALID_SPEED:
+                printf("Error: Invalid train speed.");
+                break;
+            case INVALID_SWITCH_ID:
+                printf("Error: Switch does not exist.");
+                break;
+            case INVALID_SWITCH_STATE:
+                printf("Error: Switch state is not one of (C)urved or (S)traight.");
+                break;
+            case INVALID_SENSOR_ID:
+                printf("Error: Sensor does not exist.");
+                break;
+            case TRAIN_BUSY:
+                printf("Error: Train is currently busy routing.");
+                break;
+            case TRAIN_HAS_NO_CONDUCTOR:
+                printf("Error: Train does not have a conductor.");
+                break;
+            case OUT_OF_DISPATCHER_NODES:
+                printf("Error: Out of slots for new trains.");
+                break;
+            default:
+                error("TrainController: Error: Unknown status received %d", status);
         }
         Reply(callee, &status, sizeof(status));
     }
-
     Exit();
 }
