@@ -8,8 +8,8 @@ int TrSpeed(unsigned int tid, unsigned int speed);
 int TrGoTo(unsigned int tid, track_node *finalDestination);
 int TrReverse(unsigned int tid);
 int TrAuxiliary(unsigned int tid, unsigned int aux);
-int TrGetLocation(unsigned int tid, track_edge **edge, unsigned int *edgeDistMM);
 int LookupTrain(unsigned int tid);
 int TrGetSpeed(unsigned int tid);
+track_edge *TrGetLocation(unsigned int tid, unsigned int *dist);
 
 #endif /* __TRAIN_TASK_H__ */

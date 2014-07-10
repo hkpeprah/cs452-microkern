@@ -111,7 +111,7 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, unsigned int
 
 static track_edge *sensorAttribution(unsigned int tr, DispatcherNode_t *nodes, track_node *track) {
     track_edge *edge;
-    uint32_t num_of_sensors, i, count;
+    uint32_t num_of_sensors, i, j, count, dist;
     uint32_t polled_sensors[TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT];
 
     edge = NULL;
@@ -121,7 +121,13 @@ static track_edge *sensorAttribution(unsigned int tr, DispatcherNode_t *nodes, t
         WaitAnySensor();
         LastSensorPoll(polled_sensors);
         for (i = 0; i < num_of_sensors; ++i) {
+            for (j = 0; j < num_of_trains; ++j) {
+                edge = TrGetLocation(nodes[j].train, &dist);
+                polled_sensors[edge->src->num] = 0;
+            }
         }
+
+        edge = NULL;
         for (i = 0; i < num_of_sensors; ++i) {
             if (polled_sensors[i] != 0) {
                 edge = getNearestEdgeId(i, track);

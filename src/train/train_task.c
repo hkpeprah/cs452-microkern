@@ -60,6 +60,56 @@ int TrCreate(int priority, int tr, track_edge *start) {
 }
 
 
+int TrSpeed(unsigned int tid, unsigned int speed) {
+    TrainMessage_t msg = {.type = TRM_SPEED, .arg0 = speed};
+    int status;
+
+    Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+    return 1;
+}
+
+
+int TrReverse(unsigned int tid) {
+    TrainMessage_t msg = {.type = TRM_RV};
+    int status;
+
+    Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+    return status;
+}
+
+
+int TrGetSpeed(unsigned int tid) {
+    TrainMessage_t msg = {.type = TRM_GET_SPEED};
+    int status, speed;
+
+    if ((status = Send(tid, &msg, sizeof(speed), &speed, sizeof(speed))) < 0) {
+        return status;
+    }
+    return speed;
+}
+
+
+int TrAuxiliary(unsigned int tid, unsigned int aux) {
+    TrainMessage_t msg = {.type = TRM_AUX, .arg0 = aux};
+    int status, bytes;
+
+    if ((bytes = Send(tid, &msg, sizeof(msg), &status, sizeof(status))) < 0) {
+        return bytes;
+    }
+    return status;
+}
+
+
+track_edge *TrGetLocation(unsigned int tid, unsigned int *distance) {
+    TrainMessage_t msg = {.type = TRM_GET_LOCATION};
+
+    Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    *distance = msg.arg1;
+
+    return (track_edge*)msg.arg0;
+}
+
+
 static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
     snapshot.tr = train->id;
@@ -361,8 +411,9 @@ static void TrainTask() {
                 break;
             case TRM_GET_LOCATION:
                 updateLocation(&train);
-                status = 1;
-                Reply(callee, &status, sizeof(status));
+                request.arg0 = (int)train.currentEdge;
+                request.arg1 = train.edgeDistance;
+                Reply(callee, &request, sizeof(request));
                 break;
             case TRM_GET_SPEED:
                 status = train.speed;
