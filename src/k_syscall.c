@@ -294,6 +294,7 @@ void sys_panic(char *msg, va_list va) {
     char buffer[256] = {0};
 
     sys_sigterm();
+    dumpTaskState();
     zombify();
     strcpy(fmt, "\033[80;0H\033[2K\033[");
     uitoa(RED, 10, &fmt[strlen(fmt)]);

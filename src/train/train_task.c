@@ -30,12 +30,12 @@ typedef struct __Train_t {
     track_node *nextSensor;
     unsigned int edgeDistance : 16;
     unsigned int lastUpdateTick;
-    int lastSensorTick;
     unsigned int microPerTick : 16;
-    unsigned int distToNextSensor;
-    TransitionState_t *transition;
     int stoppingDist;
     int pathDist;
+    int lastSensorTick;
+    int distToNextSensor;
+    TransitionState_t *transition;
 } Train_t;
 
 static void TrainTask();
@@ -125,6 +125,13 @@ static void CalibrationSnapshot(Train_t *train) {
     snapshot.dist = train->edgeDistance;
     snapshot.landmark = train->lastSensor->name;
     snapshot.nextmark = train->nextSensor->name;
+    if (train->lastSensorTick < 0 || train->microPerTick < 0) {
+        snapshot.eta = 0;
+        snapshot.ata = 0;
+    } else {
+        snapshot.eta = (train->distToNextSensor * 1000) / train->microPerTick + train->lastSensorTick;
+        snapshot.ata = train->lastSensorTick < 0 ? 0 : train->lastSensorTick;
+    }
     printTrainSnapshot(&snapshot);
 }
 

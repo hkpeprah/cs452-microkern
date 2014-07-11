@@ -200,10 +200,8 @@ void kernel_main() {
         }
 
         result = handleRequest(args);
-        if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT) {
+        if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT && args->code != SYS_PANIC) {
             setResult(task, result);
         }
     }
-
-    dumpTaskState();
 }

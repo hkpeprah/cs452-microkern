@@ -7,6 +7,8 @@ typedef struct {
     unsigned int tr;
     unsigned int sp;
     unsigned int dist;
+    unsigned int eta;
+    unsigned int ata;
     const char *landmark;
     const char *nextmark;
 } CalibrationSnapshot_t;

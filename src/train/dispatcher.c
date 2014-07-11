@@ -13,6 +13,26 @@
 static unsigned int train_dispatcher_tid = -1;
 static unsigned int num_of_trains = 0;
 
+typedef enum {
+    TRM_ADD = 77,
+    TRM_ADD_AT,
+    TRM_GOTO_STOP,
+    TRM_GOTO,
+    TRM_GOTO_AFTER,
+    TRM_AUX,
+    TRM_RV,
+    TRM_GET_SPEED,
+    TRM_SPEED
+} DispatcherMessageType;
+
+typedef struct DispatcherMessage {
+    DispatcherMessageType type;
+    unsigned int tr;
+    int arg0;
+    int arg1;
+    int arg2;
+} DispatcherMessage_t;
+
 typedef struct {
     unsigned int train;
     unsigned int tr_number : 8;
@@ -20,7 +40,8 @@ typedef struct {
 } DispatcherNode_t;
 
 
-int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1) {
+static int SendDispatcherMessage(int type, unsigned int tr, int arg0, int arg1) {
+    DispatcherMessage_t msg,
     int status, bytes;
     unsigned int dispatcher;
 
@@ -38,17 +59,52 @@ int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int ar
             break;
     }
 
-    msg->type = type;
-    msg->tr = tr;
-    msg->arg0 = arg0;
-    msg->arg1 = arg1;
+    msg.type = type;
+    msg.tr = tr;
+    msg.arg0 = arg0;
+    msg.arg1 = arg1;
     if (status != 0) {
         return status;
-    } else if ((bytes = Send(dispatcher, msg, sizeof(*msg), &status, sizeof(status))) < 0) {
+    } else if ((bytes = Send(dispatcher, &msg, sizeof(msg), &status, sizeof(status))) < 0) {
         error("Dispatcher: Error: Error in send to %u returned %d", dispatcher, bytes);
         return -1;
     }
     return status;
+}
+
+
+int DispatchTrainAuxiliary(unsigned int tr, unsigned int aux) {
+    return SendDispatcherMessage(TRM_AUX, tr, aux, 0);
+}
+
+
+int DispatchTrainSpeed(unsigned int tr, unsigned int speed) {
+    return SendDispatcherMessage(TRM_SPEED, tr, speed, 0);
+}
+
+
+int DispatchRoute(unsigned int tr, unsigned int sensor) {
+    return SendDispatcherMessage(TRM_GOTO, tr, sensor, 0);
+}
+
+
+int DispatchAddTrain(unsigned int tr) {
+    return SendDispatcherMessage(TRM_ADD, tr, 0, 0);
+}
+
+
+int DispatchAddTrainAd(unsigned int tr, char module, unsigned int id) {
+    return SendDispatcherMessage(TRM_ADD_AT, tr, module, id);
+}
+
+
+int DispatchTrainReverse(unsigned int tr) {
+    return SendDispatcherMessage(TRM_RV, tr, 0, 0);
+}
+
+
+int DispatchStopRoute(unsigned int tr) {
+    return SendDispatcherMessage(TRM_GOTO_STOP, tr, 0, 0);
 }
 
 
@@ -94,7 +150,7 @@ static int sensorAttribution(unsigned int tr) {
 
 void Dispatcher() {
     int callee, status;
-    TrainMessage_t request;
+    DispatcherMessage_t request;
     track_node track[TRACK_MAX];
     DispatcherNode_t trains[NUM_OF_TRAINS], *node;
 
@@ -111,6 +167,10 @@ void Dispatcher() {
             error("Dispatcher: Error: Failed to receive meessage from Task %d with status %d",
                   callee, status);
             continue;
+        }
+
+        if ((node = getDispatcherNode(trains, request.tr)) && node->conductor != -1) {
+            status = TRAIN_BUSY;
         }
 
         switch (request.type) {
@@ -170,18 +230,31 @@ void Dispatcher() {
                 }
                 break;
             case TRM_AUX:
-            case TRM_RV:
-            case TRM_GET_SPEED:
-            case TRM_GET_LOCATION:
-            case TRM_SPEED:
-                if ((node = getDispatcherNode(trains, request.tr)) != NULL) {
-                    if (node->conductor == -1) {
-                        Send(node->train, &request, sizeof(request), &status, sizeof(status));
-                    } else {
-                        status = TRAIN_BUSY;
-                    }
-                } else {
+                if (node == NULL) {
                     status = INVALID_TRAIN_ID;
+                } else if (status != TRAIN_BUSY) {
+                    TrAuxiliary(node->train, request.arg0);
+                }
+                break;
+            case TRM_RV:
+                if (node == NULL) {
+                    status = INVALID_TRAIN_ID;
+                } else if (status != TRAIN_BUSY) {
+                    TrReverse(node->train);
+                }
+                break;
+            case TRM_GET_SPEED:
+                if (node == NULL) {
+                    status = INVALID_TRAIN_ID;
+                } else if (status != TRAIN_BUSY) {
+                    status = TrGetSpeed(node->train);
+                }
+                break;
+            case TRM_SPEED:
+                if (node == NULL) {
+                    status = INVALID_TRAIN_ID;
+                } else if (status != TRAIN_BUSY) {
+                    status = TrSpeed(node->train, request.arg0);
                 }
                 break;
             default:
