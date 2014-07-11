@@ -95,7 +95,11 @@ void NameServer() {
     while (Receive(&callee, &lookup, sizeof(lookup))) {
         switch(lookup.type) {
             case REGISTER:
-                insert_ht(clients, lookup.name, callee);
+                if (exists_ht(clients, lookup.name)) {
+                    Panic("NameServer: Hash collision between %u and %u", lookup_ht(clients, lookup.name), callee);
+                } else {
+                    insert_ht(clients, lookup.name, callee);
+                }
             case WHOIS:
                 if (exists_ht(clients, lookup.name)) {
                     lookup.tid = lookup_ht(clients, lookup.name);

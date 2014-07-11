@@ -152,7 +152,6 @@ int shutdown() {
     kputstr("Disabling interrupts..\r\n");
     disableInterrupts();
     kputstr("Turning off the train controller...\r\n");
-    turnOffTrainSet();
     disableIdleTimer();
     *((uint32_t*)TIMER_CONTROL) = 0;
     kputstr(SAVE_CURSOR "\033[0;0r" RESTORE_CURSOR "\r\nExiting...\r\n");
@@ -196,9 +195,15 @@ void kernel_main() {
         // store user stack pointer
         task->sp = taskSP;
 
+        if (args->code == SYS_SIGTERM) {
+            break;
+        }
+
         result = handleRequest(args);
         if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT) {
             setResult(task, result);
         }
     }
+
+    dumpTaskState();
 }

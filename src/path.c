@@ -17,8 +17,8 @@ typedef struct Node {
     track_node *trackNode;
     struct Node *pred;
     unsigned int heapIndex : 8;
-    unsigned int dist : 18;
-    unsigned int pathLenNodes : 5;
+    unsigned int dist : 15;
+    unsigned int pathLenNodes : 8;
     unsigned int inHeap : 1;
 } Node_t;
 
@@ -35,6 +35,7 @@ static inline int trackNodeToIndex(track_node *node) {
         case NODE_EXIT:
             return node->num;
         default:
+            kprintf("PATH: FATAL: trackNodeToIndex hit default");
             return -1;
     }
 }
@@ -198,7 +199,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
         nodes[i].trackNode = NULL;
         nodes[i].pred = NULL;
         nodes[i].heapIndex = 0;
-        nodes[i].dist = (1 << 18) - 1;
+        nodes[i].dist = (1 << 15) - 1;
         nodes[i].pathLenNodes = 0;
         nodes[i].inHeap = 0;
     }
@@ -229,6 +230,7 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
                 addNode(&heap, nodes, currentNode, DIR_CURVED);
             case NODE_MERGE:
             case NODE_SENSOR:
+            case NODE_ENTER:
                 //addNode(&heap, nodes, currentNode, DIR_REVERSE);
                 addNode(&heap, nodes, currentNode, DIR_STRAIGHT);
                 break;

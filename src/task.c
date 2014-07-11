@@ -21,6 +21,9 @@ static void findHighestTaskPriority();
 static void queueState(int priority);
 #endif
 
+static const char *STATES[] = {"READY", "ACTIVE", "ZOMBIE", "FREE", "SEND_BL", "RECV_BL", "REPLY_BL"
+                               "EVENT_BL", "WAITTID_BL"};
+
 void initTasks() {
     uint32_t i;
 
@@ -325,4 +328,20 @@ void setResult(Task_t *task, int result) {
     }
     int *sp = (int*)task->sp;
     sp[2] = result;
+}
+
+void dumpTaskState() {
+    int prio = highestTaskPriority;
+    while (prio --> 0) {
+        Task_t *task = taskQueue[prio].head;
+        if (!task) {
+            break;
+        }
+
+        kprintf("Priority %d:\n", prio);
+        while (task) {
+            kprintf("Tid: {%d} Parent: {%d} State: {%s} SP: {%d}", task->tid, task->parentTid, STATES[task->state], task->sp);
+            task = task->next;
+        }
+    }
 }
