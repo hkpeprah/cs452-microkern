@@ -12,7 +12,6 @@
 #include <types.h>
 #include <path.h>
 #include <random.h>
-#include <dispatcher.h>
 
 typedef struct {
     bool valid;
@@ -38,9 +37,28 @@ typedef struct __Train_t {
     int pathDist;
 } Train_t;
 
+typedef enum {
+    TRM_INIT = 2873,
+    TRM_SENSOR_WAIT,
+    TRM_PATH,
+    TRM_SPEED,
+    TRM_AUX,
+    TRM_DIR,
+    TRM_RV,
+    TRM_GET_LOCATION,
+    TRM_GET_SPEED
+} TrainMessageType;
+
+typedef struct TrainMessage {
+    TrainMessageType type;
+    unsigned int tr;
+    int arg0;
+    int arg1;                                                                                         
+    int arg2;
+} TrainMessage_t;
+
 static void TrainTask();
 static void setTrainSpeed(Train_t *train, int speed);
-
 
 int TrCreate(int priority, int tr, track_node *start) {
     TrainMessage_t msg;
@@ -86,17 +104,6 @@ int TrReverse(unsigned int tid) {
 }
 
 
-int TrGetSpeed(unsigned int tid) {
-    TrainMessage_t msg = {.type = TRM_GET_SPEED};
-    int status, speed;
-
-    if ((status = Send(tid, &msg, sizeof(speed), &speed, sizeof(speed))) < 0) {
-        return status;
-    }
-    return speed;
-}
-
-
 int TrAuxiliary(unsigned int tid, unsigned int aux) {
     TrainMessage_t msg = {.type = TRM_AUX, .arg0 = aux};
     int status, bytes;
@@ -107,6 +114,26 @@ int TrAuxiliary(unsigned int tid, unsigned int aux) {
     return status;
 }
 
+int TrGetSpeed(unsigned int tid) {
+    TrainMessage_t msg = {.type = TRM_GET_SPEED};
+    int status, speed;
+
+    if ((status = Send(tid, &msg, sizeof(speed), &speed, sizeof(speed))) < 0) {
+        return status;
+    }
+    return speed;
+}
+
+int TrPath(unsigned int tid, unsigned int pathDist) {
+    TrainMessage_t msg = {.type = TRM_PATH, .arg0 = pathDist};
+    int status, bytes;
+
+
+    if ((bytes = Send(tid, &msg, sizeof(msg), &status, sizeof(status))) < 0) {
+        return bytes;
+    }
+    return status;
+}
 
 track_node *TrGetLocation(unsigned int tid, unsigned int *distance) {
     TrainMessage_t msg = {.type = TRM_GET_LOCATION};
@@ -116,7 +143,6 @@ track_node *TrGetLocation(unsigned int tid, unsigned int *distance) {
 
     return (track_node*)msg.arg0;
 }
-
 
 static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
@@ -422,7 +448,7 @@ static void TrainTask() {
         }
 
         switch (request.type) {
-            case TRM_GOTO:
+            case TRM_PATH:
                 train.pathDist = request.arg0 - train.edgeDistance;
                 status = train.id;
                 Reply(callee, &status, sizeof(status));

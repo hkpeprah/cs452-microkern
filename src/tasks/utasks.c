@@ -56,7 +56,6 @@ void TimerTask() {
 
 
 void TrainUserTask() {
-    TrainMessage_t message;
     ControllerMessage_t req;
     int status, cmd, callee, bytes;
     unsigned int dispatcher;
@@ -93,7 +92,7 @@ void TrainUserTask() {
             case TRM_RV:
             case TRM_GOTO_STOP:
         auxiliary:
-                status = SendDispatcherMessage(&message, cmd, req.args[1], req.args[2], req.args[3]);
+                status = SendDispatcherMessage(cmd, req.args[1], req.args[2], req.args[3]);
                 break;
             case TRM_SWITCH:
                 status = trainSwitch((unsigned int)req.args[1], (int)req.args[2]);
@@ -106,11 +105,7 @@ void TrainUserTask() {
             case TRM_GOTO:
                 req.args[4] = 0;
             case TRM_GOTO_AFTER:
-                message.type = TRM_GOTO;
-                message.tr = req.args[1];
-                message.arg0 = sensorToInt(req.args[2], req.args[3]);
-                message.arg1 = req.args[4];
-                Send(dispatcher, &message, sizeof(message), &status, sizeof(status));
+                status = SendDispatcherMessage(TRM_GOTO, req.args[1], sensorToInt(req.args[2], req.args[3]), req.args[4]);
                 break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);

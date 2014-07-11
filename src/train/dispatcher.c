@@ -20,7 +20,17 @@ typedef struct {
 } DispatcherNode_t;
 
 
-int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1) {
+
+typedef struct TrainMessage {
+    TrainMessageType type;
+    unsigned int tr;
+    int arg0;
+    int arg1;
+    int arg2;
+} TrainMessage_t;
+
+int SendDispatcherMessage(TrainMessageType type, unsigned int tr, int arg0, int arg1) {
+    TrainMessage_t msg;
     int status, bytes;
     unsigned int dispatcher;
 
@@ -38,13 +48,13 @@ int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int ar
             break;
     }
 
-    msg->type = type;
-    msg->tr = tr;
-    msg->arg0 = arg0;
-    msg->arg1 = arg1;
+    msg.type = type;
+    msg.tr = tr;
+    msg.arg0 = arg0;
+    msg.arg1 = arg1;
     if (status != 0) {
         return status;
-    } else if ((bytes = Send(dispatcher, msg, sizeof(*msg), &status, sizeof(status))) < 0) {
+    } else if ((bytes = Send(dispatcher, &msg, sizeof(msg), &status, sizeof(status))) < 0) {
         error("Dispatcher: Error: Error in send to %u returned %d", dispatcher, bytes);
         return -1;
     }
@@ -183,6 +193,10 @@ void Dispatcher() {
                 } else {
                     status = INVALID_TRAIN_ID;
                 }
+                break;
+            case TRM_RESERVE_TRACK:
+                break;
+            case TRM_RELEASE_TRACK:
                 break;
             default:
                 error("Dispatcher: Unknown request of type %d from %u", request.type, callee);

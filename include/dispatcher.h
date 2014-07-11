@@ -8,6 +8,7 @@
 #define NUM_OF_TRAINS      8
 #define TIMEOUT_BUFFER     20
 
+
 typedef enum {
     TRM_INIT = 1337,
     TRM_EXIT,
@@ -31,8 +32,11 @@ typedef enum {
     TRM_LI,
     TRM_HORN,
     TRM_BUSY,
-    TRM_GOTO_STOP
+    TRM_GOTO_STOP,
+    TRM_RESERVE_TRACK,
+    TRM_RELEASE_TRACK
 } TrainMessageType;
+
 
 typedef enum {
     INVALID_TRAIN_ID = 42,
@@ -49,15 +53,8 @@ typedef enum {
     TRAIN_BUSY
 } DispatcherErrorMessages_t;
 
-typedef struct TrainMessage {
-    TrainMessageType type;
-    unsigned int tr;
-    int arg0;
-    int arg1;
-    int arg2;
-} TrainMessage_t;
 
 void Dispatcher();
-int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int arg0, int arg1);
+int SendDispatcherMessage(TrainMessageType type, unsigned int tr, int arg0, int arg1);
 
 #endif /* __DISPATCHER_H__ */

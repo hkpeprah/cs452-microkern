@@ -185,7 +185,7 @@ static void addNode(Heap_t *heap, Node_t *nodes, Node_t *currentNode, unsigned i
 }
 
 
-int findPath(track_node *start, track_node *end, track_node **path, int pathlen, track_node **used, int usedlen, unsigned int *length) {
+int findPath(track_node *start, track_node *end, track_node **path, int pathlen, unsigned int *length) {
     int i;
     Node_t nodes[TRACK_MAX] = {{0}};
     Heap_t heap = {.arr = {0}, .size = 0};

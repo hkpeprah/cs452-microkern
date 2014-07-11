@@ -37,7 +37,6 @@ static int getOptimalSpeed(unsigned int tr, unsigned int distance) {
 void Conductor() {
     int callee, status;
     unsigned int train;
-    TrainMessage_t msg;
     ConductorMessage_t req;
     track_node *source, *dest, *path[32] = {0};
     unsigned int node_count, i;
@@ -57,7 +56,7 @@ void Conductor() {
     source = TrGetLocation(train, &edgeDist);
     dest = (track_node*)req.arg1;
     destDist = req.arg2;
-    if ((node_count = findPath(source, dest, path, 32, NULL, 0, &total_distance)) < 0) {
+    if ((node_count = findPath(source, dest, path, 32, &total_distance)) < 0) {
         error("Conductor: Error: No path to destination %u found", dest->num);
         Exit();
     } else {
@@ -74,16 +73,12 @@ void Conductor() {
                 }
             }
         }
-        msg.type = TRM_GOTO;
-        msg.arg0 = total_distance + destDist;
-        Send(train, &msg, sizeof(msg), &status, sizeof(status));
+        // send TRM_GOTO with arg0=total_distance+destDist to train
+        TrPath(train, total_distance + destDist);
         TrSpeed(train, getOptimalSpeed(status, total_distance));
     }
     /* TODO: Block on child's destination or have another one block for you */
-    msg.type = TRM_GOTO_STOP;
-    msg.tr = req.arg3;
-    /* parent actually destroys this task here */
-    Send(MyParentTid(), &msg, sizeof(msg), &status, sizeof(status));
+    // send TRM_GOTO_STOP to conductor, tr = train
     if (status < 0) {
         error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
     }
