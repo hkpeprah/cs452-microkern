@@ -13,6 +13,7 @@ typedef struct {
     int arg0;
     int arg1;
     int arg2;
+    int arg3;
 } ConductorMessage_t;
 
 typedef enum {
@@ -80,7 +81,7 @@ void Conductor() {
     }
     /* TODO: Block on child's destination or have another one block for you */
     msg.type = TRM_GOTO_STOP;
-    msg.tr = train;
+    msg.tr = req.arg3;
     /* parent actually destroys this task here */
     Send(MyParentTid(), &msg, sizeof(msg), &status, sizeof(status));
     if (status < 0) {
@@ -91,14 +92,15 @@ void Conductor() {
 }
 
 
-int GoTo(unsigned int tid, unsigned int tr, track_node *sensor, unsigned int distance) {
+int GoTo(unsigned int tid, unsigned int train, unsigned int tr_number, track_node *sensor, unsigned int distance) {
     ConductorMessage_t req;
     int status;
 
     req.type = GOTO;
-    req.arg0 = tr;
+    req.arg0 = train;
     req.arg1 = (int)sensor;
     req.arg2 = distance;
+    req.arg3 = tr_number;
     Send(tid, &req, sizeof(req), &status, sizeof(status));
     return status;
 }

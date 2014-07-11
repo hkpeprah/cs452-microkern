@@ -113,7 +113,6 @@ void Dispatcher() {
             continue;
         }
 
-        // debug("Received request of type %u", request.type);
         switch (request.type) {
             case TRM_ADD:
                 if (getDispatcherNode(trains, request.tr)) {
@@ -165,7 +164,7 @@ void Dispatcher() {
                         node->conductor = Create(7, Conductor);
                     }
                     debug("Dispatcher: Received request to move train %u to %s", node->tr_number, (&track[request.arg0])->name);
-                    status = GoTo(node->conductor, node->train, &track[request.arg0], request.arg1);
+                    status = GoTo(node->conductor, node->train, request.tr, &track[request.arg0], request.arg1);
                 } else {
                     status = INVALID_TRAIN_ID;
                 }

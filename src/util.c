@@ -27,7 +27,7 @@ int length(CircularBuffer_t *cbuf) {
 int write(CircularBuffer_t *cbuf, const volatile char *buf, uint32_t len) {
     if (cbuf->remaining < len) {
         /* TODO: Catch and handle this occuring, especially in uart. */
-        Panic("CircularBuffer: Insufficient space (%d) to copy message (%d).\r\n", cbuf, cbuf->remaining, len);
+        Panic("CircularBuffer (%x): Insufficient space (%d) to copy message (%d).\r\n", cbuf, cbuf->remaining, len);
     }
 
     cbuf->remaining -= len;

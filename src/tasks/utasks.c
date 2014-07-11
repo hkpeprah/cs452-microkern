@@ -80,9 +80,11 @@ void TrainUserTask() {
                 break;
             case TRM_LI:
                 req.args[2] = TRAIN_LIGHT_OFFSET;
+                goto auxiliary;
                 break;
             case TRM_HORN:
                 req.args[2] = TRAIN_HORN_OFFSET;
+                goto auxiliary;
                 break;
             case TRM_ADD:
             case TRM_ADD_AT:
@@ -90,6 +92,7 @@ void TrainUserTask() {
             case TRM_AUX:
             case TRM_RV:
             case TRM_GOTO_STOP:
+        auxiliary:
                 status = SendDispatcherMessage(&message, cmd, req.args[1], req.args[2], req.args[3]);
                 break;
             case TRM_SWITCH:
