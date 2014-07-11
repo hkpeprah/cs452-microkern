@@ -37,3 +37,9 @@ build
 # generated code
 include/track_data.h
 src/track_data.c
+
+# Vim temporary files
+*.swp
+
+# Emacs temporary files
+*~
