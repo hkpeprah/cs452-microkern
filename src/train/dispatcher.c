@@ -22,7 +22,9 @@ typedef enum {
     TRM_AUX,
     TRM_RV,
     TRM_GET_SPEED,
-    TRM_SPEED
+    TRM_SPEED,
+    TRM_RESERVE_TRACK,
+    TRM_RELEASE_TRACK
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
@@ -41,7 +43,7 @@ typedef struct {
 
 
 static int SendDispatcherMessage(int type, unsigned int tr, int arg0, int arg1) {
-    DispatcherMessage_t msg,
+    DispatcherMessage_t msg;
     int status, bytes;
     unsigned int dispatcher;
 
@@ -93,7 +95,7 @@ int DispatchAddTrain(unsigned int tr) {
 }
 
 
-int DispatchAddTrainAd(unsigned int tr, char module, unsigned int id) {
+int DispatchAddTrainAt(unsigned int tr, char module, unsigned int id) {
     return SendDispatcherMessage(TRM_ADD_AT, tr, module, id);
 }
 
@@ -256,6 +258,10 @@ void Dispatcher() {
                 } else if (status != TRAIN_BUSY) {
                     status = TrSpeed(node->train, request.arg0);
                 }
+                break;
+            case TRM_RESERVE_TRACK:
+                break;
+            case TRM_RELEASE_TRACK:
                 break;
             default:
                 error("Dispatcher: Unknown request of type %d from %u", request.type, callee);

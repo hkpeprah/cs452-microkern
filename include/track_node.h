@@ -30,6 +30,8 @@ struct track_node {
   int num;              /* sensor or switch number */
   track_node *reverse;  /* same location, but opposite direction */
   track_edge edge[2];
+
+  int reservedBy;       /* train # of train that reserved this node */
 };
 
 #endif

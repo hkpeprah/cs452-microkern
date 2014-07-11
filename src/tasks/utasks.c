@@ -69,42 +69,42 @@ void TrainUserTask() {
         status = 0;
 
         switch ((cmd = req.args[0])) {
-            case TRM_GO:
+            case TRAIN_CMD_GO:
                 turnOnTrainSet();
                 debug("Starting Train Controller");
                 break;
-            case TRM_STOP:
+            case TRAIN_CMD_STOP:
                 debug("Stopping Train Controller");
                 turnOffTrainSet();
                 break;
-            case TRM_LI:
+            case TRAIN_CMD_LI:
                 req.args[2] = TRAIN_LIGHT_OFFSET;
                 goto auxiliary;
                 break;
-            case TRM_HORN:
+            case TRAIN_CMD_HORN:
                 req.args[2] = TRAIN_HORN_OFFSET;
                 goto auxiliary;
                 break;
-            case TRM_ADD:
+            case TRAIN_CMD_ADD:
                 status = DispatchAddTrain(req.args[1]);
                 break;
-            case TRM_ADD_AT:
+            case TRAIN_CMD_ADD_AT:
                 status = DispatchAddTrainAt(req.args[1], req.args[2], req.args[3]);
                 break;
-            case TRM_SPEED:
+            case TRAIN_CMD_SPEED:
                 status = DispatchTrainSpeed(req.args[1], req.args[2]);
                 break;
-            case TRM_AUX:
+            case TRAIN_CMD_AUX:
         auxiliary:
                 status = DispatchTrainAuxiliary(req.args[1], req.args[2]);
                 break;
-            case TRM_RV:
+            case TRAIN_CMD_RV:
                 status = DispatchTrainReverse(req.args[1]);
                 break;
-            case TRM_GOTO_STOP:
+            case TRAIN_CMD_GOTO_STOP:
                 status = DispatchStopRoute(req.args[1]);
                 break;
-            case TRM_SWITCH:
+            case TRAIN_CMD_SWITCH:
                 status = trainSwitch((unsigned int)req.args[1], (int)req.args[2]);
                 if (status == 0) {
                     printSwitch((unsigned int)req.args[1], (char)req.args[2]);
@@ -112,9 +112,9 @@ void TrainUserTask() {
                     turnOffSolenoid();
                 }
                 break;
-            case TRM_GOTO:
+            case TRAIN_CMD_GOTO:
                 req.args[4] = 0;
-            case TRM_GOTO_AFTER:
+            case TRAIN_CMD_GOTO_AFTER:
                 status = DispatchRoute(req.args[1], sensorToInt(req.args[2], req.args[3]));
                 break;
             default:

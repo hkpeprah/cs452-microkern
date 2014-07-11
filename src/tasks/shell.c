@@ -75,19 +75,19 @@ void Shell() {
 
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors);
-    insert_ht(&commands, "go", TRM_GO);
-    insert_ht(&commands, "stop", TRM_STOP);
-    insert_ht(&commands, "tr", TRM_SPEED);
-    insert_ht(&commands, "ax", TRM_AUX);
-    insert_ht(&commands, "rv", TRM_RV);
-    insert_ht(&commands, "li", TRM_LI);
-    insert_ht(&commands, "sw", TRM_SWITCH);
-    insert_ht(&commands, "ho", TRM_HORN);
-    insert_ht(&commands, "add", TRM_ADD);
-    insert_ht(&commands, "add-at", TRM_ADD_AT);
-    insert_ht(&commands, "goto", TRM_GOTO);
-    insert_ht(&commands, "goto-after", TRM_GOTO_AFTER);
-    insert_ht(&commands, "goto-stop", TRM_GOTO_STOP);
+    insert_ht(&commands, "go", TRAIN_CMD_GO);
+    insert_ht(&commands, "stop", TRAIN_CMD_STOP);
+    insert_ht(&commands, "tr", TRAIN_CMD_SPEED);
+    insert_ht(&commands, "ax", TRAIN_CMD_AUX);
+    insert_ht(&commands, "rv", TRAIN_CMD_RV);
+    insert_ht(&commands, "li", TRAIN_CMD_LI);
+    insert_ht(&commands, "sw", TRAIN_CMD_SWITCH);
+    insert_ht(&commands, "ho", TRAIN_CMD_HORN);
+    insert_ht(&commands, "add", TRAIN_CMD_ADD);
+    insert_ht(&commands, "add-at", TRAIN_CMD_ADD_AT);
+    insert_ht(&commands, "goto", TRAIN_CMD_GOTO);
+    insert_ht(&commands, "goto-after", TRAIN_CMD_GOTO_AFTER);
+    insert_ht(&commands, "goto-stop", TRAIN_CMD_GOTO_STOP);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -134,29 +134,29 @@ void Shell() {
                 command = lookup_ht(&commands, &buf[i]);
                 if (command > 0) {
                     switch (command) {
-                        case TRM_GO:
-                        case TRM_STOP:
+                        case TRAIN_CMD_GO:
+                        case TRAIN_CMD_STOP:
                             i = 0;
                             break;
-                        case TRM_RV:
-                        case TRM_LI:
-                        case TRM_HORN:
-                        case TRM_ADD:
-                        case TRM_GOTO_STOP:
+                        case TRAIN_CMD_RV:
+                        case TRAIN_CMD_LI:
+                        case TRAIN_CMD_HORN:
+                        case TRAIN_CMD_ADD:
+                        case TRAIN_CMD_GOTO_STOP:
                             i = 1;
                             break;
-                        case TRM_SPEED:
-                        case TRM_AUX:
+                        case TRAIN_CMD_SPEED:
+                        case TRAIN_CMD_AUX:
                             i = 2;
                             break;
-                        case TRM_SWITCH:
+                        case TRAIN_CMD_SWITCH:
                             i = 3;
                             break;
-                        case TRM_ADD_AT:
-                        case TRM_GOTO:
+                        case TRAIN_CMD_ADD_AT:
+                        case TRAIN_CMD_GOTO:
                             i = 5;
                             break;
-                        case TRM_GOTO_AFTER:
+                        case TRAIN_CMD_GOTO_AFTER:
                             i = 6;
                             break;
                         default:

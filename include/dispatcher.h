@@ -8,6 +8,7 @@
 #define NUM_OF_TRAINS      8
 #define TIMEOUT_BUFFER     20
 
+
 typedef enum {
     INVALID_TRAIN_ID = 42,
     INVALID_SPEED,
