@@ -107,7 +107,6 @@ void TrainUserTask() {
             case TRAIN_CMD_SWITCH:
                 status = trainSwitch((unsigned int)req.args[1], (int)req.args[2]);
                 if (status == 0) {
-                    printSwitch((unsigned int)req.args[1], (char)req.args[2]);
                     Delay(30);
                     turnOffSolenoid();
                 }

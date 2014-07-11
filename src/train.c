@@ -152,6 +152,7 @@ int trainSwitch(unsigned int sw, char ch) {
         buf[1] = sw;
         trnputs(buf, 2);
         getSwitch(sw)->state = ss;
+        printSwitch(sw, toUpperCase(ch));
         return 0;
     }
     return INVALID_SWITCH_ID;
