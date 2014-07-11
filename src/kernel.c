@@ -104,6 +104,9 @@ static int handleRequest(Args_t *args) {
         case SYS_SIGTERM:
             sys_sigterm();
             break;
+        case SYS_PANIC:
+            sys_panic((char*)args->a0, (va_list)args->a1);
+            break;
         default:
             break;
     }
@@ -149,10 +152,10 @@ int shutdown() {
     kputstr("Disabling interrupts..\r\n");
     disableInterrupts();
     kputstr("Turning off the train controller...\r\n");
+    turnOffTrainSet();
     disableIdleTimer();
     *((uint32_t*)TIMER_CONTROL) = 0;
     kputstr(SAVE_CURSOR "\033[0;0r" RESTORE_CURSOR "\r\nExiting...\r\n");
-
     return 0;
 }
 

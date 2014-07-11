@@ -266,6 +266,14 @@ static void findHighestTaskPriority() {
 }
 
 
+void zombify() {
+    unsigned int i;
+    for (i = 0; i < TASK_BANK_SIZE; ++i) {
+        __taskBank[i].state = ZOMBIE;
+    }
+}
+
+
 Task_t *schedule() {
     // only when current task exists and is ACTIVE (ie. it didn't just get blocked)
     if (currentTask && currentTask->state == ACTIVE) {

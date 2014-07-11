@@ -23,7 +23,7 @@ void printLog(uint32_t start, uint32_t end) {
     while(start < MIN(end, *tail)) {
         c = logp[start++];
         bwputc(COM2, c);
-        if(c == '\n') {
+        if (c == '\n') {
             bwgetc(COM2);
         }
     }

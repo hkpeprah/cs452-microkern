@@ -10,6 +10,8 @@
 #include <idle.h>
 #include <null.h>
 #include <logger.h>
+#include <kernel.h>
+#include <string.h>
 
 #define INIT_SPSR   0x10
 #define REGS_SAVE   13
@@ -284,4 +286,21 @@ void sys_idle(uint32_t *retval) {
 
 void sys_sigterm() {
     setExit(1);
+}
+
+
+void sys_panic(char *msg, va_list va) {
+    char fmt[100] = {0};
+    char buffer[256] = {0};
+
+    sys_sigterm();
+    zombify();
+    strcpy(fmt, "\033[2J\033[0;0H\033[");
+    uitoa(RED, 10, &fmt[strlen(fmt)]);
+    strcat(fmt, "m");
+    strcat(fmt, msg);
+    strcat(fmt, "\033[0m");
+    format(fmt, va, buffer);
+    kputstr(buffer);
+    dumpLog();
 }

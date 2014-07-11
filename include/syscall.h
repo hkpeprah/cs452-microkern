@@ -18,5 +18,6 @@ int Logn(const char *str, int n);
 int Log(const char *fmt, ...);
 int CpuIdle();
 void SigTerm();
+void Panic(char *, ...);
 
 #endif /* __SYSCALL__ */

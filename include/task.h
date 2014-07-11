@@ -63,5 +63,6 @@ void destroyTaskD();
 void addTask(Task_t*);
 Task_t *schedule();
 void setResult(Task_t*, int);
+void zombify();
 
 #endif /* __TASK_H__ */

@@ -104,7 +104,7 @@ int WaitTid(unsigned int tid) {
 int Logn(const char *str, int n) {
     Args_t args;
     args.code = SYS_LOG;
-    args.a0 = (uint32_t) str;
+    args.a0 = (uint32_t)str;
     args.a1 = n;
 
     return swi_call(0, &args);
@@ -134,4 +134,16 @@ void SigTerm() {
     Args_t args;
     args.code = SYS_SIGTERM;
     swi_call(0, &args);
+}
+
+
+void Panic(char *msg, ...) {
+    Args_t args;
+    va_list va;
+    va_start(va, msg);
+    args.code = SYS_PANIC;
+    args.a0 = (uint32_t)msg;
+    args.a1 = (uint32_t)va;
+    swi_call(0, &args);
+    va_end(va);
 }

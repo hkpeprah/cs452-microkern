@@ -1,6 +1,7 @@
 #ifndef __K_SYSCALL__
 #define __K_SYSCALL__
 #include <types.h>
+#include <term.h>
 
 
 int sys_create(int, void (*)(), uint32_t*);
@@ -16,5 +17,6 @@ int sys_await(int, void*, int);
 int sys_waittid(uint32_t);
 void sys_idle(uint32_t*);
 void sys_sigterm();
+void sys_panic(char *message, va_list va);
 
 #endif /* __K_SYSCALL__ */
