@@ -15,7 +15,6 @@ static unsigned int num_of_trains = 0;
 typedef struct {
     unsigned int train;
     unsigned int tr_number : 8;
-    unsigned int lastSensor;
     int conductor;
 } DispatcherNode_t;
 
@@ -54,36 +53,12 @@ int SendDispatcherMessage(TrainMessage_t *msg, int type, unsigned int tr, int ar
 }
 
 
-static bool isValidSensorId(unsigned int id) {
-    return (id < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT ? 1 : 0);
-}
-
-
-static track_edge *getNearestEdgeId(unsigned int id, track_node *track) {
-    if (isValidSensorId(id)) {
-        /* TODO: Might be curved, eh ? */
-        return &track[id].edge[DIR_AHEAD];
-    }
-    return NULL;
-}
-
-
-static track_edge *getNearestEdge(char module, unsigned int id, track_node *track) {
-    int sensor;
-    sensor = sensorToInt(module, id);
-    if (sensor < 0) {
-        return NULL;
-    }
-    return getNearestEdgeId(sensor, track);
-}
-
-
-static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tr, track_edge *start_edge) {
+static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tr, track_node *start_node) {
     unsigned int i;
 
     if (num_of_trains < NUM_OF_TRAINS) {
         i = num_of_trains;
-        if ((nodes[i].train = TrCreate(6, tr, start_edge)) >= 0) {
+        if ((nodes[i].train = TrCreate(6, tr, start_node)) >= 0) {
             notice("Dispatcher: Created Train %u with tid %u", tr, nodes[i].train);
             nodes[i].tr_number = tr;
             nodes[i].conductor = -1;
@@ -109,42 +84,15 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, unsigned int
 }
 
 
-static track_edge *sensorAttribution(unsigned int tr, DispatcherNode_t *nodes, track_node *track) {
-    track_edge *edge;
-    uint32_t num_of_sensors, i, j, count, dist;
-    uint32_t polled_sensors[TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT];
-
-    edge = NULL;
-    num_of_sensors = TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT;
+static int sensorAttribution(unsigned int tr) {
     trainSpeed(tr, 3);
-    for (count = 0; count < 10; ++count) {
-        WaitAnySensor();
-        LastSensorPoll(polled_sensors);
-        for (i = 0; i < num_of_sensors; ++i) {
-            for (j = 0; j < num_of_trains; ++j) {
-                edge = TrGetLocation(nodes[j].train, &dist);
-                polled_sensors[edge->src->num] = 0;
-            }
-        }
-
-        edge = NULL;
-        for (i = 0; i < num_of_sensors; ++i) {
-            if (polled_sensors[i] != 0) {
-                edge = getNearestEdgeId(i, track);
-                break;
-            }
-        }
-        if (edge != NULL) {
-            break;
-        }
-    }
+    int sensorNum = WaitAnySensor();
     trainSpeed(tr, 0);
-    return edge;
+    return sensorNum;
 }
 
 
 void Dispatcher() {
-    track_edge *edge;
     int callee, status;
     TrainMessage_t request;
     track_node track[TRACK_MAX];
@@ -154,7 +102,6 @@ void Dispatcher() {
     RegisterAs(TRAIN_DISPATCHER);
     train_dispatcher_tid = MyTid();
     notice("Dispatcher: Tid %u", train_dispatcher_tid);
-    edge = NULL;
     num_of_trains = 0;
     setTrainSetState();
 
@@ -168,27 +115,30 @@ void Dispatcher() {
 
         switch (request.type) {
             case TRM_ADD:
-                edge = sensorAttribution(request.tr, trains, track);
-                if (edge == NULL) {
-                    status = INVALID_TRAIN_ID;
-                    break;
-                }
-            case TRM_ADD_AT:
-                if (edge || (edge = getNearestEdge(request.arg0, request.arg1, track))) {
-                    node = getDispatcherNode(trains, request.tr);
-                    if (node == NULL) {
-                        if ((node = addDispatcherNode(trains, request.tr, edge))) {
-                            status = 1;
-                        } else {
-                            status = OUT_OF_DISPATCHER_NODES;
-                        }
+                status = sensorAttribution(request.tr);
+                if (status >= 0 && status < 80) {
+                    if (!(addDispatcherNode(trains, request.tr, &track[status]))) {
+                        status = OUT_OF_DISPATCHER_NODES;
                     } else {
-                        /* Node is already on track, wrapzone it */
-                        debug("Dispatcher: Train %u already on track, re-positioning", node->tr_number);
+                        status = 0;
                     }
                 } else {
                     status = INVALID_SENSOR_ID;
                 }
+                break;
+            case TRM_ADD_AT:
+                status = sensorToInt(request.arg0, request.arg1);
+                if (status < 0 || status >= 80) {
+                    status = INVALID_SENSOR_ID;
+                    break;
+                }
+
+                if (!addDispatcherNode(trains, request.tr, &track[status])) {
+                    status = OUT_OF_DISPATCHER_NODES;
+                } else {
+                    status = 0;
+                }
+
                 break;
             case TRM_STOP:
                 if ((node = getDispatcherNode(trains, request.tr))) {

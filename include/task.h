@@ -20,6 +20,7 @@ typedef enum {
     NUM_STATES
 } TaskState_t;
 
+
 struct __envelope_t;
 
 
@@ -63,5 +64,5 @@ void destroyTaskD();
 void addTask(Task_t*);
 Task_t *schedule();
 void setResult(Task_t*, int);
-
+void dumpTaskState();
 #endif /* __TASK_H__ */

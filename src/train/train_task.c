@@ -26,7 +26,7 @@ typedef struct __Train_t {
     unsigned int id : 16;
     unsigned int speed : 8;
     unsigned int aux : 16;
-    track_edge *currentEdge;
+    track_node *lastSensor;
     track_node *nextSensor;
     unsigned int edgeDistance : 16;
     unsigned int lastUpdateTick;
@@ -38,7 +38,7 @@ typedef struct __Train_t {
 static void TrainTask();
 
 
-int TrCreate(int priority, int tr, track_edge *start) {
+int TrCreate(int priority, int tr, track_node *start) {
     TrainMessage_t msg;
     int result, trainTask;
 
@@ -100,13 +100,13 @@ int TrAuxiliary(unsigned int tid, unsigned int aux) {
 }
 
 
-track_edge *TrGetLocation(unsigned int tid, unsigned int *distance) {
+track_node *TrGetLocation(unsigned int tid, unsigned int *distance) {
     TrainMessage_t msg = {.type = TRM_GET_LOCATION};
 
     Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
     *distance = msg.arg1;
 
-    return (track_edge*)msg.arg0;
+    return (track_node*)msg.arg0;
 }
 
 
@@ -115,8 +115,8 @@ static void CalibrationSnapshot(Train_t *train) {
     snapshot.tr = train->id;
     snapshot.sp = train->speed;
     snapshot.dist = train->edgeDistance;
-    snapshot.landmark = train->currentEdge->src->name;
-    snapshot.nextmark = train->currentEdge->dest->name;
+    snapshot.landmark = train->lastSensor->name;
+    snapshot.nextmark = train->nextSensor->name;
     printTrainSnapshot(&snapshot);
 }
 
@@ -138,11 +138,11 @@ static track_edge *getNextEdge(track_node *node) {
     switch (node->type) {
     case NODE_SENSOR:
     case NODE_MERGE:
+    case NODE_ENTER:
         return &(node->edge[DIR_AHEAD]);
     case NODE_BRANCH:
         swtch = getSwitch(node->num);
         return &(node->edge[swtch->state]);
-    case NODE_ENTER:
     case NODE_EXIT:
         return NULL;
     case NODE_NONE:
@@ -153,18 +153,35 @@ static track_edge *getNextEdge(track_node *node) {
 }
 
 
-static void traverseNode(Train_t *train, track_node *dest) {
-    train->lastUpdateTick = Time();
-    if (dest->type == NODE_SENSOR) {
-        if (train->transition->valid) {
-            if (train->transition->stopping_distance >= train->distToNextSensor - train->edgeDistance) {
-                train->transition->stopping_distance -= (train->distToNextSensor - train->edgeDistance);
-            }
-        }
-        train->distToNextSensor = 0;
-        train->edgeDistance = 0;
+static void updateNextSensor(Train_t *train) {
+    track_node *node = train->lastSensor;
+    track_edge *edge = getNextEdge(node);
+
+    train->distToNextSensor = 0;
+
+    do {
+        train->distToNextSensor += edge->dist;
+        node = edge->dest;
+        edge = getNextEdge(node);
+    } while (node && node->type != NODE_SENSOR);
+
+    train->nextSensor = node;
+}
+
+static void sensorTrip(Train_t *train, track_node *sensor) {
+    if (sensor->type != NODE_SENSOR) {
+        error("sensorTrip called with non-sensor node %s", sensor->name);
     }
-    train->currentEdge = getNextEdge(dest);
+
+    train->lastUpdateTick = Time();
+    if (train->transition->valid
+            && train->transition->stopping_distance >= train->distToNextSensor - train->edgeDistance) {
+        train->transition->stopping_distance -= (train->distToNextSensor - train->edgeDistance);
+    }
+    train->edgeDistance = 0;
+    train->lastSensor = sensor;
+
+    updateNextSensor(train);
 }
 
 
@@ -251,8 +268,6 @@ static void TrainReverseCourier() {
 
 static void WaitOnNextTarget(Train_t *train, int *SensorCourier, int *waitingSensor) {
     TrainMessage_t msg1;
-    track_node *dest;
-    track_edge *nextEdge;
 
     if (*waitingSensor >= 0) {
         FreeSensor(*waitingSensor);
@@ -263,19 +278,13 @@ static void WaitOnNextTarget(Train_t *train, int *SensorCourier, int *waitingSen
         *SensorCourier = -1;
     }
 
-    dest = train->currentEdge->dest;
-    train->distToNextSensor += train->currentEdge->dist;
-    while (dest && dest->type != NODE_SENSOR) {
-        nextEdge = getNextEdge(dest);
-        dest = nextEdge->dest;
-        train->distToNextSensor += nextEdge->dist;
-    }
+    // potentially need to call updateNextSensor here? only if track state changed between
+    // last sensor trip and this
 
-    train->nextSensor = dest;
-    *waitingSensor = dest->num;
+    *waitingSensor = train->nextSensor->num;
     *SensorCourier = Create(4, SensorCourierTask);
     msg1.type = TRM_SENSOR_WAIT;
-    msg1.arg0 = dest->num;
+    msg1.arg0 = train->nextSensor->num;
     Send(*SensorCourier, &msg1, sizeof(msg1), NULL, 0);
     CalibrationSnapshot(train);
 }
@@ -314,7 +323,10 @@ static void TrainTask() {
 
     /* block on receive waiting for parent to send message */
     dispatcher = MyParentTid();
+    Log("train waiting on recv\n");
     Receive(&callee, &request, sizeof(request));
+    Log("train got message\n");
+
     if (callee != dispatcher || request.type != TRM_INIT) {
         error("Train: Error: Received message of type %d from %d, expected %d from %d",
               request.type, callee, TRM_INIT, dispatcher);
@@ -331,7 +343,7 @@ static void TrainTask() {
     train.id = request.tr;
     train.speed = 0;
     train.aux = 0;
-    train.currentEdge = (track_edge*)request.arg0;
+    train.lastSensor = (track_node*)request.arg0;
     train.edgeDistance = 0;
     train.microPerTick = 0;
     train.lastUpdateTick = 0;
@@ -363,14 +375,12 @@ static void TrainTask() {
         status = 0;
         if (callee == SensorCourier) {
             if (train.nextSensor) {
-                traverseNode(&train, train.nextSensor);
+                sensorTrip(&train, train.nextSensor);
+                WaitOnNextTarget(&train, &SensorCourier, &waitingSensor);
+            } else {
+                setTrainSpeed(&train, 0);
             }
             CalibrationSnapshot(&train);
-            WaitOnNextTarget(&train, &SensorCourier, &waitingSensor);
-            if (train.nextSensor == dest) {
-                setTrainSpeed(&train, 0);
-                dest = NULL;
-            }
             continue;
         }
 
@@ -392,8 +402,9 @@ static void TrainTask() {
                 break;
             case TRM_DIR:
                 if (callee == ReverseCourier) {
-                    train.currentEdge = train.currentEdge->reverse;
-                    train.edgeDistance = train.currentEdge->dist - train.edgeDistance;
+                    train.lastSensor = train.nextSensor;
+                    updateNextSensor(&train);
+                    train.edgeDistance = train.distToNextSensor - train.edgeDistance;
                     command[0] = TRAIN_AUX_REVERSE;
                     command[1] = train.id;
                     trnputs(command, 2);
@@ -411,7 +422,7 @@ static void TrainTask() {
                 break;
             case TRM_GET_LOCATION:
                 updateLocation(&train);
-                request.arg0 = (int)train.currentEdge;
+                request.arg0 = (int)train.lastSensor;
                 request.arg1 = train.edgeDistance;
                 Reply(callee, &request, sizeof(request));
                 break;

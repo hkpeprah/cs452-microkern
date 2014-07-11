@@ -26,6 +26,10 @@ static unsigned int Continue() {
     return 0;
 }
 
+int trspeed(int id, int sp) {
+    char command[2] = {sp, id};
+    trnputs(command, 2);
+}
 
 void SpeedTest() {
     int status;
@@ -52,20 +56,20 @@ void SpeedTest() {
             tr_number = atoin(buf, &status);
         }
         printf("Speed Calculations for Train %u\r\n", tr_number);
-        tr_number = TrCreate(6, tr_number, NearestSensorEdge('B', 9));
+
         if (tr_number >= 0) {
-            TrSpeed(tr_number, 0);
-            for (speed = 3; speed <= TRAIN_MAX_SPEED; ++speed) {
+            trspeed(tr_number, 0);
+            for (speed = 8; speed <= TRAIN_MAX_SPEED; ++speed) {
                 printf("Speed or acceleration test? (s|a|c) ");
                 ch = getchar();
                 printf("%c\r\n", ch);
-                TrSpeed(tr_number, speed);
+                trspeed(tr_number, speed);
                 if (ch == 'a' || ch == 'A') {
                     printf("Acceleration/Deceleration for speed %u\r\n", speed);
                     WaitOnSensor('D', 13);
-                    printf("Stopping beginning at sensor D13.\r\n");
                     WaitOnSensor('D', 13);
-                    TrSpeed(tr_number, 0);
+                    trspeed(tr_number, 0);
+                    printf("Stopping beginning at sensor D13.\r\n");
                 } else if (ch == 'c' || ch == 'C') {
                     printf("Skipping speed %u\r\n", speed);
                     continue;
@@ -90,7 +94,7 @@ void SpeedTest() {
                     break;
                 }
             }
-            TrSpeed(tr_number, 0);
+            trspeed(tr_number, 0);
         }
     }
 

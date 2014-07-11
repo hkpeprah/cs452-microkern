@@ -173,6 +173,10 @@ void kernel_main() {
     FOREVER {
         task = schedule();
 
+        if (task->tid != 1 && task->tid != 3 && task->tid != 4) {
+            sys_log_f("%d\n", tid);
+        }
+
         if (task == NULL) {
             // nothing left to run
             break;
@@ -193,9 +197,24 @@ void kernel_main() {
         // store user stack pointer
         task->sp = taskSP;
 
+        if (args->code == SYS_SIGTERM) {
+            break;
+        }
+
+        if (task->tid != 1 && task->tid != 3 && task->tid != 4) {
+            sys_log_f("req %d\n", args->code);
+        }
+
         result = handleRequest(args);
+
+        if (task->tid != 1 && task->tid != 3 && task->tid != 4) {
+            sys_log_f("hndl %d\n", args->code);
+        }
+
         if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT) {
             setResult(task, result);
         }
     }
+
+    dumpTaskState();
 }
