@@ -113,6 +113,7 @@ void Dispatcher() {
             continue;
         }
 
+        // debug("Received request of type %u", request.type);
         switch (request.type) {
             case TRM_ADD:
                 if (getDispatcherNode(trains, request.tr)) {
@@ -145,8 +146,9 @@ void Dispatcher() {
                 if ((node = getDispatcherNode(trains, request.tr))) {
                     if (node->conductor == -1) {
                         status = TRAIN_HAS_NO_CONDUCTOR;
-                        error("Dispatcher: Error: Train %u does not have a conductor", node->conductor);
+                        error("Dispatcher: Error: Train %u does not have a conductor", node->tr_number);
                     } else {
+                        debug("Dispatcher: Removing Conductor for Train %u", node->tr_number);
                         Destroy(node->conductor);
                         node->conductor = -1;
                         status = 0;
@@ -159,7 +161,8 @@ void Dispatcher() {
             case TRM_GOTO_AFTER:
                 if ((node = getDispatcherNode(trains, request.tr))) {
                     if (node->conductor == -1) {
-                        node->conductor = Create(6, Conductor);
+                        debug("Dispatcher: Creating new conductor for train %u", node->tr_number);
+                        node->conductor = Create(7, Conductor);
                     }
                     debug("Dispatcher: Received request to move train %u to %s", node->tr_number, (&track[request.arg0])->name);
                     status = GoTo(node->conductor, node->train, &track[request.arg0], request.arg1);

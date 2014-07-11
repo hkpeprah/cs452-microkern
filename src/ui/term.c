@@ -15,7 +15,7 @@ static unsigned int SENSORS_PER_LINE;
 void initDebug() {
     initCalibration();
     kprintf(HIDE_CURSOR ERASE_SCREEN CHANGE_COLOR, 0);
-    kprintf(SET_COLS_132 SET_WINDOW ENABLE_LINE_WRAP, "Microkern Operating System");
+    kprintf(SET_COLS_132 "\033[7;%dh", TERMINAL_WIDTH);
     #if DEBUG
         unsigned int i;
         kprintf(MOVE_CURSOR, BOTTOM_HALF, 0);
@@ -24,7 +24,6 @@ void initDebug() {
             kputstr("=");
         }
         kprintf(MOVE_CURSOR, TOP_HALF, 0);
-        kputstr("Debugging Enabled..");
         kprintf(SET_SCROLL, BOTTOM_HALF + 1, TERMINAL_HEIGHT);
         kprintf(MOVE_CURSOR, BOTTOM_HALF + 1, 0);
         TERM_OFFSET = BOTTOM_HALF;
@@ -131,7 +130,7 @@ void displayInfo() {
     lines = SENSORS_PER_LINE;
     lines = (TRAIN_SWITCH_COUNT / lines) + (TRAIN_SWITCH_COUNT % lines);
     count = TRAIN_SWITCH_COUNT;
-    kdebug("Window Title: " REPORT_TITLE "\tWindow Size: " REPORT_WINDOW_SIZE);
+    kdebug("Debugging Enabled...");
     kdebug("Number of Debug Lines: %d", lines);
     kprintf("====Switches===" MOVE_TO_COL CHANGE_COLOR "Train Calibration:" CHANGE_COLOR "\r\n"
             MOVE_TO_COL "| Train Id | Micrometers/Tick | Landmark | Distance (mm) | Next Landmark |" MOVE_TO_COL,

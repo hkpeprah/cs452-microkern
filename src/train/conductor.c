@@ -79,10 +79,14 @@ void Conductor() {
         TrSpeed(train, getOptimalSpeed(status, total_distance));
     }
     /* TODO: Block on child's destination or have another one block for you */
-    req.type = TRM_GOTO_STOP;
-    req.arg0 = train;
+    msg.type = TRM_GOTO_STOP;
+    msg.tr = train;
     /* parent actually destroys this task here */
-    Send(MyParentTid(), &req, sizeof(req), &status, sizeof(status));
+    Send(MyParentTid(), &msg, sizeof(msg), &status, sizeof(status));
+    if (status < 0) {
+        error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
+    }
+    debug("Conductor: Tid %u, removing self from parent %u", MyTid(), MyParentTid());
     Exit();
 }
 

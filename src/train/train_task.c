@@ -333,7 +333,7 @@ static void setTrainSpeed(Train_t *train, int speed) {
         train->lastUpdateTick = tick;
         train->lastSensorTick = -1;
         train->stoppingDist = getStoppingDistance(train->id, train->speed, speed);
-        debug("Stopping Distance: %d", train->stoppingDist);
+        debug("Stopping Distance for %d -> %d: %d", train->speed, speed, train->stoppingDist);
         if (speed == 0) {
             train->transition->stopping_distance = train->edgeDistance + getStoppingDistance(train->id, train->speed, speed);
         } else {
