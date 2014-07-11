@@ -8,6 +8,7 @@
 #include <term.h>
 #include <train.h>
 #include <sensor_server.h>
+#include <conductor.h>
 
 static unsigned int train_dispatcher_tid = -1;
 static unsigned int num_of_trains = 0;
@@ -114,6 +115,10 @@ void Dispatcher() {
 
         switch (request.type) {
             case TRM_ADD:
+                if (getDispatcherNode(trains, request.tr)) {
+                    status = INVALID_TRAIN_ID;
+                    break;
+                }
                 status = sensorAttribution(request.tr);
                 if (addDispatcherNode(trains, request.tr, &track[status]) != NULL) {
                     status = 0;
@@ -122,6 +127,10 @@ void Dispatcher() {
                 }
                 break;
             case TRM_ADD_AT:
+                if (getDispatcherNode(trains, request.tr)) {
+                    status = INVALID_TRAIN_ID;
+                    break;
+                }
                 status = sensorToInt(request.arg0, request.arg1);
                 if (status < 0 || status >= 80) {
                     status = INVALID_SENSOR_ID;
@@ -132,13 +141,15 @@ void Dispatcher() {
                     status = OUT_OF_DISPATCHER_NODES;
                 }
                 break;
-            case TRM_STOP:
+            case TRM_GOTO_STOP:
                 if ((node = getDispatcherNode(trains, request.tr))) {
                     if (node->conductor == -1) {
-                        error("Dispatcher: Error: Train %u does not have a condcutor", node->conductor);
+                        status = TRAIN_HAS_NO_CONDUCTOR;
+                        error("Dispatcher: Error: Train %u does not have a conductor", node->conductor);
                     } else {
                         Destroy(node->conductor);
                         node->conductor = -1;
+                        status = 0;
                     }
                 } else {
                     status = INVALID_TRAIN_ID;
@@ -146,6 +157,15 @@ void Dispatcher() {
                 break;
             case TRM_GOTO:
             case TRM_GOTO_AFTER:
+                if ((node = getDispatcherNode(trains, request.tr))) {
+                    if (node->conductor == -1) {
+                        node->conductor = Create(6, Conductor);
+                    }
+                    debug("Dispatcher: Received request to move train %u to %s", node->tr_number, (&track[request.arg0])->name);
+                    status = GoTo(node->conductor, node->train, &track[request.arg0], request.arg1);
+                } else {
+                    status = INVALID_TRAIN_ID;
+                }
                 break;
             case TRM_AUX:
             case TRM_RV:

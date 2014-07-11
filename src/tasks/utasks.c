@@ -89,6 +89,7 @@ void TrainUserTask() {
             case TRM_SPEED:
             case TRM_AUX:
             case TRM_RV:
+            case TRM_GOTO_STOP:
                 status = SendDispatcherMessage(&message, cmd, req.args[1], req.args[2], req.args[3]);
                 break;
             case TRM_SWITCH:
@@ -102,10 +103,10 @@ void TrainUserTask() {
             case TRM_GOTO:
                 req.args[4] = 0;
             case TRM_GOTO_AFTER:
+                message.type = TRM_GOTO;
                 message.tr = req.args[1];
-                message.arg0 = req.args[2];
-                message.arg1 = req.args[3];
-                message.arg2 = req.args[4];
+                message.arg0 = sensorToInt(req.args[2], req.args[3]);
+                message.arg1 = req.args[4];
                 Send(dispatcher, &message, sizeof(message), &status, sizeof(status));
                 break;
             default:
@@ -142,6 +143,12 @@ void TrainUserTask() {
                 break;
             case OUT_OF_DISPATCHER_NODES:
                 printf("Error: Out of slots for new trains.\r\n");
+                break;
+            case INVALID_DESTINATION:
+                printf("Error: Invalid destination specified.\r\n");
+                break;
+            case NO_PATH_EXISTS:
+                printf("Error: No path found to specified destination.\r\n");
                 break;
             default:
                 error("TrainController: Error: Unknown status received %d", status);

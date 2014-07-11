@@ -33,9 +33,12 @@ typedef struct __Train_t {
     unsigned int microPerTick : 16;
     unsigned int distToNextSensor;
     TransitionState_t *transition;
+    int stoppingDist;
+    int pathDist;
 } Train_t;
 
 static void TrainTask();
+static void setTrainSpeed(Train_t *train, int speed);
 
 
 int TrCreate(int priority, int tr, track_node *start) {
@@ -174,6 +177,7 @@ static void updateNextSensor(Train_t *train) {
     train->nextSensor = node;
 }
 
+
 static void sensorTrip(Train_t *train, track_node *sensor) {
     if (sensor->type != NODE_SENSOR) {
         error("sensorTrip called with non-sensor node %s", sensor->name);
@@ -186,6 +190,11 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
     }
     train->edgeDistance = 0;
     train->lastSensor = sensor;
+
+    if (train->pathDist >= train->distToNextSensor) {
+        train->pathDist -= train->distToNextSensor;
+    }
+    debug("Path Remaining: %d", train->pathDist);
 
     updateNextSensor(train);
 }
@@ -208,6 +217,12 @@ static void updateLocation(Train_t *train) {
     } else {
         train->edgeDistance += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
     }
+
+    if (train->pathDist >= 0 && train->pathDist <= train->stoppingDist - ((train->microPerTick * 25) / 1000)) {
+        train->pathDist = -1;
+        setTrainSpeed(train, 0);
+    }
+
     train->lastUpdateTick = ticks;
     CalibrationSnapshot(train);
 }
@@ -238,7 +253,7 @@ static void SensorCourierTask() {
     if ((status = WaitOnSensorN(wait)) < 0) {
         error("SensorCourier: result from WaitOnSensorN: %d", status);
     }
-    debug("SensorCourier: Tripped sensor %d", wait);
+    // debug("SensorCourier: Tripped sensor %d", wait);
     Send(train, NULL, 0, NULL, 0);
 }
 
@@ -305,6 +320,7 @@ static void setTrainSpeed(Train_t *train, int speed) {
         train->transition->dest_speed = speed;
         train->transition->time_issued = Time();
         train->transition->stopping_distance = getStoppingDistance(train->id, train->speed, speed);
+        train->stoppingDist = train->transition->stopping_distance;
         train->transition->stopping_distance += train->edgeDistance;
         train->speed = speed;
         debug("Dist to Next Sensor: %u, Current Edge Distance: %u, Stopping Distance: %u",
@@ -347,11 +363,13 @@ static void TrainTask() {
     train.aux = 0;
     train.lastSensor = (track_node*)request.arg0;
     train.nextSensor = NULL;
-    train.edgeDistance = 0;
+    train.edgeDistance = getStoppingDistance(train.id, 3, 0);
     train.microPerTick = 0;
     train.lastUpdateTick = 0;
     train.transition = &state;
     train.distToNextSensor = 0;
+    train.pathDist = -1;
+    train.stoppingDist = -2;
 
     /* initialize couriers */
     SensorCourier = -1;
@@ -385,6 +403,11 @@ static void TrainTask() {
         }
 
         switch (request.type) {
+            case TRM_GOTO:
+                train.pathDist = request.arg0 - train.edgeDistance;
+                status = train.id;
+                Reply(callee, &status, sizeof(status));
+                break;
             case TRM_SPEED:
                 speed = request.arg0;
                 setTrainSpeed(&train, speed);

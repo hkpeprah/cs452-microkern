@@ -295,7 +295,7 @@ void sys_panic(char *msg, va_list va) {
 
     sys_sigterm();
     zombify();
-    strcpy(fmt, "\033[2J\033[0;0H\033[");
+    strcpy(fmt, "\033[");
     uitoa(RED, 10, &fmt[strlen(fmt)]);
     strcat(fmt, "m");
     strcat(fmt, msg);

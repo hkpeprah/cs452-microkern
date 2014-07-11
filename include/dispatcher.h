@@ -30,7 +30,8 @@ typedef enum {
     TRM_SWITCH,
     TRM_LI,
     TRM_HORN,
-    TRM_BUSY
+    TRM_BUSY,
+    TRM_GOTO_STOP
 } TrainMessageType;
 
 typedef enum {
@@ -42,6 +43,9 @@ typedef enum {
     INVALID_SENSOR_ID,
     TRAIN_HAS_NO_CONDUCTOR,
     OUT_OF_DISPATCHER_NODES,
+    INVALID_DESTINATION,
+    NO_PATH_EXISTS,
+    INVALID_REQUEST,
     TRAIN_BUSY
 } DispatcherErrorMessages_t;
 

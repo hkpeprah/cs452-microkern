@@ -87,6 +87,7 @@ void Shell() {
     insert_ht(&commands, "add-at", TRM_ADD_AT);
     insert_ht(&commands, "goto", TRM_GOTO);
     insert_ht(&commands, "goto-after", TRM_GOTO_AFTER);
+    insert_ht(&commands, "goto-stop", TRM_GOTO_STOP);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -141,6 +142,7 @@ void Shell() {
                         case TRM_LI:
                         case TRM_HORN:
                         case TRM_ADD:
+                        case TRM_GOTO_STOP:
                             i = 1;
                             break;
                         case TRM_SPEED:
