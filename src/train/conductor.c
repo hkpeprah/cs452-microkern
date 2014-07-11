@@ -74,7 +74,7 @@ void Conductor() {
             }
         }
         msg.type = TRM_GOTO;
-        msg.arg0 = total_distance;
+        msg.arg0 = total_distance + destDist;
         Send(train, &msg, sizeof(msg), &status, sizeof(status));
         TrSpeed(train, getOptimalSpeed(status, total_distance));
     }

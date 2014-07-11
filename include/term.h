@@ -92,6 +92,11 @@
 #define MOVE_TO_COL              "\033[%dG"
 #define HIDE_CURSOR              "\033[?25l"
 #define SHOW_CURSOR              "\033[?25h"
+#define ENABLE_LINE_WRAP         "\033[7h"
+#define DISABLE_LINE_WRAP        "\033[7l"
+#define RESET_TERMINAL           "\033c"
+#define REPORT_WINDOW_TITLE      "\033[21t"
+#define REPORT_WINDOW_SIZE       "\033[19t"
 
 #define restore_cursor()         puts(RESTORE_CURSOR)
 #define save_cursor()            puts(SAVE_CURSOR)

@@ -88,16 +88,20 @@ void initUart(short uart, int speed, bool fifo) {
 
 
 void k_assert(int condition, char *message) {
-    if (condition == 0) {
-        zombify();
-        kprintf(CHANGE_COLOR ERASE_SCREEN "%s" CHANGE_COLOR NEW_LINE,
-                RED, message, 0);
-    }
+    #if DEBUG
+        if (condition == 0) {
+            zombify();
+            kprintf(CHANGE_COLOR "\033[80;0H\033[2K%s" CHANGE_COLOR NEW_LINE,
+                    RED, message, 0);
+        }
+    #endif
 }
 
 
 void assert(int condition, char *message) {
-    if (condition == 0) {
-        Panic(message);
-    }
+    #if DEBUG
+        if (condition == 0) {
+            Panic(message);
+        }
+    #endif
 }

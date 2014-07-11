@@ -14,9 +14,8 @@ static unsigned int SENSORS_PER_LINE;
 
 void initDebug() {
     initCalibration();
-    kputstr(HIDE_CURSOR);
-    kputstr(ERASE_SCREEN);
-    kprintf(CHANGE_COLOR, 0);
+    kprintf(HIDE_CURSOR ERASE_SCREEN CHANGE_COLOR, 0);
+    kprintf(SET_COLS_132 SET_WINDOW ENABLE_LINE_WRAP, "Microkern Operating System");
     #if DEBUG
         unsigned int i;
         kprintf(MOVE_CURSOR, BOTTOM_HALF, 0);
@@ -33,11 +32,12 @@ void initDebug() {
         TERM_OFFSET = TOP_HALF;
         kprintf(MOVE_CURSOR, TOP_HALF, 0);
     #endif
-    kputstr(SET_COLS_132 "\033[37mCS452 Real-Time Microkernel (Version 0.2.0)\r\n");
+    kputstr("\033[37mCS452 Real-Time Microkernel (Version 0.2.0)\r\n");
     kputstr("Copyright <c> Max Chen (mqchen), Ford Peprah (hkpeprah).  All rights reserved.\033[0m\r\n");
     kputstr("\033[32mTime:           \033[35mCPU Idle:\033[0m\r\n\r\n");
     TERM_OFFSET += 5;
 }
+
 
 #if DEBUG
 static void debugformatted(char *fmt, va_list va) {
@@ -131,6 +131,7 @@ void displayInfo() {
     lines = SENSORS_PER_LINE;
     lines = (TRAIN_SWITCH_COUNT / lines) + (TRAIN_SWITCH_COUNT % lines);
     count = TRAIN_SWITCH_COUNT;
+    kdebug("Window Title: " REPORT_TITLE "\tWindow Size: " REPORT_WINDOW_SIZE);
     kdebug("Number of Debug Lines: %d", lines);
     kprintf("====Switches===" MOVE_TO_COL CHANGE_COLOR "Train Calibration:" CHANGE_COLOR "\r\n"
             MOVE_TO_COL "| Train Id | Micrometers/Tick | Landmark | Distance (mm) | Next Landmark |" MOVE_TO_COL,
