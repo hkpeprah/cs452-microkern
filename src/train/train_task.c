@@ -30,6 +30,7 @@ typedef struct __Train_t {
     track_node *nextSensor;
     unsigned int edgeDistance : 16;
     unsigned int lastUpdateTick;
+    int lastSensorTick;
     unsigned int microPerTick : 16;
     unsigned int distToNextSensor;
     TransitionState_t *transition;
@@ -171,6 +172,8 @@ static void updateNextSensor(Train_t *train) {
         edge = getNextEdge(node);
     } while (node && node->type != NODE_SENSOR);
 
+    debug("distToNextSensor: %d", train->distToNextSensor);
+
     train->nextSensor = node;
 }
 
@@ -179,15 +182,28 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
         error("sensorTrip called with non-sensor node %s", sensor->name);
     }
 
-    train->lastUpdateTick = Time();
-    if (train->transition->valid
-            && train->transition->stopping_distance >= train->distToNextSensor - train->edgeDistance) {
-        train->transition->stopping_distance -= (train->distToNextSensor - train->edgeDistance);
+    int tick = Time();
+
+    debug("act: %d", tick);
+
+    if (train->lastSensorTick >= 0 && !train->transition->valid) {
+        train->microPerTick = (train->microPerTick >> 1) + (train->distToNextSensor * 500 / (tick - train->lastSensorTick));
     }
+
+    debug("new train->microPerTick: %d", train->microPerTick);
+
+    if (train->transition->stopping_distance >= train->distToNextSensor - 10) {
+        train->transition->stopping_distance = MAX(0, train->transition->stopping_distance - train->distToNextSensor);
+    }
+
+    train->lastUpdateTick = tick;
+    train->lastSensorTick = tick;
     train->edgeDistance = 0;
     train->lastSensor = sensor;
 
     updateNextSensor(train);
+
+    debug("exp: %d", train->lastSensorTick + train->distToNextSensor * 1000 / train->microPerTick);
 }
 
 
@@ -201,9 +217,14 @@ static void updateLocation(Train_t *train) {
         stop_speed = train->transition->dest_speed;
         if (ticks - train->transition->time_issued >= getTransitionTicks(train->id, start_speed, stop_speed)) {
             train->transition->valid = false;
-            train->microPerTick = getTrainVelocity(train->id, train->transition->dest_speed);
+
+            debug("transition invalid");
+
             train->edgeDistance = train->transition->stopping_distance;
+            train->microPerTick = getTrainVelocity(train->id, stop_speed);
             train->edgeDistance += (ticks - train->transition->time_issued - getTransitionTicks(train->id, start_speed, stop_speed)) * train->microPerTick;
+
+            debug("edge dist: %d", train->edgeDistance);
         }
     } else {
         train->edgeDistance += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
@@ -238,7 +259,7 @@ static void SensorCourierTask() {
     if ((status = WaitOnSensorN(wait)) < 0) {
         error("SensorCourier: result from WaitOnSensorN: %d", status);
     }
-    debug("SensorCourier: Tripped sensor %d", wait);
+    // debug("SensorCourier: Tripped sensor %d", wait);
     Send(train, NULL, 0, NULL, 0);
 }
 
@@ -299,13 +320,18 @@ static void WaitOnNextTarget(Train_t *train, int *SensorCourier, int *waitingSen
 static void setTrainSpeed(Train_t *train, int speed) {
     char buf[2];
     if (speed != train->speed) {
-        updateLocation(train);
+        int tick = Time();
         train->transition->valid = true;
         train->transition->start_speed = train->speed;
         train->transition->dest_speed = speed;
-        train->transition->time_issued = Time();
-        train->transition->stopping_distance = getStoppingDistance(train->id, train->speed, speed);
-        train->transition->stopping_distance += train->edgeDistance;
+        train->transition->time_issued = tick;
+        train->lastUpdateTick = tick;
+        train->lastSensorTick = -1;
+        if (speed == 0) {
+            train->transition->stopping_distance = train->edgeDistance + getStoppingDistance(train->id, train->speed, speed);
+        } else {
+            train->transition->stopping_distance = 0;
+        }
         train->speed = speed;
         debug("Dist to Next Sensor: %u, Current Edge Distance: %u, Stopping Distance: %u",
               train->distToNextSensor, train->edgeDistance, train->transition->stopping_distance);
@@ -340,6 +366,7 @@ static void TrainTask() {
     state.start_speed = 0;
     state.dest_speed = 0;
     state.time_issued = 0;
+    state.stopping_distance = 0;
 
     /* initialize the train structure */
     train.id = request.tr;
@@ -350,6 +377,7 @@ static void TrainTask() {
     train.edgeDistance = 0;
     train.microPerTick = 0;
     train.lastUpdateTick = 0;
+    train.lastSensorTick = -1;
     train.transition = &state;
     train.distToNextSensor = 0;
 
