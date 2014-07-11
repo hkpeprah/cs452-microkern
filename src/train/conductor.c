@@ -24,7 +24,7 @@ typedef enum {
 
 static int getOptimalSpeed(unsigned int tr, unsigned int distance) {
     unsigned int i;
-    for (i = TRAIN_MAX_SPEED - 1; i > 1; ++i) {
+    for (i = TRAIN_MAX_SPEED - 2; i > 1; ++i) {
         if (getStoppingDistance(tr, i, 0) <= distance) {
             break;
         }
