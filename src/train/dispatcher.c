@@ -235,14 +235,14 @@ void Dispatcher() {
                 if (node == NULL) {
                     status = INVALID_TRAIN_ID;
                 } else if (status != TRAIN_BUSY) {
-                    TrAuxiliary(node->train, request.arg0);
+                    status = TrAuxiliary(node->train, request.arg0);
                 }
                 break;
             case TRM_RV:
                 if (node == NULL) {
                     status = INVALID_TRAIN_ID;
                 } else if (status != TRAIN_BUSY) {
-                    TrReverse(node->train);
+                    status = TrReverse(node->train);
                 }
                 break;
             case TRM_GET_SPEED:
