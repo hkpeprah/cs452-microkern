@@ -101,7 +101,7 @@ void NameServer() {
                     insert_ht(clients, lookup.name, callee);
                 }
             case WHOIS:
-                if (exists_ht(clients, lookup.name)) {
+                if (exists_ht(clients, lookup.name) == true) {
                     lookup.tid = lookup_ht(clients, lookup.name);
                 } else {
                     debug("WhoIs: %s does not exist in lookup table.", lookup.name);

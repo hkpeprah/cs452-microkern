@@ -8,7 +8,6 @@
 #include <clock.h>
 #include <stdio.h>
 #include <term.h>
-#include <controller.h>
 #include <k_syscall.h>
 #include <stdlib.h>
 #include <utasks.h>
@@ -26,10 +25,6 @@ static unsigned int Continue() {
     return 0;
 }
 
-int trspeed(int id, int sp) {
-    char command[2] = {sp, id};
-    trnputs(command, 2);
-}
 
 void SpeedTest() {
     int status;
@@ -58,17 +53,17 @@ void SpeedTest() {
         printf("Speed Calculations for Train %u\r\n", tr_number);
 
         if (tr_number >= 0) {
-            trspeed(tr_number, 0);
+            trainSpeed(tr_number, 0);
             for (speed = 8; speed <= TRAIN_MAX_SPEED; ++speed) {
                 printf("Speed or acceleration test? (s|a|c) ");
                 ch = getchar();
                 printf("%c\r\n", ch);
-                trspeed(tr_number, speed);
+                trainSpeed(tr_number, speed);
                 if (ch == 'a' || ch == 'A') {
                     printf("Acceleration/Deceleration for speed %u\r\n", speed);
                     WaitOnSensor('D', 13);
                     WaitOnSensor('D', 13);
-                    trspeed(tr_number, 0);
+                    trainSpeed(tr_number, 0);
                     printf("Stopping beginning at sensor D13.\r\n");
                 } else if (ch == 'c' || ch == 'C') {
                     printf("Skipping speed %u\r\n", speed);
@@ -94,7 +89,7 @@ void SpeedTest() {
                     break;
                 }
             }
-            trspeed(tr_number, 0);
+            trainSpeed(tr_number, 0);
         }
     }
 
@@ -115,7 +110,6 @@ int main() {
     sys_create(15, NameServer, &tid);
     sys_create(12, InputServer, &tid);
     sys_create(12, OutputServer, &tid);
-    sys_create(11, TrainController, &tid);
     sys_create(13, TimerTask, &tid);
     sys_create(4, SpeedTest, &tid);
     sys_create(12, SensorServer, &tid);

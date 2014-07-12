@@ -173,6 +173,15 @@ int trainSpeed(unsigned int tr, unsigned int speed) {
 }
 
 
+int trainReverse(unsigned int tr) {
+    char buf[2];
+    buf[0] = TRAIN_AUX_REVERSE;
+    buf[1] = tr;
+    trnputs(buf, 2);
+    return 0;
+}
+
+
 void turnOffSolenoid() {
     trputch(TRAIN_AUX_SOLENOID);
 }

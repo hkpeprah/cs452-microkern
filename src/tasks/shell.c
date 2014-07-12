@@ -169,6 +169,8 @@ void Shell() {
                         if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3], &args[4]) != -1) {
                             args[0] = command;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
+                        } else {
+                            printf("%s: invalid arguments.\r\n", command);
                         }
                     } else {
                         /* this command spawns a user task */

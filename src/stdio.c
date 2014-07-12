@@ -266,18 +266,22 @@ char *gets(int channel, char *buf, uint32_t len) {
     uint32_t nread;
 
     nread = 0;
-    while (nread < len && (ch = Getc(channel))) {
+    while ((ch = Getc(channel))) {
         if (ch == LF || ch == CR || ch == EOF) {
             Putc(IO, '\n');
             break;
-        } else if (ch == BS) {
+        } else if (ch == BS || ch == '\b') {
             if (nread > 0) {
+                if (nread < len) {
+                    buf--;
+                }
                 nread--;
-                buf--;
                 bufputstr(IO, "\b \b");
             }
         } else {
-            *buf++ = ch;
+            if (nread < len) {
+                *buf++ = ch;
+            }
             nread++;
             Putc(IO, ch);
         }

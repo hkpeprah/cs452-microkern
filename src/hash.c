@@ -3,6 +3,7 @@
  * source: http://stackoverflow.com/questions/7666509/
  */
 #include <hash.h>
+#include <syscall.h>
 
 
 unsigned int hash_djb2(char *str) {
@@ -24,12 +25,12 @@ void init_ht(HashTable *table) {
     unsigned int i;
     table->size = H_LEN;
     for (i = 0; i < table->size; ++i) {
-        table->assigned[i] = 0;
+        table->assigned[i] = false;
     }
 }
 
 
-unsigned int exists_ht(HashTable *table, char *key) {
+bool exists_ht(HashTable *table, char *key) {
     unsigned int hash;
 
     hash = hash_djb2(key) % table->size;
@@ -37,17 +38,18 @@ unsigned int exists_ht(HashTable *table, char *key) {
 }
 
 
-unsigned int insert_ht(HashTable *table, char *key, int val) {
+bool insert_ht(HashTable *table, char *key, int val) {
     unsigned int hash;
 
     hash = hash_djb2(key) % table->size;
-    if (!table->assigned[hash]) {
+    if (table->assigned[hash] == false) {
         table->assigned[hash] = 1;
         table->data[hash] = val;
-        return 1;
+        return true;
     }
 
-    return 0;
+    Panic("HashTable: Collision on key %s", key);
+    return false;
 }
 
 
@@ -60,7 +62,7 @@ int lookup_ht(HashTable *table, char *key) {
         return table->data[hash];
     }
 
-    return 0;
+    return MINSINT;
 }
 
 

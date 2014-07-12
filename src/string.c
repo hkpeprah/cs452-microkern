@@ -77,7 +77,6 @@ int strcmp(const char *str1, const char *str2) {
     } else if (strlen(str2) - i > 0) {
         return (int)str2[i];
     }
-
     return 0;
 }
 

@@ -73,6 +73,7 @@ void Conductor() {
                 }
             }
         }
+        turnOffSolenoid();
         // send TRM_GOTO with arg0=total_distance+destDist to train
         TrPath(train, total_distance + destDist);
         TrSpeed(train, getOptimalSpeed(status, total_distance));
