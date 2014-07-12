@@ -255,6 +255,7 @@ int DelayUntil(int ticks) {
     return 0;
 }
 
+
 static void DelayCourier() {
     int parent = MyParentTid();
     int ticks, callee, status;
@@ -269,16 +270,22 @@ static void DelayCourier() {
 
     Delay(ticks);
     Send(parent, NULL, 0, NULL, 0);
+    Exit();
 }
 
-int CourierDelay(int ticks, int priority) {
-    int courier = Create(priority, DelayCourier);
-    int result = Send(courier, &ticks, sizeof(ticks), NULL, 0);
 
+int CourierDelay(int ticks, int priority) {
+    int courier, result;
+
+    courier = Create(priority, DelayCourier);
+    if (courier < 0) {
+        return courier;
+    }
+
+    result = Send(courier, &ticks, sizeof(ticks), NULL, 0);
     if (result < 0) {
         error ("CourierDelay: error in send %d to child %d", result, courier);
         return result;
     }
-
     return courier;
 }

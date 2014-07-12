@@ -151,7 +151,7 @@ void TrainUserTask() {
             case TRAIN_CMD_GOTO:
                 req.args[4] = 0;
             case TRAIN_CMD_GOTO_AFTER:
-                status = DispatchRoute(req.args[1], sensorToInt(req.args[2], req.args[3]));
+                status = DispatchRoute(req.args[1], sensorToInt(req.args[2], req.args[3]), req.args[4]);
                 break;
             case TRAIN_CMD_RESERVE:
                 status = trackReservation(RESERVE, req.args[1], sensorToInt(req.args[2], req.args[3]), sensorToInt(req.args[4], req.args[5]));

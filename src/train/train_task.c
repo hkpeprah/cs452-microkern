@@ -73,6 +73,7 @@ typedef struct TrainMessage {
 static void TrainTask();
 static void setTrainSpeed(Train_t *train, int speed);
 
+
 int TrCreate(int priority, int tr, track_node *start) {
     TrainMessage_t msg;
     int result, trainTask;
@@ -129,6 +130,7 @@ int TrAuxiliary(unsigned int tid, unsigned int aux) {
     return status;
 }
 
+
 int TrGetSpeed(unsigned int tid) {
     TrainMessage_t msg = {.type = TRM_GET_SPEED};
     int status, speed;
@@ -139,8 +141,9 @@ int TrGetSpeed(unsigned int tid) {
     return speed;
 }
 
+
 int TrGotoAfter(unsigned int tid, track_node **path, unsigned int pathLen,  unsigned int dist) {
-    TrainMessage_t msg = {.type = TRM_GOTO_AFTER, .arg0 = (int) path, .arg1 = pathLen, .arg2 = dist};
+    TrainMessage_t msg = {.type = TRM_GOTO_AFTER, .arg0 = (int)path, .arg1 = pathLen, .arg2 = dist};
     int status, bytes;
 
 
@@ -149,6 +152,7 @@ int TrGotoAfter(unsigned int tid, track_node **path, unsigned int pathLen,  unsi
     }
     return status;
 }
+
 
 track_node *TrGetLocation(unsigned int tid, unsigned int *distance) {
     TrainMessage_t msg = {.type = TRM_GET_LOCATION};
@@ -159,6 +163,7 @@ track_node *TrGetLocation(unsigned int tid, unsigned int *distance) {
     return (track_node*)msg.arg0;
 }
 
+
 track_node *TrGetNextLocation(unsigned int tid, unsigned int *distance) {
     TrainMessage_t msg = {.type = TRM_GET_NEXT_LOCATION};
 
@@ -166,6 +171,7 @@ track_node *TrGetNextLocation(unsigned int tid, unsigned int *distance) {
     *distance = msg.arg1;
     return (track_node*)msg.arg0;
 }
+
 
 static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
@@ -443,6 +449,7 @@ static void setTrainSpeed(Train_t *train, int speed) {
     trnputs(buf, 2);
 }
 
+
 static void initTrain(Train_t *train, TrainMessage_t *request) {
     /* initialize the train structure */
     train->id = request->tr;
@@ -467,7 +474,6 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     train->distOffset = 0;
     train->pathRemain = 0;
 
-
     /* initialize transition */
     train->transition.valid = false;
     train->transition.start_speed = 0;
@@ -481,10 +487,9 @@ static void TrainTask() {
     Train_t train;
     char command[2];
     TrainMessage_t request;
-    int status, bytes, callee;
     unsigned int dispatcher, speed;
-    int sensorCourier, locationTimer, reverseCourier, waitingSensor;
-    int gotoBlocked = 0;
+    int status, bytes, callee, gotoBlocked;
+    int sensorCourier, locationTimer, reverseCourier, waitingSensor, delayCourier;
 
     /* block on receive waiting for parent to send message */
     dispatcher = MyParentTid();
@@ -502,6 +507,8 @@ static void TrainTask() {
     locationTimer = -1;
     reverseCourier = -1;
     waitingSensor = -1;
+    delayCourier = -1;
+    gotoBlocked = 0;
 
     Reply(callee, NULL, 0);
 
@@ -526,26 +533,33 @@ static void TrainTask() {
             }
             CalibrationSnapshot(&train);
             continue;
+        } else if (callee == delayCourier) {
+            debug("Train %u: DelayCourier returned", train.id);
+            setTrainSpeed(&train, 0);
+            Reply(callee, NULL, 0);
+            delayCourier = -1;
+            continue;
         }
 
         switch (request.type) {
             case TRM_GOTO_AFTER:
                 // blocking call, reply when we arrive
                 gotoBlocked = callee;
-                train.path = (track_node**) request.arg0;
+                train.path = (track_node**)request.arg0;
                 train.pathNodeRem = request.arg1;
                 train.distOffset = request.arg2;
                 train.pathRemain = pathRemaining(&train);
-
-                if (train.pathRemain < 5) {
-                    // short move to it
-                    debug("short move!");
+                notice("%u < %u", pathRemain, getStoppingDistance(train.id, 10, 0));
+                if (train.pathRemain < getStoppingDistance(train.id, 10, 0)) {
+                    notice("Train %u: Short move with delay %u ticks", train.id, shortmoves(train.id, 10, train.pathRemain));
+                    delayCourier = CourierDelay(shortmoves(train.id, 10, train.pathRemain) + 1, 4);
+                    train.pathRemain = 0;
+                    train.path = NULL;
+                    setTrainSpeed(&train, 10);
                 } else {
-                    debug("normal move!");
                     setTrainSpeed(&train, 10);
                     waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
                 }
-
                 break;
             case TRM_SPEED:
                 speed = request.arg0;

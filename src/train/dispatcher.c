@@ -82,8 +82,8 @@ int DispatchTrainSpeed(uint32_t tr, uint32_t speed) {
 }
 
 
-int DispatchRoute(uint32_t tr, uint32_t sensor) {
-    return SendDispatcherMessage(TRM_GOTO, tr, sensor, 0, 0);
+int DispatchRoute(uint32_t tr, uint32_t sensor, uint32_t dist) {
+    return SendDispatcherMessage(TRM_GOTO, tr, sensor, dist, 0);
 }
 
 
@@ -106,9 +106,11 @@ int DispatchStopRoute(uint32_t tr) {
     return SendDispatcherMessage(TRM_GOTO_STOP, tr, 0, 0, 0);
 }
 
+
 track_node *DispatchGetTrackNode(uint32_t id) {
     return (track_node*) SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0, 0);
 }
+
 
 track_node *DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, uint32_t dist) {
     int result = SendDispatcherMessage(TRM_RESERVE_TRACK_DIST, tr, (int) track, n, dist);
@@ -120,6 +122,7 @@ track_node *DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n
     return (track_node*) result;
 }
 
+
 track_node *DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n) {
     int result = SendDispatcherMessage(TRM_RESERVE_TRACK, tr, (int) track, n, 0);
     if (result < 0) {
@@ -129,6 +132,7 @@ track_node *DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n) {
 
     return (track_node*) result;
 }
+
 
 static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tid, unsigned int tr) {
     unsigned int i;

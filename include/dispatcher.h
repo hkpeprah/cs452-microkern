@@ -29,7 +29,7 @@ typedef enum {
 void Dispatcher();
 int DispatchTrainAuxiliary(unsigned int tr, unsigned int aux);
 int DispatchTrainSpeed(unsigned int tr, unsigned int speed);
-int DispatchRoute(unsigned int tr, unsigned int sensor);
+int DispatchRoute(unsigned int tr, unsigned int sensor, unsigned int dist);
 int DispatchAddTrain(unsigned int tr);
 int DispatchAddTrainAt(unsigned int tr, char module, unsigned int id);
 int DispatchTrainReverse(unsigned int tr);
