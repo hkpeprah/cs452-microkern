@@ -23,6 +23,7 @@ typedef enum {
 } ConductorMessageTypes;
 
 
+/*
 static int getOptimalSpeed(unsigned int tr, unsigned int distance) {
     unsigned int i;
     for (i = TRAIN_MAX_SPEED - 2; i > 1; ++i) {
@@ -32,6 +33,7 @@ static int getOptimalSpeed(unsigned int tr, unsigned int distance) {
     }
     return i;
 }
+*/
 
 
 void Conductor() {
@@ -40,7 +42,7 @@ void Conductor() {
     ConductorMessage_t req;
     track_node *source, *dest, *path[32] = {0};
     unsigned int node_count, i;
-    unsigned int total_distance, edgeDist, destDist;
+    unsigned int total_distance, edgeDist, nextSensorDist, destDist;
 
     source = NULL;
     status = Receive(&callee, &req, sizeof(req));
@@ -53,10 +55,11 @@ void Conductor() {
     Reply(callee, &status, sizeof(status));
 
     train = req.arg0;
-    source = TrGetLocation(train, &edgeDist);
+    source = TrGetNextLocation(train, &nextSensorDist);
+    TrGetLocation(train, &edgeDist);
     dest = (track_node*)req.arg1;
     destDist = req.arg2;
-    if ((node_count = findPath(source, dest, path, 32, &total_distance)) < 0) {
+    if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
         error("Conductor: Error: No path to destination %u found", dest->num);
         Exit();
     } else {
@@ -74,9 +77,10 @@ void Conductor() {
             }
         }
         turnOffSolenoid();
-        // send TRM_GOTO with arg0=total_distance+destDist to train
-        TrPath(train, total_distance + destDist);
-        TrSpeed(train, getOptimalSpeed(status, total_distance));
+        total_distance += destDist + (nextSensorDist - edgeDist);
+        TrPath(train, total_distance);
+        // getOptimalSpeed(status, total_distance);
+        TrSpeed(train, 10);
     }
     /* TODO: Block on child's destination or have another one block for you */
     status = DispatchStopRoute(req.arg3);

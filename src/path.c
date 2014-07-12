@@ -5,7 +5,9 @@
 
 #define REVERSE_DIST   100
 #define DIR_REVERSE    2
+#ifndef RAW_DEBUG
 #define RAW_DEBUG      0
+#endif
 
 #define CONVERT_SWITCH(x)    (x >= 153 ? x - 134 : x)
 #define LEFT(x)              ((x << 1) + 1)
@@ -185,7 +187,7 @@ static void addNode(Heap_t *heap, Node_t *nodes, Node_t *currentNode, unsigned i
 }
 
 
-int findPath(track_node *start, track_node *end, track_node **path, int pathlen, unsigned int *length) {
+int findPath(unsigned int tr, track_node *start, track_node *end, track_node **path, int pathlen, unsigned int *length) {
     int i;
     Node_t nodes[TRACK_MAX] = {{0}};
     Heap_t heap = {.arr = {0}, .size = 0};
@@ -223,6 +225,11 @@ int findPath(track_node *start, track_node *end, track_node **path, int pathlen,
 #endif
         if (currentTrackNode == end) {
             break;
+        }
+
+        if (currentTrackNode->reservedBy != RESERVED_BY_NOBODY && currentTrackNode->reservedBy != tr) {
+            // someone else owns that node - skip it!
+            continue;
         }
 
         switch (currentTrackNode->type) {

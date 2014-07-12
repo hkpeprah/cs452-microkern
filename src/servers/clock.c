@@ -10,8 +10,38 @@
 #include <syscall_types.h>
 #include <util.h>
 
+#define TIMER_LOAD     0x80810080
+#define TIMER_VALUE    0x80810084
+#define TIMER_ENABLE   0x00000080
+#define TIMER_MODE     0x00000040
+#define TIMER_508KHZ   0x00000008
+
+#define CLOCK_SERVER   "ClockServer"
 
 static int clockserver_tid = -1;
+
+struct DelayQueue_t;
+
+
+typedef enum {
+    DELAY = 0,
+    DELAY_UNTIL,
+    TIME,
+    TICK
+} ClockRequestType;
+
+
+typedef struct {
+    short type;
+    unsigned int ticks;
+} ClockRequest;
+
+
+typedef struct DelayQueue_t {
+    uint32_t tid;
+    uint32_t delay;
+    struct DelayQueue_t *next;
+} DelayQueue;
 
 
 static void ClockNotifier() {
@@ -223,4 +253,32 @@ int DelayUntil(int ticks) {
     }
 
     return 0;
+}
+
+static void DelayCourier() {
+    int parent = MyParentTid();
+    int ticks, callee, status;
+
+    // recv/reply immediately
+    status = Receive(&callee, &ticks, sizeof(ticks));
+    Reply(callee, NULL, 0);
+
+    if (status < 0 || callee != parent) {
+        error ("DelayCourier: error recv from %d with status %d", callee, status); 
+    }
+
+    Delay(ticks);
+    Send(parent, NULL, 0, NULL, 0);
+}
+
+int CourierDelay(int ticks, int priority) {
+    int courier = Create(priority, DelayCourier);
+    int result = Send(courier, &ticks, sizeof(ticks), NULL, 0);
+
+    if (result < 0) {
+        error ("CourierDelay: error in send %d to child %d", result, courier);
+        return result;
+    }
+
+    return courier;
 }

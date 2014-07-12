@@ -5,6 +5,14 @@
 #include <hash.h>
 #include <syscall.h>
 
+unsigned int hash_djb2n(char *str, unsigned int n) {
+    unsigned int hash = 5381;
+
+    while (n --> 0) {
+        hash = ((hash << 5) + hash) + *str++; /* hash * 33 + c */
+    }
+    return hash;
+}
 
 unsigned int hash_djb2(char *str) {
     /*

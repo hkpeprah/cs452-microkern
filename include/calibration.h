@@ -4,9 +4,9 @@
 
 
 typedef struct {
-    unsigned int tr;
-    unsigned int sp;
-    unsigned int dist;
+    unsigned int tr : 6;
+    unsigned int sp : 14;
+    unsigned int dist : 12;
     unsigned int eta;
     unsigned int ata;
     const char *landmark;

@@ -38,6 +38,7 @@ void ShortMoveTask() {
     if (tr_number >= 0) {
         delay = 10;
         while (true) {
+            printf("Train %u with delay %u\r\n", tr_number, delay);
             trainSpeed(tr_number, 10);
             Delay(delay);
             trainSpeed(tr_number, 0);

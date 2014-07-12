@@ -13,6 +13,7 @@ typedef enum {
 #define DIR_AHEAD 0
 #define DIR_STRAIGHT 0
 #define DIR_CURVED 1
+#define RESERVED_BY_NOBODY -1
 
 struct track_node;
 typedef struct track_node track_node;
