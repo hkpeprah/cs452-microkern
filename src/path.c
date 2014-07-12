@@ -271,7 +271,6 @@ int findPath(unsigned int tr, track_node *start, track_node *end, track_node **p
     return finalPathLen;
 }
 
-
 #if TEST
 void testHeap() {
     int i;

@@ -1,22 +1,5 @@
 #include <track_reservation.h>
-#include <types.h>
 #include <term.h>
-
-static bool validNextNode(track_node *current, track_node *next) {
-    switch(current->type) {
-        case NODE_SENSOR:
-        case NODE_MERGE:
-        case NODE_ENTER:
-            return current->edge[DIR_AHEAD].dest == next;
-        case NODE_BRANCH:
-            return current->edge[DIR_STRAIGHT].dest == next
-                    || current->edge[DIR_CURVED].dest == next;
-        case NODE_NONE:
-        case NODE_EXIT:
-        default:
-            return false;
-    }
-}
 
 // compare oldValue with existing. If true, swap to new value
 // returns true on success, false on failure
@@ -34,28 +17,38 @@ static bool cmpAndSwapResvBy(track_node *node, int oldValue, int newValue) {
 
 
 // runs cmpAndSwapResvBy on each track, provided they are contineous
-static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **track, unsigned int n) {
+static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **track, uint32_t n, uint32_t dist) {
     track_node *lastSuccessNode = NULL;
     track_node *currentNode = *track++;
     track_node *nextNode;
     bool validRes;
+    int nextEdgeDist;
 
     while (currentNode && (validRes = cmpAndSwapResvBy(currentNode, oldValue, newValue))) {
         debug("set %s to %d, %d remaining", currentNode->name, newValue, n);
 
         if (!validRes) {
+            // node was already taken or tried to free something belonging to someone else
             break;
         }
 
         lastSuccessNode = currentNode;
 
         if (--n <= 0) {
+            // no more nodes in the array
             break;
         }
 
         nextNode = *track++;
-        if (!validNextNode(currentNode, nextNode)) {
+        if ( (nextEdgeDist = validNextNode(currentNode, nextNode)) < 0 ) {
+            // path is not contiguous (not DIR_AHEAD/DIR_STRAIGHT or DIR_CURVED)
             error("Incorrect path at %s to %s", currentNode->name, nextNode->name);
+            break;
+        }
+
+        dist -= nextEdgeDist;
+        if (dist <= 0) {
+            // ran out of distance
             break;
         }
 
@@ -65,12 +58,15 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
     return lastSuccessNode;
 }
 
-
-track_node *reserveTrack(unsigned int tr, track_node **track, unsigned int n) {
-    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n);
+track_node *reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, uint32_t dist) {
+    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, dist);
 }
 
-track_node *releaseTrack(unsigned int tr, track_node **track, unsigned int n) {
-    return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n);
+track_node *reserveTrack(uint32_t tr, track_node **track, uint32_t n) {
+    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, MAXUINT);
+}
+
+track_node *releaseTrack(uint32_t tr, track_node **track, uint32_t n) {
+    return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n, MAXUINT);
 }
 

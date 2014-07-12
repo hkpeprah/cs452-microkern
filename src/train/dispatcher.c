@@ -11,8 +11,8 @@
 #include <conductor.h>
 #include <track_reservation.h>
 
-static unsigned int train_dispatcher_tid = -1;
-static unsigned int num_of_trains = 0;
+static uint32_t train_dispatcher_tid = -1;
+static uint32_t num_of_trains = 0;
 
 typedef enum {
     TRM_ADD = 77,
@@ -26,29 +26,30 @@ typedef enum {
     TRM_SPEED,
     TRM_GET_TRACK_NODE,
     TRM_RESERVE_TRACK,
+    TRM_RESERVE_TRACK_DIST,
     TRM_RELEASE_TRACK,
     TRM_CREATE_TRAIN
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
     DispatcherMessageType type;
-    unsigned int tr;
+    uint32_t tr;
     int arg0;
     int arg1;
     int arg2;
 } DispatcherMessage_t;
 
 typedef struct {
-    unsigned int train;
-    unsigned int tr_number : 8;
+    uint32_t train;
+    uint32_t tr_number : 8;
     int conductor;
 } DispatcherNode_t;
 
 
-static int SendDispatcherMessage(DispatcherMessageType type, unsigned int tr, int arg0, int arg1) {
+static int SendDispatcherMessage(DispatcherMessageType type, uint32_t tr, int arg0, int arg1, int arg2) {
     DispatcherMessage_t msg;
     int status, bytes;
-    unsigned int dispatcher;
+    uint32_t dispatcher;
 
     status = 0;
     dispatcher = WhoIs(TRAIN_DISPATCHER);
@@ -60,6 +61,7 @@ static int SendDispatcherMessage(DispatcherMessageType type, unsigned int tr, in
     msg.tr = tr;
     msg.arg0 = arg0;
     msg.arg1 = arg1;
+    msg.arg2 = arg2;
     if (status != 0) {
         return status;
     } else if ((bytes = Send(dispatcher, &msg, sizeof(msg), &status, sizeof(status))) < 0) {
@@ -70,56 +72,58 @@ static int SendDispatcherMessage(DispatcherMessageType type, unsigned int tr, in
 }
 
 
-int DispatchTrainAuxiliary(unsigned int tr, unsigned int aux) {
-    return SendDispatcherMessage(TRM_AUX, tr, aux, 0);
+int DispatchTrainAuxiliary(uint32_t tr, uint32_t aux) {
+    return SendDispatcherMessage(TRM_AUX, tr, aux, 0, 0);
 }
 
 
-int DispatchTrainSpeed(unsigned int tr, unsigned int speed) {
-    return SendDispatcherMessage(TRM_SPEED, tr, speed, 0);
+int DispatchTrainSpeed(uint32_t tr, uint32_t speed) {
+    return SendDispatcherMessage(TRM_SPEED, tr, speed, 0, 0);
 }
 
 
-int DispatchRoute(unsigned int tr, unsigned int sensor) {
-    return SendDispatcherMessage(TRM_GOTO, tr, sensor, 0);
+int DispatchRoute(uint32_t tr, uint32_t sensor) {
+    return SendDispatcherMessage(TRM_GOTO, tr, sensor, 0, 0);
 }
 
 
-int DispatchAddTrain(unsigned int tr) {
-    return SendDispatcherMessage(TRM_ADD, tr, 0, 0);
+int DispatchAddTrain(uint32_t tr) {
+    return SendDispatcherMessage(TRM_ADD, tr, 0, 0, 0);
 }
 
 
-int DispatchAddTrainAt(unsigned int tr, char module, unsigned int id) {
-    return SendDispatcherMessage(TRM_ADD_AT, tr, module, id);
+int DispatchAddTrainAt(uint32_t tr, char module, uint32_t id) {
+    return SendDispatcherMessage(TRM_ADD_AT, tr, module, id, 0);
 }
 
 
-int DispatchTrainReverse(unsigned int tr) {
-    return SendDispatcherMessage(TRM_RV, tr, 0, 0);
+int DispatchTrainReverse(uint32_t tr) {
+    return SendDispatcherMessage(TRM_RV, tr, 0, 0, 0);
 }
 
 
-int DispatchStopRoute(unsigned int tr) {
-    return SendDispatcherMessage(TRM_GOTO_STOP, tr, 0, 0);
+int DispatchStopRoute(uint32_t tr) {
+    return SendDispatcherMessage(TRM_GOTO_STOP, tr, 0, 0, 0);
 }
 
-track_node *DispatchGetTrackNode(unsigned int id) {
-    return (track_node*)SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0);
+track_node *DispatchGetTrackNode(uint32_t id) {
+    return (track_node*) SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0, 0);
 }
 
-track_node *DispatchReserveTrack(unsigned int tr, track_node **track, unsigned int n) {
-    int result = SendDispatcherMessage(TRM_RESERVE_TRACK, tr, (int) track, n);
+track_node *DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, uint32_t dist) {
+    int result = SendDispatcherMessage(TRM_RESERVE_TRACK_DIST, tr, (int) track, n, dist);
     if (result < 0) {
+        error("DispatchReserveTrackDist: error: %d", result);
         return NULL;
     }
 
     return (track_node*) result;
 }
 
-track_node *DispatchReleaseTrack(unsigned int tr, track_node **track, unsigned int n) {
-    int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int) track, n);
+track_node *DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n) {
+    int result = SendDispatcherMessage(TRM_RESERVE_TRACK, tr, (int) track, n, 0);
     if (result < 0) {
+        error("DispatchReserveTrack: error: %d", result);
         return NULL;
     }
 
@@ -138,7 +142,7 @@ static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int
 }
 
 
-static int sensorAttribution(unsigned int tr) {
+static int findSensorForTrain(unsigned int tr) {
     int sensorNum;
     trainSpeed(tr, 3);
     sensorNum = WaitAnySensor();
@@ -160,7 +164,7 @@ static void TrainCreateCourier() {
     }
     Reply(callee, NULL, 0);
     if ((sensor = req.arg0) == -1) {
-        sensor = sensorAttribution(req.tr);
+        sensor = findSensorForTrain(req.tr);
     }
 
     tid = TrCreate(6, req.tr, DispatchGetTrackNode(sensor));
@@ -193,8 +197,8 @@ static int addDispatcherTrain(unsigned int tr, int sensor) {
 }
 
 
-static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, unsigned int tr) {
-    unsigned int i;
+static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, uint32_t tr) {
+    uint32_t i;
     for (i = 0; i < num_of_trains; ++i) {
         if (nodes[i].tr_number == tr) {
             return &nodes[i];
@@ -203,6 +207,15 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, unsigned int
     return NULL;
 }
 
+track_node *DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
+    int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int) track, n, 0);
+    if (result < 0) {
+        error("DispatchReleaseTrack: error: %d", result);
+        return NULL;
+    }
+
+    return (track_node*) result;
+}
 
 void Dispatcher() {
     int callee, status;
@@ -330,6 +343,9 @@ void Dispatcher() {
                     break;
                 }
                 status = (int) &(track[request.arg0]);
+                break;
+            case TRM_RESERVE_TRACK_DIST:
+                status = (int) reserveTrackDist(node->tr_number, (track_node**)request.arg0, request.arg1, request.arg2);
                 break;
             case TRM_RESERVE_TRACK:
                 status = (int)reserveTrack(node->tr_number, (track_node**)request.arg0, request.arg1);

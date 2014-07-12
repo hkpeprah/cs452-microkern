@@ -42,7 +42,7 @@ void Conductor() {
     ConductorMessage_t req;
     track_node *source, *dest, *path[32] = {0};
     unsigned int node_count, i;
-    unsigned int total_distance, edgeDist, nextSensorDist, destDist;
+    unsigned int total_distance, nextSensorDist, destDist;
 
     source = NULL;
     status = Receive(&callee, &req, sizeof(req));
@@ -56,7 +56,6 @@ void Conductor() {
 
     train = req.arg0;
     source = TrGetNextLocation(train, &nextSensorDist);
-    TrGetLocation(train, &edgeDist);
     dest = (track_node*)req.arg1;
     destDist = req.arg2;
     if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
@@ -76,11 +75,7 @@ void Conductor() {
                 }
             }
         }
-        turnOffSolenoid();
-        total_distance += destDist + (nextSensorDist - edgeDist);
-        TrPath(train, total_distance);
-        // getOptimalSpeed(status, total_distance);
-        TrSpeed(train, 10);
+        TrGotoAfter(train, path, node_count, destDist);
     }
     /* TODO: Block on child's destination or have another one block for you */
     status = DispatchStopRoute(req.arg3);
