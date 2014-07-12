@@ -145,15 +145,21 @@ void boot () {
 }
 
 
+void kernel_disable() {
+    zombify();
+    disableInterrupts();
+    disableIdleTimer();
+    *((uint32_t*)TIMER_CONTROL) = 0;
+}
+
+
 int shutdown() {
     /* sequence of shutdown operations */
     kputstr(RESTORE_CURSOR);
     kputstr("\r\nShutting down the system...\r\n");
     kputstr("Disabling interrupts..\r\n");
-    disableInterrupts();
     kputstr("Turning off the train controller...\r\n");
-    disableIdleTimer();
-    *((uint32_t*)TIMER_CONTROL) = 0;
+    kernel_disable();
     kputstr(SAVE_CURSOR "\033[0;0r" RESTORE_CURSOR "\r\nExiting...\r\n");
     return 0;
 }

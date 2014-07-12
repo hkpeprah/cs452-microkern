@@ -3,8 +3,6 @@
  */
 #include <stdlib.h>
 #include <ts7200.h>
-#include <syscall.h>
-#include <k_syscall.h>
 #include <term.h>
 #include <task.h>
 
@@ -84,24 +82,4 @@ void initUart(short uart, int speed, bool fifo) {
     }
 
     flushUart(base);
-}
-
-
-void k_assert(int condition, char *message) {
-    #if DEBUG
-        if (condition == 0) {
-            zombify();
-            kprintf(CHANGE_COLOR "\033[80;0H\033[2K%s" CHANGE_COLOR NEW_LINE,
-                    RED, message, 0);
-        }
-    #endif
-}
-
-
-void assert(int condition, char *message) {
-    #if DEBUG
-        if (condition == 0) {
-            Panic(message);
-        }
-    #endif
 }

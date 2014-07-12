@@ -186,3 +186,18 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
     totalTicks = trainSpeeds[id].stoppingTicks[MAX(startsp, destsp)];
     return totalTicks;
 }
+
+
+unsigned int shortmoves(unsigned int tr, unsigned int speed, unsigned int dist) {
+    unsigned int delay;
+    /* TODO: Consider speed as some multiplicative value */
+    switch (tr) {
+        case 48:
+            delay = 51.984 + (0.9486 * dist) + (0.0013 * dist * dist);
+            delay += (dist * dist * dist * 0.0000001);
+            break;
+        default:
+            delay = 200;
+    }
+    return delay;
+}

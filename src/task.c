@@ -274,7 +274,7 @@ void zombify() {
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
         __taskBank[i].state = ZOMBIE;
     }
-    highestTaskPriority = 0;
+    highestTaskPriority = -1;
 }
 
 
