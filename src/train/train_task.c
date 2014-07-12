@@ -14,6 +14,7 @@
 #include <random.h>
 
 #define GOTO_SPEED 10
+#define STOP_BUFFER_MM 15
 
 typedef struct {
     bool valid;
@@ -39,12 +40,12 @@ typedef struct __Train_t {
     unsigned int lastUpdateTick;    // last time the train position was updated
     int lastSensorTick;             // last time the train triggered a sensor
 
-    int stoppingDist;               // how long the train will go after speed is set to 0
+    int stoppingDist : 16;          // how long the train will go after speed is set to 0
 
     track_node **path;              // path the train is currently executing
     unsigned int pathNodeRem : 6;   // how many nodes are left in the path array
     unsigned int distOffset : 16;   // mm after last node in path to stop
-    unsigned int pathRemain : 16;   // mm left until end of path
+    int pathRemain : 16;            // mm left until end of path
 
     TransitionState_t transition;
 } Train_t;
@@ -171,8 +172,8 @@ static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
     snapshot.tr = train->id;
     snapshot.sp = train->microPerTick;
-    snapshot.dist = train->distSinceLastNode;
-    snapshot.landmark = train->currentEdge->src->name;
+    snapshot.dist = train->distSinceLastSensor;
+    snapshot.landmark = train->lastSensor->name;
     snapshot.nextmark = train->nextSensor->name;
     if (train->lastSensorTick < 0) {
         snapshot.eta = 0;
@@ -272,9 +273,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
         train->microPerTick = (train->microPerTick >> 1) + (train->distToNextSensor * 500 / (tick - train->lastSensorTick));
     }
 
-    if (train->transition.stopping_distance >= train->distToNextSensor - 10) {
-        train->transition.stopping_distance = MAX(0, train->transition.stopping_distance - train->distToNextSensor);
-    }
+    train->transition.stopping_distance = MAX(0, train->transition.stopping_distance - train->distToNextSensor);
 
     train->lastUpdateTick = tick;
     train->lastSensorTick = tick;
@@ -289,16 +288,18 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
             error("expected path to be at %s but it is at %s", sensor->name, train->path[0]->name);
         }
 
-        while (*(train->path) != sensor) {
+        while (*(train->path) != sensor && train->pathNodeRem > 0) {
             train->path++;
             train->pathNodeRem--;
         }
 
-        train->path++;
-        train->pathNodeRem--;
+        if (train->pathNodeRem > 0) {
+            train->path++;
+            train->pathNodeRem--;
+        }
 
         train->pathRemain = pathRemaining(train);
-        debug("pathRemain: %d", train->pathRemain);
+        debug("compute path: %d", train->pathRemain);
     }
 
     updateNextSensor(train);
@@ -330,9 +331,10 @@ static void updateLocation(Train_t *train) {
     train->distSinceLastNode += traveledDist;
     train->pathRemain -= traveledDist;
 
-    if (train->path && train->pathRemain <= train->stoppingDist - 20) {
+    if (train->path && train->pathRemain < train->stoppingDist + STOP_BUFFER_MM) {
         train->path = NULL;
         setTrainSpeed(train, 0);
+        debug("critical path remaining reached at %d for stopping dist %d, stopping", train->pathRemain, train->stoppingDist);
     }
 
     int numTraverse = 0;
@@ -347,7 +349,7 @@ static void updateLocation(Train_t *train) {
         train->distSinceLastNode -= train->currentEdge->dist;
     }
 
-    if (numTraverse > 0) {
+    if (train->path && numTraverse > 0) {
         // TODO: free traversed
         // TODO: reserve, recompute path dist, stop if necessary
         train->path += numTraverse;
@@ -418,18 +420,16 @@ static void setTrainSpeed(Train_t *train, int speed) {
     char buf[2];
     if (speed != train->speed) {
         int tick = Time();
-        int stoppingDistance = getStoppingDistance(train->id, train->speed, speed);
+        train->stoppingDist = getStoppingDistance(train->id, train->speed, speed);
         train->transition.valid = true;
         train->transition.start_speed = train->speed;
         train->transition.dest_speed = speed;
         train->transition.time_issued = tick;
         train->lastUpdateTick = tick;
         train->lastSensorTick = -1;
-        train->stoppingDist = stoppingDistance;
         debug("Stopping Distance for %d -> %d: %d", train->speed, speed, train->stoppingDist);
         if (speed == 0) {
-            train->transition.stopping_distance = stoppingDistance;
-            train->distSinceLastNode += stoppingDistance;
+            train->transition.stopping_distance = train->distSinceLastSensor + train->stoppingDist;
         } else {
             train->transition.stopping_distance = 0;
         }
