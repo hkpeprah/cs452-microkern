@@ -33,5 +33,8 @@ int DispatchAddTrain(unsigned int tr);
 int DispatchAddTrainAt(unsigned int tr, char module, unsigned int id);
 int DispatchTrainReverse(unsigned int tr);
 int DispatchStopRoute(unsigned int tr);
+track_node *DispatchGetTrackNode(unsigned int id);
+track_node *DispatchReserveTrack(unsigned int tr, track_node **track, unsigned int n);
+track_node *DispatchReleaseTrack(unsigned int tr, track_node **track, unsigned int n);
 
 #endif /* __DISPATCHER_H__ */

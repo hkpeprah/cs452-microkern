@@ -64,10 +64,10 @@ static void whoami() {
 
 
 void Shell() {
-    int args[5];
+    int args[6];
     char ch, buf[80];
     unsigned int i, tid;
-    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u"};
+    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
     HashTable commands;
     int command, status;
     unsigned int TrainController;
@@ -88,6 +88,8 @@ void Shell() {
     insert_ht(&commands, "goto", TRAIN_CMD_GOTO);
     insert_ht(&commands, "goto-after", TRAIN_CMD_GOTO_AFTER);
     insert_ht(&commands, "goto-stop", TRAIN_CMD_GOTO_STOP);
+    insert_ht(&commands, "reserve", TRAIN_CMD_RESERVE);
+    insert_ht(&commands, "release", TRAIN_CMD_RELEASE);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -159,6 +161,10 @@ void Shell() {
                         case TRAIN_CMD_GOTO_AFTER:
                             i = 6;
                             break;
+                        case TRAIN_CMD_RESERVE:
+                        case TRAIN_CMD_RELEASE:
+                            i = 7;
+                            break;
                         default:
                             i = -1;
                     }
@@ -166,7 +172,7 @@ void Shell() {
                     if (i >= 0) {
                         /* this is a parser command */
                         ++tmp;
-                        if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3], &args[4]) != -1) {
+                        if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3], &args[4], &args[5]) != -1) {
                             args[0] = command;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
                         }

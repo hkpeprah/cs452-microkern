@@ -9,6 +9,7 @@
 #include <train.h>
 #include <sensor_server.h>
 #include <conductor.h>
+#include <track_reservation.h>
 
 static unsigned int train_dispatcher_tid = -1;
 static unsigned int num_of_trains = 0;
@@ -23,6 +24,7 @@ typedef enum {
     TRM_RV,
     TRM_GET_SPEED,
     TRM_SPEED,
+    TRM_GET_TRACK_NODE,
     TRM_RESERVE_TRACK,
     TRM_RELEASE_TRACK
 } DispatcherMessageType;
@@ -42,23 +44,15 @@ typedef struct {
 } DispatcherNode_t;
 
 
-static int SendDispatcherMessage(int type, unsigned int tr, int arg0, int arg1) {
+static int SendDispatcherMessage(DispatcherMessageType type, unsigned int tr, int arg0, int arg1) {
     DispatcherMessage_t msg;
     int status, bytes;
     unsigned int dispatcher;
 
     status = 0;
     dispatcher = WhoIs(TRAIN_DISPATCHER);
-    switch (type) {
-        case TRM_SPEED:
-            if (arg0 > TRAIN_MAX_SPEED) {
-                status = INVALID_SPEED;
-            }
-            break;
-        case TRM_RV:
-            break;
-        case TRM_AUX:
-            break;
+    if (type == TRM_SPEED && arg0 > TRAIN_MAX_SPEED) {
+        status = INVALID_SPEED;
     }
 
     msg.type = type;
@@ -109,6 +103,27 @@ int DispatchStopRoute(unsigned int tr) {
     return SendDispatcherMessage(TRM_GOTO_STOP, tr, 0, 0);
 }
 
+track_node *DispatchGetTrackNode(unsigned int id) {
+    return (track_node*) SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0);
+}
+
+track_node *DispatchReserveTrack(unsigned int tr, track_node **track, unsigned int n) {
+    int result = SendDispatcherMessage(TRM_RESERVE_TRACK, tr, (int) track, n);
+    if (result < 0) {
+        return NULL;
+    }
+
+    return (track_node*) result;
+}
+
+track_node *DispatchReleaseTrack(unsigned int tr, track_node **track, unsigned int n) {
+    int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int) track, n);
+    if (result < 0) {
+        return NULL;
+    }
+
+    return (track_node*) result;
+}
 
 static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tr, track_node *start_node) {
     unsigned int i;
@@ -148,7 +163,6 @@ static int sensorAttribution(unsigned int tr) {
     trainSpeed(tr, 0);
     return sensorNum;
 }
-
 
 void Dispatcher() {
     int callee, status;
@@ -259,9 +273,18 @@ void Dispatcher() {
                     status = TrSpeed(node->train, request.arg0);
                 }
                 break;
+            case TRM_GET_TRACK_NODE:
+                if (request.arg0 >= TRACK_MAX) {
+                    status = 0;
+                    break;
+                }
+                status = (int) &(track[request.arg0]);
+                break;
             case TRM_RESERVE_TRACK:
+                status = (int) reserveTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
                 break;
             case TRM_RELEASE_TRACK:
+                status = (int) releaseTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
                 break;
             default:
                 error("Dispatcher: Unknown request of type %d from %u", request.type, callee);

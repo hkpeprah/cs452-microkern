@@ -20,7 +20,9 @@ typedef enum {
     TRAIN_CMD_ADD_AT,
     TRAIN_CMD_GOTO,
     TRAIN_CMD_GOTO_AFTER,
-    TRAIN_CMD_GOTO_STOP
+    TRAIN_CMD_GOTO_STOP,
+    TRAIN_CMD_RESERVE,
+    TRAIN_CMD_RELEASE
 } TrainCommandTypes;
 
 typedef struct {

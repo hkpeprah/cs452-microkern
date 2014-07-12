@@ -21,6 +21,7 @@
 #include <track_node.h>
 #include <sensor_server.h>
 #include <dispatcher.h>
+#include <path.h> // for command line reservation testing
 
 
 void firstTask() {
@@ -54,6 +55,42 @@ void TimerTask() {
     Exit();
 }
 
+#define RESERVE 0
+#define RELEASE 1
+
+static int trackReservation(int type, unsigned int tr, int start, int end) {
+    track_node *path[32] = {0};
+    track_node *startNode = DispatchGetTrackNode(start);
+    track_node *endNode = DispatchGetTrackNode(end);
+
+    if (startNode == NULL || endNode == NULL) {
+        return INVALID_SENSOR_ID;
+    }
+
+    debug("got reservation %d for train %d from %s to %s", type, tr, startNode->name, endNode->name);
+
+    unsigned int pathDist;
+    int pathLen = findPath(tr, startNode, endNode, path, 32, &pathDist);
+
+    track_node *lastNode;
+
+    switch(type) {
+        case RESERVE:
+            lastNode = DispatchReserveTrack(tr, path, pathLen);
+            break;
+        case RELEASE:
+            lastNode = DispatchReleaseTrack(tr, path, pathLen);
+        default:
+            return -1337;
+    }
+
+    if (lastNode) {
+        printf("reserved up to node %s\n", lastNode->name);
+    } else {
+        printf("no nodes reserved");
+    }
+    return 0;
+}
 
 void TrainUserTask() {
     ControllerMessage_t req;
@@ -116,6 +153,12 @@ void TrainUserTask() {
                 req.args[4] = 0;
             case TRAIN_CMD_GOTO_AFTER:
                 status = DispatchRoute(req.args[1], sensorToInt(req.args[2], req.args[3]));
+                break;
+            case TRAIN_CMD_RESERVE:
+                status = trackReservation(RESERVE, req.args[1], sensorToInt(req.args[2], req.args[3]), sensorToInt(req.args[4], req.args[5]));
+                break;
+            case TRAIN_CMD_RELEASE:
+                status = trackReservation(RELEASE, req.args[1], sensorToInt(req.args[2], req.args[3]), sensorToInt(req.args[4], req.args[5]));
                 break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);

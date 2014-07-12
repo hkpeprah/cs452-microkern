@@ -3,7 +3,16 @@
  * source: http://stackoverflow.com/questions/7666509/
  */
 #include <hash.h>
+#include <syscall.h>
 
+unsigned int hash_djb2n(char *str, unsigned int n) {
+    unsigned int hash = 5381;
+
+    while (n --> 0) {
+        hash = ((hash << 5) + hash) + *str++; /* hash * 33 + c */
+    }
+    return hash;
+}
 
 unsigned int hash_djb2(char *str) {
     /*
@@ -46,6 +55,8 @@ unsigned int insert_ht(HashTable *table, char *key, int val) {
         table->data[hash] = val;
         return 1;
     }
+
+    Panic("Hash collision on key %s", key);
 
     return 0;
 }
