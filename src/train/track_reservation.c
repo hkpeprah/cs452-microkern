@@ -29,8 +29,9 @@ static bool cmpAndSwapResvBy(track_node *node, int oldValue, int newValue) {
 
     error("Node %s cmpAndSwapResvBy failed: rsv {%d}, reverse rsv {%d}, oldValue {%d}, newValue {%d}",
             node->reservedBy, node->reverse->reservedBy, oldValue, newValue);
-    return false;
+    return (node->reverse->reservedBy == newValue && node->reservedBy == newValue);
 }
+
 
 // runs cmpAndSwapResvBy on each track, provided they are contineous
 static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **track, unsigned int n) {
@@ -61,8 +62,9 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
         currentNode = nextNode;
     }
 
-    return currentNode;
+    return lastSuccessNode;
 }
+
 
 track_node *reserveTrack(unsigned int tr, track_node **track, unsigned int n) {
     return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n);

@@ -26,7 +26,8 @@ typedef enum {
     TRM_SPEED,
     TRM_GET_TRACK_NODE,
     TRM_RESERVE_TRACK,
-    TRM_RELEASE_TRACK
+    TRM_RELEASE_TRACK,
+    TRM_CREATE_TRAIN
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
@@ -104,7 +105,7 @@ int DispatchStopRoute(unsigned int tr) {
 }
 
 track_node *DispatchGetTrackNode(unsigned int id) {
-    return (track_node*) SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0);
+    return (track_node*)SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0);
 }
 
 track_node *DispatchReserveTrack(unsigned int tr, track_node **track, unsigned int n) {
@@ -125,23 +126,70 @@ track_node *DispatchReleaseTrack(unsigned int tr, track_node **track, unsigned i
     return (track_node*) result;
 }
 
-static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tr, track_node *start_node) {
+static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tid, unsigned int tr) {
     unsigned int i;
+    i = num_of_trains;
+    nodes[i].train = tid;
+    nodes[i].tr_number = tr;
+    nodes[i].conductor = -1;
+    notice("Dispatcher: Created Train %u with tid %u", tr, nodes[i].train);
+    num_of_trains++;
+    return &nodes[i];
+}
+
+
+static int sensorAttribution(unsigned int tr) {
+    int sensorNum;
+    trainSpeed(tr, 3);
+    sensorNum = WaitAnySensor();
+    trainSpeed(tr, 0);
+    return sensorNum;
+}
+
+
+static void TrainCreateCourier() {
+    DispatcherMessage_t req;
+    int callee, tid, parent;
+    int sensor;
+
+    parent = MyParentTid();
+    Receive(&callee, &req, sizeof(req));
+    if (callee != parent) {
+        error("TrainCreateCourier: Error: Received request from %u, expected %u", callee, parent);
+        Exit();
+    }
+    Reply(callee, NULL, 0);
+    if ((sensor = req.arg0) == -1) {
+        sensor = sensorAttribution(req.tr);
+    }
+
+    tid = TrCreate(6, req.tr, DispatchGetTrackNode(sensor));
+    if (tid >= 0) {
+        debug("TrainCreateCourier: Creating Train %u with Tid %d", req.tr, tid);
+        req.type = TRM_CREATE_TRAIN;
+        req.tr = req.tr;
+        req.arg0 = tid;
+        Send(parent, &req, sizeof(req), NULL, 0);
+    } else {
+        error("TrainCreateCourier: Error: Failed to create new Train task");
+    }
+    Exit();
+}
+
+
+static int addDispatcherTrain(unsigned int tr, int sensor) {
+    DispatcherMessage_t req;
+    unsigned int tid;
 
     if (num_of_trains < NUM_OF_TRAINS) {
-        i = num_of_trains;
-        if ((nodes[i].train = TrCreate(6, tr, start_node)) >= 0) {
-            notice("Dispatcher: Created Train %u with tid %u", tr, nodes[i].train);
-            nodes[i].tr_number = tr;
-            nodes[i].conductor = -1;
-            num_of_trains++;
-            return &nodes[i];
-        } else {
-            error("Dispatcher: Error: Failed to create new Train task");
-            return NULL;
-        }
+        tid = Create(9, TrainCreateCourier);
+        req.type = TRM_ADD;
+        req.tr = tr;
+        req.arg0 = sensor;
+        Send(tid, &req, sizeof(req), NULL, 0);
+        return tid;
     }
-    return NULL;
+    return -1;
 }
 
 
@@ -156,16 +204,9 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, unsigned int
 }
 
 
-static int sensorAttribution(unsigned int tr) {
-    int sensorNum;
-    trainSpeed(tr, 3);
-    sensorNum = WaitAnySensor();
-    trainSpeed(tr, 0);
-    return sensorNum;
-}
-
 void Dispatcher() {
     int callee, status;
+    unsigned int CreateCourier;
     DispatcherMessage_t request;
     track_node track[TRACK_MAX];
     DispatcherNode_t trains[NUM_OF_TRAINS], *node;
@@ -175,6 +216,7 @@ void Dispatcher() {
     train_dispatcher_tid = MyTid();
     notice("Dispatcher: Tid %u", train_dispatcher_tid);
     num_of_trains = 0;
+    CreateCourier = -1;
     setTrainSetState();
 
     while (true) {
@@ -195,12 +237,8 @@ void Dispatcher() {
                     status = INVALID_TRAIN_ID;
                     break;
                 }
-                status = sensorAttribution(request.tr);
-                if (addDispatcherNode(trains, request.tr, &track[status]) != NULL) {
-                    status = 0;
-                } else {
-                    status = OUT_OF_DISPATCHER_NODES;
-                }
+                status = -1;
+                goto addnode;
                 break;
             case TRM_ADD_AT:
                 if (getDispatcherNode(trains, request.tr)) {
@@ -212,10 +250,23 @@ void Dispatcher() {
                     status = INVALID_SENSOR_ID;
                     break;
                 }
+        addnode:
+                if (CreateCourier != -1) {
+                    Destroy(CreateCourier);
+                    CreateCourier = -1;
+                }
+                if ((CreateCourier = addDispatcherTrain(request.tr, status)) == -1) {
+                    status = OUT_OF_DISPATCHER_NODES;
+                } else {
+                    status = 0;
+                }
+                break;
+            case TRM_CREATE_TRAIN:
                 status = 0;
-                if (addDispatcherNode(trains, request.tr, &track[status]) == NULL) {
+                if (addDispatcherNode(trains, request.arg0, request.tr) == NULL) {
                     status = OUT_OF_DISPATCHER_NODES;
                 }
+                CreateCourier = -1;
                 break;
             case TRM_GOTO_STOP:
                 if ((node = getDispatcherNode(trains, request.tr))) {
@@ -281,10 +332,10 @@ void Dispatcher() {
                 status = (int) &(track[request.arg0]);
                 break;
             case TRM_RESERVE_TRACK:
-                status = (int) reserveTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
+                status = (int)reserveTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
                 break;
             case TRM_RELEASE_TRACK:
-                status = (int) releaseTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
+                status = (int)releaseTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
                 break;
             default:
                 error("Dispatcher: Unknown request of type %d from %u", request.type, callee);

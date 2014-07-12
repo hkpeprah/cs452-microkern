@@ -21,7 +21,8 @@ typedef enum {
     INVALID_DESTINATION,
     NO_PATH_EXISTS,
     INVALID_REQUEST,
-    TRAIN_BUSY
+    TRAIN_BUSY,
+    NUM_DISPATCHER_ERROR_MESSAGES
 } DispatcherErrorMessages_t;
 
 
