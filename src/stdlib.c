@@ -91,3 +91,8 @@ void swap_ptr(void **a, void **b) {
     *a = *b;
     *b = tmp;
 }
+
+
+inline int pow(int i, int n) {
+    return (n <= 1 ? i : i * pow(i, n - 1));
+}

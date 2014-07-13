@@ -4,6 +4,8 @@
 #include <syscall.h>
 #include <kernel.h>
 
+#define ASSERT_MSG               "\033[31mPanic: assert failed at line %d of file %s (function <%s>): %s\033[0m\r\n\r\n"
+
 /* http://www.cocoawithlove.com/2008/04/using-pointers-to-recast-in-c-is-bad.html */
 #define UNION_CAST(x, destType)  (((union {__typeof__(x) a; destType b;}) x).b)
 #define toLowerCase(ch)          (ch < 'a' ? ch + 'a' - 'A' : ch)
@@ -12,7 +14,6 @@
 #define MIN(x, y)                ((x) < (y) ? (x) : (y))
 #define MAX(x, y)                ((x) > (y) ? (x) : (y))
 #define EXTRACT_BIT(n, k)        (((n) & (1 << (k))) >> (k))
-#define ASSERT_MSG               "\033[31mPanic: assert failed at line %d of file %s (function <%s>): %s\033[0m\r\n\r\n"
 #define ASSERT(condition, msg)   {                                        \
         if ((condition) == false) {                                       \
             Panic(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));   \
@@ -31,5 +32,6 @@ void *memcpy(void*, const void*, size_t);
 void swap_ptr(void**, void**);
 void initUart(short, int, bool);
 void flushUart(int);
+inline int pow(int i, int n);
 
 #endif /* __STDLIB__ */

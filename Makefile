@@ -6,7 +6,7 @@ test             = $(testdir)/a.out
 XCC              = gcc
 AS               = as
 LD               = ld
-CFLAGS           = -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O3 -DBUFFEREDIO
+CFLAGS           = -fno-builtin -nostdlib -nodefaultlibs -c -fPIC -Wall -I. -I./include -mcpu=arm920t -msoft-float -O3 -DBUFFEREDIO
 TRACK            ?= a
 # -g: include hooks for gdb
 # -c: only compile

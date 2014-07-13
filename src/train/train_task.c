@@ -569,14 +569,14 @@ static void TrainTask() {
 
         switch (request.type) {
             case TRM_GOTO_AFTER:
-                // blocking call, reply when we arrive
+                /* blocks the calling task until we arrive at our destination */
                 gotoBlocked = callee;
                 train.path = (track_node**)request.arg0;
                 train.pathNodeRem = request.arg1;
                 train.distOffset = request.arg2;
                 train.pathRemain = pathRemaining(&train);
                 notice("%u < %u", train.pathRemain, getStoppingDistance(train.id, 10, 0));
-                if (train.pathRemain < getStoppingDistance(train.id, 10, 0)) {
+                if (train.pathRemain < getStoppingDistance(train.id, 10, 0) + STOP_BUFFER_MM) {
                     delayTime = shortmoves(train.id, 10, train.pathRemain);
                     notice("Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm",
                            train.id, delayTime, train.pathNodeRem, train.pathRemain);

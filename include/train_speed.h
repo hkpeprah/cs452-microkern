@@ -13,7 +13,7 @@ struct train_speed_state {
 
 void initTrainSpeeds();
 bool isValidTrainId(unsigned int tr);
-unsigned int shortmoves(unsigned int tr, unsigned int speed, int dist);
+int shortmoves(unsigned int tr, unsigned int speed, int dist);
 unsigned int getTrainVelocity(unsigned tr, unsigned int sp);
 unsigned int getStoppingDistance(unsigned int tr, int startsp, int destsp);
 unsigned int getTransitionDistance(unsigned int tr, int startsp, int destsp, int ticks);
