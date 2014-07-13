@@ -211,6 +211,7 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, uint32_t tr)
     return NULL;
 }
 
+
 track_node *DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
     int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int) track, n, 0);
     if (result < 0) {
@@ -220,6 +221,7 @@ track_node *DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
 
     return (track_node*) result;
 }
+
 
 void Dispatcher() {
     int callee, status;

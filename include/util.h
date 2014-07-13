@@ -1,8 +1,7 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 #include <types.h>
-#define MIN(x, y)     (x < y ? x : y)
-#define MAX(x, y)     (x > y ? x : y)
+#include <stdlib.h>
 #define BUFFER_BITS   11
 #define CBUFFER_SIZE  (1 << BUFFER_BITS)
 

@@ -25,28 +25,23 @@ typedef struct {
 } TransitionState_t;
 
 typedef struct __Train_t {
-    unsigned int id : 16;           // controller train id
-    unsigned int speed : 8;         // controller train speed
-    unsigned int aux : 16;          // functions such as light, horn, etc.
-    unsigned int microPerTick : 16; // actual speed (micrometers / clock tick)
-
+    unsigned int id : 16;                  // controller train id
+    unsigned int speed : 8;                // controller train speed
+    unsigned int aux : 16;                 // functions such as light, horn, etc.
+    unsigned int microPerTick : 16;        // actual speed (micrometers / clock tick)
     track_node *lastSensor;
     track_node *nextSensor;
     track_edge *currentEdge;
     unsigned int distSinceLastSensor : 16;
     unsigned int distSinceLastNode : 16;
-    int distToNextSensor : 16;      // distance between last sensor and next sensor
-
-    unsigned int lastUpdateTick;    // last time the train position was updated
-    int lastSensorTick;             // last time the train triggered a sensor
-
-    int stoppingDist : 16;          // how long the train will go after speed is set to 0
-
-    track_node **path;              // path the train is currently executing
-    unsigned int pathNodeRem : 6;   // how many nodes are left in the path array
-    unsigned int distOffset : 16;   // mm after last node in path to stop
-    int pathRemain : 16;            // mm left until end of path
-
+    int distToNextSensor : 16;             // distance between last sensor and next sensor
+    unsigned int lastUpdateTick;           // last time the train position was updated
+    int lastSensorTick;                    // last time the train triggered a sensor
+    int stoppingDist : 16;                 // how long the train will go after speed is set to 0
+    track_node **path;                     // path the train is currently executing
+    unsigned int pathNodeRem : 6;          // how many nodes are left in the path array
+    unsigned int distOffset : 16;          // mm after last node in path to stop
+    int pathRemain : 16;                   // mm left until end of path
     TransitionState_t transition;
 } Train_t;
 
@@ -289,9 +284,11 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
     train->currentEdge = getNextEdge(sensor);
 
     if (train->path) {
-        // assert here
+        ASSERT(train->path != NULL, "train path is NULL");
+        ASSERT(train->pathNodeRem != 0, "train path is zero length");
+
         if (train->path[0] != sensor) {
-            error("expected path to be at %s but it is at %s", sensor->name, train->path[0]->name);
+            error("SensorTrip: Error: Expected path to be at %s but it is at %s", sensor->name, train->path[0]->name);
         }
 
         while (*(train->path) != sensor && train->pathNodeRem > 0) {
@@ -305,7 +302,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
         }
 
         train->pathRemain = pathRemaining(train);
-        debug("compute path: %d", train->pathRemain);
+        debug("Train %u: Compute path: %d", train->id, train->pathRemain);
     }
 
     updateNextSensor(train);
@@ -313,22 +310,26 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
 
 
 static void updateLocation(Train_t *train) {
-    int ticks;
+    int ticks, numTraverse;;
     unsigned int start_speed, stop_speed;
-    unsigned int traveledDist = 0;
+    unsigned int traveledDist;
 
+    traveledDist = 0;
+    numTraverse = 0;
     ticks = Time();
     if (train->transition.valid) {
         start_speed = train->transition.start_speed;
         stop_speed = train->transition.dest_speed;
         if (ticks - train->transition.time_issued >= getTransitionTicks(train->id, start_speed, stop_speed)) {
+            debug("Train %u: Transition finished at time %u", train->id, ticks);
             train->transition.valid = false;
             train->distSinceLastSensor = train->transition.stopping_distance;
             train->microPerTick = getTrainVelocity(train->id, stop_speed);
-            train->distSinceLastSensor += (ticks - train->transition.time_issued - getTransitionTicks(train->id, start_speed, stop_speed)) * train->microPerTick;
-
+            train->distSinceLastSensor += (ticks - train->transition.time_issued -
+                                           getTransitionTicks(train->id, start_speed, stop_speed)) * train->microPerTick;
+            train->speed = stop_speed;
             train->distSinceLastNode = train->distSinceLastSensor;
-        }
+         }
     } else {
         traveledDist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
     }
@@ -336,20 +337,18 @@ static void updateLocation(Train_t *train) {
     train->distSinceLastSensor += traveledDist;
     train->distSinceLastNode += traveledDist;
     train->pathRemain -= traveledDist;
-
+    train->lastUpdateTick = ticks;
     if (train->path && train->pathRemain < train->stoppingDist + STOP_BUFFER_MM) {
         train->path = NULL;
         setTrainSpeed(train, 0);
-        debug("critical path remaining reached at %d for stopping dist %d, stopping", train->pathRemain, train->stoppingDist);
+        debug("Critical path remaining reached at %d for stopping dist %d, stopping", train->pathRemain, train->stoppingDist);
     }
 
-    int numTraverse = 0;
-
-    while ( train->distSinceLastNode > train->currentEdge->dist ) {
+    while (train->distSinceLastNode > train->currentEdge->dist) {
         if (train->currentEdge->dest == train->nextSensor) {
             break;
         }
-        debug("traversing to %s and freeing %s", train->currentEdge->dest->name, train->currentEdge->src->name);
+        // debug("Traversing to %s and freeing %s", train->currentEdge->dest->name, train->currentEdge->src->name);
         numTraverse++;
         train->currentEdge = getNextEdge(train->currentEdge->dest);
         train->distSinceLastNode -= train->currentEdge->dist;
@@ -362,7 +361,6 @@ static void updateLocation(Train_t *train) {
         train->pathNodeRem -= numTraverse;
     }
 
-    train->lastUpdateTick = ticks;
     CalibrationSnapshot(train);
 }
 
@@ -396,6 +394,7 @@ static void SensorCourierTask() {
     Send(train, NULL, 0, NULL, 0);
 }
 
+
 static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSensor) {
     TrainMessage_t msg1;
 
@@ -410,7 +409,6 @@ static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSen
 
     // potentially need to call updateNextSensor here? only if track state changed between
     // last sensor trip and this
-
     if (train->nextSensor) {
         *waitingSensor = train->nextSensor->num;
         *sensorCourier = Create(4, SensorCourierTask);
@@ -433,15 +431,15 @@ static void setTrainSpeed(Train_t *train, int speed) {
         train->transition.time_issued = tick;
         train->lastUpdateTick = tick;
         train->lastSensorTick = -1;
-        debug("Stopping Distance for %d -> %d: %d", train->speed, speed, train->stoppingDist);
+        // debug("Stopping Distance for %d -> %d: %d", train->speed, speed, train->stoppingDist);
         if (speed == 0) {
             train->transition.stopping_distance = train->distSinceLastSensor + train->stoppingDist;
         } else {
             train->transition.stopping_distance = 0;
         }
         train->speed = speed;
-        debug("Dist to Next Sensor: %u, Current Edge Distance: %u, Stopping Distance: %u",
-              train->distToNextSensor, train->distSinceLastSensor, train->transition.stopping_distance);
+        // debug("Dist to Next Sensor: %u, Current Edge Distance: %u, Stopping Distance: %u",
+        //      train->distToNextSensor, train->distSinceLastSensor, train->transition.stopping_distance);
         updateLocation(train);
     }
     buf[0] = train->speed + train->aux;
@@ -483,13 +481,43 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
 }
 
 
+static void TrainReverseCourier() {
+    int callee, status;
+    TrainMessage_t request, message = {.type = TRM_DIR};
+
+    Receive(&callee, &request, sizeof(request));
+    status = 0;
+    if (callee == MyParentTid()) {
+        debug("ReverseCourier: Stopping train tid %u with starting speed %u", callee, request.arg0);
+        Reply(callee, &status, sizeof(status));
+        message.type = TRM_SPEED;
+        message.arg0 = 0;
+        Send(callee, &message, sizeof(message), &status, sizeof(status));
+        /* adjust by five(5) to compensate for the clock edge */
+        Delay(getTransitionTicks(request.tr, request.arg0, 0) + 5);
+        debug("ReverseCourier: Reversing train tid %u, called at time %u", callee, Time());
+        message.type = TRM_DIR;
+        Send(callee, &message, sizeof(message), &status, sizeof(status));
+        Delay(20);
+        debug("ReverseCourier: Sending to speed up train tid %u to %u", callee, request.arg0);
+        message.type = TRM_SPEED;
+        message.arg0 = request.arg0;
+        Send(callee, &message, sizeof(message), &status, sizeof(status));
+    } else {
+        status = -1;
+        Reply(callee, &status, sizeof(status));
+    }
+    Exit();
+}
+
+
 static void TrainTask() {
     Train_t train;
     char command[2];
     TrainMessage_t request;
     unsigned int dispatcher, speed;
-    int status, bytes, callee, gotoBlocked;
-    int sensorCourier, locationTimer, reverseCourier, waitingSensor, delayCourier;
+    int status, bytes, callee, gotoBlocked, delayCourier, delayTime;
+    int sensorCourier, locationTimer, reverseCourier, waitingSensor;
 
     /* block on receive waiting for parent to send message */
     dispatcher = MyParentTid();
@@ -513,7 +541,7 @@ static void TrainTask() {
     Reply(callee, NULL, 0);
 
     updateNextSensor(&train);
-    locationTimer = Create(2, TrainTimer);
+    locationTimer = Create(4, TrainTimer);
 
     while (true) {
         if ((bytes = Receive(&callee, &request, sizeof(request))) < 0) {
@@ -534,11 +562,9 @@ static void TrainTask() {
             CalibrationSnapshot(&train);
             continue;
         } else if (callee == delayCourier) {
-            debug("Train %u: DelayCourier returned", train.id);
+            delayCourier = -1;
             setTrainSpeed(&train, 0);
             Reply(callee, NULL, 0);
-            delayCourier = -1;
-            continue;
         }
 
         switch (request.type) {
@@ -549,11 +575,12 @@ static void TrainTask() {
                 train.pathNodeRem = request.arg1;
                 train.distOffset = request.arg2;
                 train.pathRemain = pathRemaining(&train);
-                notice("%u < %u", pathRemain, getStoppingDistance(train.id, 10, 0));
+                notice("%u < %u", train.pathRemain, getStoppingDistance(train.id, 10, 0));
                 if (train.pathRemain < getStoppingDistance(train.id, 10, 0)) {
-                    notice("Train %u: Short move with delay %u ticks", train.id, shortmoves(train.id, 10, train.pathRemain));
-                    delayCourier = CourierDelay(shortmoves(train.id, 10, train.pathRemain) + 1, 4);
-                    train.pathRemain = 0;
+                    delayTime = shortmoves(train.id, 10, train.pathRemain);
+                    notice("Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm",
+                           train.id, delayTime, train.pathNodeRem, train.pathRemain);
+                    delayCourier = CourierDelay(ABS(delayTime), 7);
                     train.path = NULL;
                     setTrainSpeed(&train, 10);
                 } else {
@@ -578,22 +605,34 @@ static void TrainTask() {
                 break;
             case TRM_DIR:
                 if (train.speed != 0 || train.transition.valid) {
-                    error("Cannot reverse while moving");
+                    error("Train %u: Cannot reverse while moving, ticks: %u", train.id, Time());
                     status = -1;
                     Reply(callee, &status, sizeof(status));
                     break;
                 }
-                train.distSinceLastNode = train.currentEdge->dist - train.distSinceLastNode;
+                /* recompute distances from sensors and nodes */
                 train.currentEdge = train.currentEdge->reverse;
+                train.distSinceLastNode = train.currentEdge->dist - train.distSinceLastNode;
+                train.distSinceLastSensor = train.distSinceLastNode;
+                /* swap the next and last sensors */
+                swap_ptr((void**)&(train.lastSensor), (void**)&(train.nextSensor));
+                /* reverse the direction of the sensors */
+                train.lastSensor = train.lastSensor->reverse;
+                train.nextSensor = train.nextSensor->reverse;
                 status = 0;
                 command[0] = TRAIN_AUX_REVERSE;
                 command[1] = train.id;
                 trnputs(command, 2);
                 Reply(callee, &status, sizeof(status));
-
+                waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
                 break;
             case TRM_RV:
-                // TODO: replace me with github version 
+                reverseCourier = Create(3, TrainReverseCourier);
+                request.type = TRM_RV;
+                request.tr = train.id;
+                request.arg0 = train.speed;
+                Send(reverseCourier, &request, sizeof(request), &status, sizeof(status));
+                Reply(callee, &status, sizeof(status));
                 break;
             case TRM_GET_LOCATION:
                 updateLocation(&train);

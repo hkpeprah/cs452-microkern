@@ -29,7 +29,7 @@ SILENT           ?= false
 
 .SECONDARY:
 
-.NOTPARALLEL: all upload test debug profile clean init
+.NOTPARALLEL: all upload test debug profile clean init debugtest target
 
 all: init target
 

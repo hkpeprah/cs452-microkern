@@ -83,3 +83,11 @@ void initUart(short uart, int speed, bool fifo) {
 
     flushUart(base);
 }
+
+
+void swap_ptr(void **a, void **b) {
+    int *tmp;
+    tmp = (int*)*a;
+    *a = *b;
+    *b = tmp;
+}

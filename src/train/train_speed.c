@@ -188,20 +188,28 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
 }
 
 
-unsigned int shortmoves(unsigned int tr, unsigned int speed, unsigned int dist) {
+unsigned int shortmoves(unsigned int tr, unsigned int speed, int dist) {
     int delay;
     /* TODO: Consider speed as some multiplicative value */
     switch (tr) {
         case 48:
-            delay = 51.984 + (0.9486 * dist) - (0.0013 * dist * dist);
-            delay += (dist * dist * dist * 0.0000007);
+            delay = (7 * dist * dist * dist) + (9486000 * dist) + 518940000;
+            delay -= (13000 * dist * dist);
+            delay /= 10000000;
             break;
+        case 51:
+        case 50:
+        case 49:
+        case 45:
         case 47:
-            delay = 43.92 + (0.8978 * dist) - (0.0011 * dist * dist);
-            delay += (dist * dist * dist * 0.0000005);
+            delay = (5 * dist * dist * dist) + (8978000 * dist) + 439200000;
+            delay -= (11000 * dist * dist);
+            delay /= 10000000;
+            /* fudging the numbers a bit */
+            delay += dist;
             break;
         default:
-            delay = 200;
+            delay = dist;
     }
     return delay;
 }
