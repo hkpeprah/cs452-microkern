@@ -14,16 +14,16 @@
 #define MIN(x, y)                ((x) < (y) ? (x) : (y))
 #define MAX(x, y)                ((x) > (y) ? (x) : (y))
 #define EXTRACT_BIT(n, k)        (((n) & (1 << (k))) >> (k))
-#define ASSERT(condition, msg)   {                                        \
-        if ((condition) == false) {                                       \
-            Panic(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));   \
-        }                                                                 \
+#define ASSERT(condition, msg, ...)   {                                                   \
+        if ((condition) == false) {                                                       \
+            Assert(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg), ## __VA_ARGS__);  \
+        }                                                                                 \
     }
-#define KASSERT(condition, msg)   {                                       \
-        if ((condition) == false) {                                       \
-            kernel_disable();                                             \
-            kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg)); \
-        }                                                                 \
+#define KASSERT(condition, msg)   {                                        \
+        if ((condition) == false) {                                        \
+            kernel_disable();                                              \
+            kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));  \
+        }                                                                  \
     }
 
 

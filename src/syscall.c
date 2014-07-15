@@ -147,3 +147,26 @@ void Panic(char *msg, ...) {
     swi_call(0, &args);
     va_end(va);
 }
+
+
+static void AssertFormatted(char *buf, char *msg, ...) {
+    va_list va;
+    va_start(va, msg);
+    format(msg, va, buf);
+    va_end(va);
+}
+
+
+void Assert(char *assert_msg, uint32_t line, char *file, const char *func, char *msg, ...) {
+    Args_t args;
+    va_list va;
+    char buffer[256];
+
+    va_start(va, msg);
+    AssertFormatted(buffer, assert_msg, line, file, func, msg);
+    args.code = SYS_PANIC;
+    args.a0 = (uint32_t)buffer;
+    args.a1 = (uint32_t)va;
+    swi_call(0, &args);
+    va_end(va);
+}

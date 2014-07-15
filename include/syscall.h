@@ -1,6 +1,5 @@
 #ifndef __SYSCALL__
 #define __SYSCALL__
-
 #include <types.h>
 
 int Create(int, void(*)());
@@ -19,5 +18,6 @@ int Log(const char *fmt, ...);
 int CpuIdle();
 void SigTerm();
 void Panic(char *, ...);
+void Assert(char *assert_msg, uint32_t line, char *file, const char *func, char *msg, ...);
 
 #endif /* __SYSCALL__ */

@@ -290,8 +290,8 @@ void sys_sigterm() {
 
 
 void sys_panic(char *msg, va_list va) {
-    char fmt[100] = {0};
-    char buffer[256] = {0};
+    char fmt[256] = {0};
+    char buffer[512] = {0};
 
     sys_sigterm();
     dumpTaskState();
