@@ -4,6 +4,8 @@
  */
 #include <hash.h>
 #include <syscall.h>
+#include <string.h>
+
 
 unsigned int hash_djb2n(char *str, unsigned int n) {
     unsigned int hash = 5381;
@@ -13,6 +15,7 @@ unsigned int hash_djb2n(char *str, unsigned int n) {
     }
     return hash;
 }
+
 
 unsigned int hash_djb2(char *str) {
     /*
@@ -51,12 +54,14 @@ bool insert_ht(HashTable *table, char *key, int val) {
 
     hash = hash_djb2(key) % table->size;
     if (table->assigned[hash] == false) {
-        table->assigned[hash] = 1;
-        table->data[hash] = val;
+        table->assigned[hash] = true;
+        table->data[hash].val = val;
+        strncpy(table->data[hash].key, key, 31);
+        table->data[hash].key[31] = '\0';
         return true;
     }
 
-    Panic("HashTable: Collision on key %s", key);
+    Panic("HashTable: Collision on key: %s", key);
     return false;
 }
 
@@ -67,7 +72,9 @@ int lookup_ht(HashTable *table, char *key) {
 
     hash = hash_djb2(key) % table->size;
     if (hash < table->size && table->assigned[hash]) {
-        return table->data[hash];
+        if (strcmp(key, table->data[hash].key) == 0) {
+            return table->data[hash].val;
+        }
     }
 
     return MINSINT;

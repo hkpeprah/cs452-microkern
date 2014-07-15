@@ -22,7 +22,8 @@ typedef enum {
     TRAIN_CMD_GOTO_AFTER,
     TRAIN_CMD_GOTO_STOP,
     TRAIN_CMD_RESERVE,
-    TRAIN_CMD_RELEASE
+    TRAIN_CMD_RELEASE,
+    TRAIN_CMD_MOVE
 } TrainCommandTypes;
 
 typedef struct {

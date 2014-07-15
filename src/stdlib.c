@@ -94,5 +94,6 @@ void swap_ptr(void **a, void **b) {
 
 
 inline int pow(int i, int n) {
-    return (n <= 1 ? i : i * pow(i, n - 1));
+    return (n <= 0 ? 1 :
+            (n == 1 ? i : i * pow(i, n - 1)));
 }

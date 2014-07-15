@@ -4,5 +4,6 @@
 
 void Conductor();
 int GoTo(unsigned int tid, unsigned int train, unsigned int tr_number, track_node *sensor, unsigned int distance);
+int Move(unsigned int tid, unsigned int train, unsigned int tr_number, unsigned int distance);
 
 #endif /* __CONDUCTOR_H__ */

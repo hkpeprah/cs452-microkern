@@ -135,6 +135,9 @@ void TrainUserTask() {
         auxiliary:
                 status = DispatchTrainAuxiliary(req.args[1], req.args[2]);
                 break;
+            case TRAIN_CMD_MOVE:
+                status = DispatchTrainMove(req.args[1], req.args[2]);
+                break;
             case TRAIN_CMD_RV:
                 status = DispatchTrainReverse(req.args[1]);
                 break;

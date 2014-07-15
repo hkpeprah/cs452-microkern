@@ -15,39 +15,42 @@
 #include <dispatcher.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      17
+#define HELP_MESSAGES      21
 
 static void print_help() {
-    static char *help[HELP_MESSAGES];
-    help[0] = "sl                          -   Steam locomotive\r\n";
-    help[1] = "rps                         -   Play a game of Rock-Paper-Scissors\r\n";
-    help[2] = "go                          -   Start the train set\r\n";
-    help[3] = "stop                        -   Stop the train set\r\n";
-    help[4] = "tr TRAIN SPEED              -   Set train TRAIN to move at speed SPEED\r\n";
-    help[5] = "sw SWITCH {C, S}            -   Set the specified switch to curve or straight\r\n";
-    help[6] = "ax TRAIN INT                -   Run the auxiliary function on the train\r\n";
-    help[7] = "rv TRAIN                    -   Reverse the specified train\r\n";
-    help[8] = "li TRAIN                    -   Turn on/off the lights on the specified train\r\n";
-    help[9] = "ho TRAIN                    -   Signal the horn on the specified train\r\n";
-    help[10] = "time                        -   Get the current formatted time\r\n";
-    help[11] = "add TRAIN SNSR              -   Add a train to the track at specified sensor\r\n";
-    help[12] = "goto TRAIN SNSR             -   Tell train to go to specified sensor\r\n";
-    help[13] = "goto-after TRAIN SNSR dist  -   Tell train to go to specified distance after sensor\r\n";
-    help[14] = "whoami                      -   Prints the current user\r\n";
-    help[15] = "help                        -   Display this help dialog\r\n";
-    help[16] = "?                           -   Display this help dialog\r\n";
+    static char *help[] = {
+        "rps                         -   Play a game of Rock-Paper-Scissors",
+        "go                          -   Start the train set",
+        "stop                        -   Stop the train set",
+        "tr TRAIN SPEED              -   Set train TRAIN to move at speed SPEED",
+        "sw SWITCH {C, S}            -   Set the specified switch to curve or straight",
+        "ax TRAIN INT                -   Run the auxiliary function on the train",
+        "rv TRAIN                    -   Reverse the specified train",
+        "li TRAIN                    -   Turn on/off the lights on the specified train",
+        "ho TRAIN                    -   Signal the horn on the specified train",
+        "time                        -   Get the current formatted time",
+        "add TRAIN                   -   Add a train to the track",
+        "add-at TRAIN SNSR           -   Add a train to the track at the specified sensor",
+        "goto TRAIN SNSR             -   Tell train to go to specified sensor",
+        "gt TRAIN SNSR dist          -   Tell train to go to specified distance after sensor",
+        "mv TRAIN dist               -   Tell train to move specified distance",
+        "st TRAIN                    -   Stop the train from routing",
+        "rsv TRAIN SNSR1 SNSR2       -   Reserve sensors from SNSR1 to SNSR2 for TRAIN",
+        "rls TRAIN SNSR1 SNSR2       -   Release sensors from SNSR1 to SNSR2 if they are assigned to TRAIN",
+        "whoami                      -   Prints the current user",
+        "help                        -   Display this help dialog",
+        "?                           -   Display this help dialog"
+    };
     unsigned int i;
-
-    // TODO: Figure out why can't send sl to be printed....
-    for (i = 1; i < 16; ++i) {
-        puts(help[i]);
+    for (i = 1; i < HELP_MESSAGES; ++i) {
+        printf("%s\r\n", help[i]);
     }
 }
 
 
 static void whoami() {
     static int id = -1;
-    char *names[] = {
+    static char *names[] = {
         "mqchen",
         "hkpeprah",
         "root",
@@ -66,7 +69,7 @@ static void whoami() {
 void Shell() {
     int args[6];
     char ch, buf[80];
-    unsigned int i, tid;
+    unsigned int i, tid, cmd;
     char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
     HashTable commands;
     int command, status;
@@ -86,10 +89,11 @@ void Shell() {
     insert_ht(&commands, "add", TRAIN_CMD_ADD);
     insert_ht(&commands, "add-at", TRAIN_CMD_ADD_AT);
     insert_ht(&commands, "goto", TRAIN_CMD_GOTO);
-    insert_ht(&commands, "goto-after", TRAIN_CMD_GOTO_AFTER);
-    insert_ht(&commands, "goto-stop", TRAIN_CMD_GOTO_STOP);
-    insert_ht(&commands, "reserve", TRAIN_CMD_RESERVE);
-    insert_ht(&commands, "release", TRAIN_CMD_RELEASE);
+    insert_ht(&commands, "gt", TRAIN_CMD_GOTO_AFTER);
+    insert_ht(&commands, "st", TRAIN_CMD_GOTO_STOP);
+    insert_ht(&commands, "rsv", TRAIN_CMD_RESERVE);
+    insert_ht(&commands, "rls", TRAIN_CMD_RELEASE);
+    insert_ht(&commands, "mv", TRAIN_CMD_MOVE);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -106,20 +110,23 @@ void Shell() {
             /* remove a character from the line */
             if (i > 0) {
                 if (i < 80) {
-                    buf[i] = 0;
+                    buf[--i] = 0;
+                } else {
+                    i--;
                 }
-                i--;
                 backspace();
             }
         } else if (ch == CR || ch == LF) {
             newline();
             i = 0;
+
             while (isspace(buf[i])) {
                 i++;
             }
 
             if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
                 /* quit the terminal and stop the kernel */
+                newline();
                 break;
             } else if (strcmp(buf, "?") == 0 || strcmp(buf, "help") == 0) {
                 print_help();
@@ -129,54 +136,58 @@ void Shell() {
             } else if (strcmp(buf, "whoami") == 0) {
                 whoami();
             } else {
+                /* add null terminating character to first available position */
                 tmp = &buf[i];
-                while (!isspace(*tmp) && *tmp) tmp++;
+                while (!isspace(*tmp) && *tmp) {
+                    tmp++;
+                }
                 *tmp = '\0';
-
+                /* match the command found between i ... tmp */
                 command = lookup_ht(&commands, &buf[i]);
                 if (command > 0) {
                     switch (command) {
                         case TRAIN_CMD_GO:
                         case TRAIN_CMD_STOP:
-                            i = 0;
+                            cmd = 0;
                             break;
                         case TRAIN_CMD_RV:
                         case TRAIN_CMD_LI:
                         case TRAIN_CMD_HORN:
                         case TRAIN_CMD_ADD:
                         case TRAIN_CMD_GOTO_STOP:
-                            i = 1;
+                            cmd = 1;
                             break;
                         case TRAIN_CMD_SPEED:
                         case TRAIN_CMD_AUX:
-                            i = 2;
+                        case TRAIN_CMD_MOVE:
+                            cmd = 2;
                             break;
                         case TRAIN_CMD_SWITCH:
-                            i = 3;
+                            cmd = 3;
                             break;
                         case TRAIN_CMD_ADD_AT:
                         case TRAIN_CMD_GOTO:
-                            i = 5;
+                            cmd = 5;
                             break;
                         case TRAIN_CMD_GOTO_AFTER:
-                            i = 6;
+                            cmd = 6;
                             break;
                         case TRAIN_CMD_RESERVE:
                         case TRAIN_CMD_RELEASE:
-                            i = 7;
+                            cmd = 7;
                             break;
                         default:
-                            i = -1;
+                            cmd = -1;
                     }
 
-                    if (i >= 0) {
+                    if (cmd >= 0) {
                         /* this is a parser command */
                         ++tmp;
-                        if (sscanf(tmp, parser[i], &args[1], &args[2], &args[3], &args[4], &args[5]) != -1) {
+                        if (sscanf(tmp, parser[cmd], &args[1], &args[2], &args[3], &args[4], &args[5]) != -1) {
                             args[0] = command;
                             Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
                         } else {
-                            printf("%s: invalid arguments.\r\n", command);
+                            printf("%s: invalid arguments.\r\n", &buf[i]);
                         }
                     } else {
                         /* this command spawns a user task */

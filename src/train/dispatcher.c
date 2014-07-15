@@ -28,7 +28,8 @@ typedef enum {
     TRM_RESERVE_TRACK,
     TRM_RESERVE_TRACK_DIST,
     TRM_RELEASE_TRACK,
-    TRM_CREATE_TRAIN
+    TRM_CREATE_TRAIN,
+    TRM_MOVE
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
@@ -108,7 +109,12 @@ int DispatchStopRoute(uint32_t tr) {
 
 
 track_node *DispatchGetTrackNode(uint32_t id) {
-    return (track_node*) SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0, 0);
+    return (track_node*)SendDispatcherMessage(TRM_GET_TRACK_NODE, 0, id, 0, 0);
+}
+
+
+int DispatchTrainMove(uint32_t id, uint32_t dist) {
+    return SendDispatcherMessage(TRM_MOVE, id, dist, 0, 0);
 }
 
 
@@ -302,9 +308,21 @@ void Dispatcher() {
                     status = INVALID_TRAIN_ID;
                 }
                 break;
+            case TRM_MOVE:
+                if (node != NULL) {
+                    if (node->conductor == -1) {
+                        debug("Dispatcher: Creating new conductor for train %u", node->tr_number);
+                        node->conductor = Create(7, Conductor);
+                    }
+                    debug("Dispatcher: Received request to move train %u %u mm", node->tr_number, request.arg0);
+                    status = Move(node->conductor, node->train, request.tr, request.arg0);
+                } else {
+                    status = INVALID_TRAIN_ID;
+                }
+                break;
             case TRM_GOTO:
             case TRM_GOTO_AFTER:
-                if ((node = getDispatcherNode(trains, request.tr))) {
+                if (node != NULL) {
                     if (node->conductor == -1) {
                         debug("Dispatcher: Creating new conductor for train %u", node->tr_number);
                         node->conductor = Create(7, Conductor);
@@ -368,4 +386,3 @@ void Dispatcher() {
     notice("Dispatcher: Exiting...");
     Exit();
 }
-

@@ -7,6 +7,7 @@
 #include <train_speed.h>
 #include <term.h>
 #include <path.h>
+#include <stdlib.h>
 
 typedef struct {
     int type;
@@ -18,6 +19,7 @@ typedef struct {
 
 typedef enum {
     GOTO = 33,
+    MOVE,
     TIME_UP,
     DIST_UP
 } ConductorMessageTypes;
@@ -56,28 +58,36 @@ void Conductor() {
 
     train = req.arg0;
     source = TrGetNextLocation(train, &nextSensorDist);
-    dest = (track_node*)req.arg1;
-    destDist = req.arg2;
-    if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
-        error("Conductor: Error: No path to destination %u found", dest->num);
-        Exit();
-    } else {
-        /* set up the couriers to navigate to destination */
-        for (i = 0; i < node_count; ++i) {
-            #if DEBUG
+    ASSERT((req.type == GOTO || req.type == MOVE), "conductor recieved a message not of type GOTO or MOVE");
+
+    /* check if goto or just a short move */
+    if (req.type == GOTO) {
+        dest = (track_node*)req.arg1;
+        destDist = req.arg2;
+        if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
+            error("Conductor: Error: No path to destination %u found", dest->num);
+            Exit();
+        } else {
+            /* set up the couriers to navigate to destination */
+            for (i = 0; i < node_count; ++i) {
+                #if DEBUG
                 printf((i == node_count - 1 ? "%s(%d)\r\n" : "%s(%d) -> "), path[i]->name, path[i]->num);
-            #endif
-            if (path[i]->type == NODE_BRANCH) {
-                if (path[i]->edge[DIR_STRAIGHT].dest == path[i + 1]) {
-                    trainSwitch(path[i]->num, 'S');
-                } else if (path[i]->edge[DIR_CURVED].dest == path[i + 1]) {
-                    trainSwitch(path[i]->num, 'C');
+                #endif
+                if (path[i]->type == NODE_BRANCH) {
+                    if (path[i]->edge[DIR_STRAIGHT].dest == path[i + 1]) {
+                        trainSwitch(path[i]->num, 'S');
+                    } else if (path[i]->edge[DIR_CURVED].dest == path[i + 1]) {
+                        trainSwitch(path[i]->num, 'C');
+                    }
                 }
             }
         }
         TrGotoAfter(train, path, node_count, destDist);
+    } else {
+        destDist = req.arg2;
+        TrGotoAfter(train, NULL, 0, destDist);
     }
-    /* TODO: Block on child's destination or have another one block for you */
+
     status = DispatchStopRoute(req.arg3);
     if (status < 0) {
         error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
@@ -94,6 +104,20 @@ int GoTo(unsigned int tid, unsigned int train, unsigned int tr_number, track_nod
     req.type = GOTO;
     req.arg0 = train;
     req.arg1 = (int)sensor;
+    req.arg2 = distance;
+    req.arg3 = tr_number;
+    Send(tid, &req, sizeof(req), &status, sizeof(status));
+    return status;
+}
+
+
+int Move(unsigned int tid, unsigned int train, unsigned int tr_number, unsigned int distance) {
+    ConductorMessage_t req;
+    int status;
+
+    req.type = MOVE;
+    req.arg0 = train;
+    req.arg1 = 0;
     req.arg2 = distance;
     req.arg3 = tr_number;
     Send(tid, &req, sizeof(req), &status, sizeof(status));

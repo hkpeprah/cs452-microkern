@@ -438,9 +438,6 @@ static void setTrainSpeed(Train_t *train, int speed) {
             train->transition.stopping_distance = 0;
         }
         train->speed = speed;
-        // debug("Dist to Next Sensor: %u, Current Edge Distance: %u, Stopping Distance: %u",
-        //      train->distToNextSensor, train->distSinceLastSensor, train->transition.stopping_distance);
-        updateLocation(train);
     }
     buf[0] = train->speed + train->aux;
     buf[1] = train->id;
@@ -571,22 +568,24 @@ static void TrainTask() {
             case TRM_GOTO_AFTER:
                 /* blocks the calling task until we arrive at our destination */
                 gotoBlocked = callee;
-                train.path = (track_node**)request.arg0;
-                train.pathNodeRem = request.arg1;
-                train.distOffset = request.arg2;
-                train.pathRemain = pathRemaining(&train);
-                notice("%u < %u", train.pathRemain, getStoppingDistance(train.id, 10, 0));
+                if (request.arg0 == NULL) {
+                    train.pathNodeRem = 0;
+                    train.pathRemain = request.arg2;
+                } else {
+                    train.path = (track_node**)request.arg0;
+                    train.pathNodeRem = request.arg1;
+                    train.distOffset = request.arg2;
+                    train.pathRemain = pathRemaining(&train);
+                }
                 if (train.pathRemain < getStoppingDistance(train.id, 10, 0) + STOP_BUFFER_MM) {
                     delayTime = shortmoves(train.id, 10, train.pathRemain);
                     notice("Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm",
                            train.id, delayTime, train.pathNodeRem, train.pathRemain);
-                    delayCourier = CourierDelay(ABS(delayTime), 7);
+                    delayCourier = CourierDelay(delayTime, 7);
                     train.path = NULL;
-                    setTrainSpeed(&train, 10);
-                } else {
-                    setTrainSpeed(&train, 10);
-                    waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
                 }
+                setTrainSpeed(&train, 10);
+                waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
                 break;
             case TRM_SPEED:
                 speed = request.arg0;

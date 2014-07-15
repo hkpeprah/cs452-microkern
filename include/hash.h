@@ -5,9 +5,14 @@
 
 #define H_LEN  64
 
+typedef struct {
+    char key[32];
+    int val;
+} HashNode;
+
 typedef struct __HashTable {
     size_t size;
-    int data[H_LEN];
+    HashNode data[H_LEN];
     bool assigned[H_LEN];
 } HashTable;
 

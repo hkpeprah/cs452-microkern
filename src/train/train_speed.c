@@ -189,7 +189,7 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
 
 
 static inline int compute_shortmove(int dist, int a, int b, int c, int d) {
-    return ((a * pow(dist, 3)) / pow(10, 7)) - ((b * pow(dist, 2)) / pow(10, 3)) +
+    return ((a * pow(dist, 3)) / pow(10, 7)) - ((b * pow(dist, 2)) / pow(10, 4)) +
         ((c * dist) / pow(10, 4)) + d;
 }
 
