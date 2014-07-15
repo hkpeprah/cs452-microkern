@@ -10,14 +10,12 @@ static bool cmpAndSwapResvBy(track_node *node, int oldValue, int newValue) {
         return true;
     }
 
-    error("Node %s cmpAndSwapResvBy failed: rsv {%d}, reverse rsv {%d}, oldValue {%d}, newValue {%d}",
-            node->reservedBy, node->reverse->reservedBy, oldValue, newValue);
     return (node->reverse->reservedBy == newValue && node->reservedBy == newValue);
 }
 
 
 // runs cmpAndSwapResvBy on each track, provided they are contineous
-static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **track, uint32_t n, uint32_t dist) {
+static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **track, uint32_t n, int *dist) {
     track_node *lastSuccessNode = NULL;
     track_node *currentNode = *track++;
     track_node *nextNode;
@@ -25,7 +23,7 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
     int nextEdgeDist;
 
     while (currentNode && (validRes = cmpAndSwapResvBy(currentNode, oldValue, newValue))) {
-        debug("set %s to %d, %d remaining", currentNode->name, newValue, n);
+        debug("%d res %s", newValue, currentNode->name);
 
         if (!validRes) {
             // node was already taken or tried to free something belonging to someone else
@@ -46,27 +44,29 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
             break;
         }
 
-        dist -= nextEdgeDist;
-        if (dist <= 0) {
-            // ran out of distance
+        if (*dist <= 0) {
+            debug("out of distance with dist = %d", *dist);
             break;
         }
 
+        *dist -= nextEdgeDist;
         currentNode = nextNode;
     }
 
     return lastSuccessNode;
 }
 
-track_node *reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, uint32_t dist) {
+track_node *reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
     return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, dist);
 }
 
 track_node *reserveTrack(uint32_t tr, track_node **track, uint32_t n) {
-    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, MAXUINT);
+    int maxint = MAXSINT;
+    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, &maxint);
 }
 
 track_node *releaseTrack(uint32_t tr, track_node **track, uint32_t n) {
-    return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n, MAXUINT);
+    int maxint = MAXSINT;
+    return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n, &maxint);
 }
 

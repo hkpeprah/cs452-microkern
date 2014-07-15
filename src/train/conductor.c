@@ -62,18 +62,10 @@ void Conductor() {
         error("Conductor: Error: No path to destination %u found", dest->num);
         Exit();
     } else {
-        /* set up the couriers to navigate to destination */
         for (i = 0; i < node_count; ++i) {
             #if DEBUG
                 printf((i == node_count - 1 ? "%s(%d)\r\n" : "%s(%d) -> "), path[i]->name, path[i]->num);
             #endif
-            if (path[i]->type == NODE_BRANCH) {
-                if (path[i]->edge[DIR_STRAIGHT].dest == path[i + 1]) {
-                    trainSwitch(path[i]->num, 'S');
-                } else if (path[i]->edge[DIR_CURVED].dest == path[i + 1]) {
-                    trainSwitch(path[i]->num, 'C');
-                }
-            }
         }
         TrGotoAfter(train, path, node_count, destDist);
     }

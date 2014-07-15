@@ -14,14 +14,14 @@
 #define EXTRACT_BIT(n, k)        (((n) & (1 << (k))) >> (k))
 #define ASSERT_MSG               "\033[31mPanic: assert failed at line %d of file %s (function <%s>): %s\033[0m\r\n\r\n"
 #define ASSERT(condition, msg)   {                                        \
-        if (condition == false) {                                         \
-            Panic(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, msg);     \
+        if ((condition) == false) {                                       \
+            Panic(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));   \
         }                                                                 \
     }
 #define KASSERT(condition, msg)   {                                       \
-        if (condition == false) {                                         \
+        if ((condition) == false) {                                       \
             kernel_disable();                                             \
-            kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, msg);   \
+            kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg)); \
         }                                                                 \
     }
 

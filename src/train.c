@@ -130,6 +130,7 @@ Sensor_t *getSensorFromIndex(unsigned int index) {
 int trainSwitch(unsigned int sw, char ch) {
     char buf[2];
     unsigned int ss;
+    Switch_t *swtch;
 
     buf[0] = 0;
     switch (ch) {
@@ -148,10 +149,15 @@ int trainSwitch(unsigned int sw, char ch) {
             return INVALID_SWITCH_STATE;
     }
 
+    swtch = getSwitch(sw);
+    if (swtch->state == ss) {
+        // TODO: don't send?
+    }
+
     if (buf[0] != 0  && sw >= 0 && sw <= 255) {
         buf[1] = sw;
         trnputs(buf, 2);
-        getSwitch(sw)->state = ss;
+        swtch->state = ss;
         printSwitch(sw, toUpperCase(ch));
         return 0;
     }
