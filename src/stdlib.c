@@ -83,3 +83,12 @@ void initUart(short uart, int speed, bool fifo) {
 
     flushUart(base);
 }
+
+inline void *pointer_check(void *x, int line, char *file, const char *function)
+{
+    if ( !x ) {
+        Panic(ASSERT_MSG, line, file, function, "NULL DEREF");
+    }
+    return x;
+}
+

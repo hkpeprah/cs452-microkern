@@ -23,7 +23,7 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
     int nextEdgeDist;
 
     while (currentNode && (validRes = cmpAndSwapResvBy(currentNode, oldValue, newValue))) {
-        debug("%d res %s", newValue, currentNode->name);
+        debug("%d res %s, %d node %d dist left", newValue, currentNode->name, n, *dist);
 
         if (!validRes) {
             // node was already taken or tried to free something belonging to someone else
