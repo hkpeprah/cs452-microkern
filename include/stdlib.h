@@ -24,9 +24,15 @@
             kernel_disable();                                              \
             kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));  \
         }                                                                  \
-    }
+
+#if DEBUG
+    #define d(p) ( *((typeof(p)) pointer_check(p, __LINE__, __FILE__, __FUNCTION__)) )
+#else
+    #define d(p) (*(p))
+#endif
 
 
+inline void *pointer_check(void *x, int line, char *file, const char *function);
 void *memset(void*, int, unsigned int);
 void *memcpy(void*, const void*, size_t);
 void swap_ptr(void**, void**);

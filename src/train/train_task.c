@@ -12,9 +12,13 @@
 #include <types.h>
 #include <path.h>
 #include <random.h>
+#include <dispatcher.h>
 
 #define GOTO_SPEED 10
 #define STOP_BUFFER_MM 15
+#define RESV_BUF_BITS 3
+#define RESV_MOD ((1 << RESV_BUF_BITS) - 1)
+
 
 typedef struct {
     bool valid;
@@ -24,6 +28,14 @@ typedef struct {
     unsigned int stopping_distance;
     unsigned int shortmove;
 } TransitionState_t;
+
+typedef struct __TrainResvBuf {
+    track_node *arr[(1 << RESV_BUF_BITS)];           // (path) of nodes reserved by this train
+    unsigned int head;
+    unsigned int tail;
+    // TODO: keep track of resv dist in here so we can just
+    // start counting from end of this buf
+} TrainResv_t;
 
 typedef struct __Train_t {
     unsigned int id : 16;                  // controller train id
@@ -36,13 +48,19 @@ typedef struct __Train_t {
     unsigned int distSinceLastSensor : 16;
     unsigned int distSinceLastNode : 16;
     int distToNextSensor : 16;             // distance between last sensor and next sensor
+
     unsigned int lastUpdateTick;           // last time the train position was updated
     int lastSensorTick;                    // last time the train triggered a sensor
+
     int stoppingDist : 16;                 // how long the train will go after speed is set to 0
+
     track_node **path;                     // path the train is currently executing
     unsigned int pathNodeRem : 6;          // how many nodes are left in the path array
     unsigned int distOffset : 16;          // mm after last node in path to stop
     int pathRemain : 16;                   // mm left until end of path
+
+    TrainResv_t resv;
+
     TransitionState_t transition;
 } Train_t;
 
@@ -69,6 +87,8 @@ typedef struct TrainMessage {
 
 static void TrainTask();
 static void setTrainSpeed(Train_t *train, int speed);
+static track_edge *getNextEdge(track_node *node);
+static track_node *peek_any_Resv(TrainResv_t *resv, uint32_t index);
 
 
 int TrCreate(int priority, int tr, track_node *start) {
@@ -203,21 +223,89 @@ static void TrainTimer() {
 
 /***** ACTUAL, HARD-WORKING AMERICAN FUNCTOINS START HERE *****/
 
+static uint32_t size_Resv(TrainResv_t *resv) {
+    uint32_t size = (resv->tail - resv->head) & RESV_MOD;
+    return size;
+}
+
+
+static void dump_Resv(TrainResv_t *resv) {
+    // should be debugging only
+    int i;
+    Log("DUMPING RESV:\n");
+    for (i = 0; i < size_Resv(resv); ++i) {
+        Log(" %s ", peek_any_Resv(resv, i)->name);
+    }
+    Log("\n");
+}
+
+
+static track_node *pop_head_Resv(TrainResv_t *resv) {
+    // buffer not empty
+    ASSERT(size_Resv(resv) > 0, "Train resv array empty");
+    int ind = resv->head;
+    resv->head = (resv->head + 1) & RESV_MOD;
+    return resv->arr[ind];
+}
+
+
+static track_node *peek_back_Resv(TrainResv_t *resv) {
+    int ind = (resv->tail - 1) & RESV_MOD;
+    return (size_Resv(resv) > 0) ? resv->arr[ind] : NULL;
+}
+
+
+static track_node *peek_head_Resv(TrainResv_t *resv) {
+    return (size_Resv(resv) > 0) ? resv->arr[resv->head] : NULL;
+}
+
+
+static track_node *peek_any_Resv(TrainResv_t *resv, uint32_t index) {
+    if (index >= size_Resv(resv)) {
+        error("Index %d out of bounds, head %u, tail %u", index, resv->head, resv->tail);
+        return NULL;
+    }
+
+    return resv->arr[(resv->head + index) & RESV_MOD];
+}
+
+
+static void push_back_Resv(TrainResv_t *resv, track_node *node) {
+    track_node *tail = peek_back_Resv(resv);
+
+    // buffer full
+    ASSERT((resv->tail + 1) != resv->head, "Train resv array out of space");
+    // empty or tail's next edge is what we want
+    ASSERT((tail == NULL || validNextNode(tail, node) != INVALID_NEXT_NODE), "End of resv and next resv not equal");
+    int ind = resv->tail;
+    resv->tail = (resv->tail + 1) & RESV_MOD;
+    resv->arr[ind] = node;
+}
+
+
+static void freeHeadResv(Train_t *train) {
+    track_node *toFree = pop_head_Resv(&(train->resv));
+    ASSERT(toFree != NULL, "Called freeHeadResv but nothing to free");
+    track_node *freed = DispatchReleaseTrack(train->id, &toFree, 1);
+    ASSERT(freed == toFree, "Failed to free head of resv node");
+}
+
+
 static track_edge *getNextEdge(track_node *node) {
     Switch_t *swtch;
-    switch (node->type) {
+    switch (d(node).type) {
         case NODE_SENSOR:
         case NODE_MERGE:
         case NODE_ENTER:
-            return &(node->edge[DIR_AHEAD]);
+            return &(d(node).edge[DIR_AHEAD]);
         case NODE_BRANCH:
             swtch = getSwitch(node->num);
-            return &(node->edge[swtch->state]);
+            return &(d(node).edge[d(swtch).state]);
         case NODE_EXIT:
             return NULL;
         case NODE_NONE:
         default:
-            error("getNextEdge: Error: Bad node type %u", node->type);
+            error("getNextEdge: Error: Bad node type %u", d(node).type);
             return NULL;
     }
 }
@@ -237,6 +325,7 @@ static void updateNextSensor(Train_t *train) {
 
     train->nextSensor = node;
 }
+
 
 // compute distance till end of path
 static uint32_t pathRemaining(const Train_t *train) {
@@ -259,20 +348,148 @@ static uint32_t pathRemaining(const Train_t *train) {
 // request path
 // flip switches
 // compute path distance, stop if necessary
-static void trainPath(Train_t *train) {
+// 0 on success, -1 if no paths reserved
+static int reserveTrack(Train_t *train, int resvDist) {
+    track_node *lastReserved = NULL;
+
+    int numResv = 0;
+    track_node *resvArr[RESV_MOD] = {0};
+    track_node **toResv = resvArr;
+
+    // debug("resvDist: %d", resvDist);
+
+    track_node *lastResvNode = peek_back_Resv(&(train->resv));
+    track_edge *lastResvEdge = NULL;
+    if (lastResvNode) {
+        lastResvEdge = getNextEdge(lastResvNode);
+    }
+
+    if (train->path) {
+        // has path, reserve along it
+        ASSERT(train->currentEdge->dest == train->path[0], "Train edge dest is not equal to start of path");
+        toResv = train->path;
+        lastReserved = DispatchReserveTrackDist(train->id, train->path, train->pathNodeRem, &resvDist);
+    } else {
+        // no path, find nodes
+        int distRemaining = resvDist;
+        track_node *node = train->currentEdge->dest;
+        track_edge *edge = getNextEdge(node);
+
+        while (node && edge && distRemaining > 0) {
+            toResv[numResv++] = node;
+            distRemaining -= edge->dist;
+            // debug("  resv: %s dist remain %d\n", d(node).name, distRemaining);
+            node = edge->dest;
+            edge = getNextEdge(node);
+        }
+
+        ASSERT(node != NULL, "reserveTrack: node should not be NULL");
+
+        // overshoot so we have extra stopping dist
+        toResv[numResv++] = node;
+        distRemaining -= edge->dist;
+        // debug("  resv (look-ahead): %s dist remain %d\n", d(node).name, distRemaining);
+
+        if (numResv <= 0) {
+            return resvDist;
+        }
+
+        // debug("EXPECT: reserving %d new nodes, dist remaining: %d", numResv, distRemaining);
+        ASSERT(numResv < RESV_MOD, "reserveTrack: overshot number of nodes to reserve");
+
+        lastReserved = DispatchReserveTrackDist(train->id, toResv, numResv, &resvDist);
+    }
+
+    if (lastResvEdge && lastResvEdge->dest == lastReserved) {
+        resvDist -= lastResvEdge->dist;
+    }
+
+    Log("Resv up to %s\n", d(lastReserved).name);
+
+    Log("Before resv\n");
+    dump_Resv(&(train->resv));
+
+    if (lastReserved) {
+        // add resv'd nodes to our list
+        int i = 0;
+        while (peek_any_Resv(&(train->resv), i) == toResv[i]) {
+            if (toResv[i] == lastReserved) {
+                // last reserved node already existed
+                goto done;
+            }
+            i += 1;
+        }
+        Log("i: %d\n", i);
+
+        track_node *newResv;
+        do {
+            newResv = toResv[i++];
+            Log("    pushing %s\n", d(newResv).name);
+            push_back_Resv(&(train->resv), newResv);
+        } while (newResv != lastReserved);
+    }
+
+done:
+    Log("After resv\n");
+    dump_Resv(&(train->resv));
+
+    if (train->path && train->path[train->pathNodeRem - 1] == lastReserved) {
+        // reserved up to the path's last node, return neg value to indicate okay to go
+        // and the path computation code will take care of stopping the train
+        return 0;
+    }
+
+    // debug("returning resvDist: %d", resvDist);
+    return resvDist;
+}
+
+
+static void execPath(Train_t *train, track_node *lastExec) {
+    if (!train->path) {
+        return;
+    }
+
+    Log("before EXEC path, with init path node %s\n", d(train->path[0]).name);
+    dump_Resv(&(train->resv));
+
+    ASSERT(train->currentEdge->dest == train->path[0], "Train edge dest is not equal to start of path");
+    ASSERT(peek_head_Resv(&(train->resv)) == train->path[0], "Next path node is not reserved by train");
+
+    track_node *current;
+    track_node *next;
+
+    int i = 0;
+    do {
+        current = peek_any_Resv(&(train->resv), i++);
+    } while (lastExec && current != lastExec);
+
+    for (; i < size_Resv(&(train->resv)); ++i) {
+        next = peek_any_Resv(&(train->resv), i);
+
+        if (d(current).edge[DIR_STRAIGHT].dest == next) {
+            trainSwitch(d(current).num, 'S');
+        } else if (d(current).type == NODE_BRANCH && d(current).edge[DIR_CURVED].dest == next) {
+            trainSwitch(d(current).num, 'C');
+        } else {
+            error("Error with path at %s to %s", current->name, next->name);
+        }
+
+        current = next;
+    }
 }
 
 
 static void sensorTrip(Train_t *train, track_node *sensor) {
     int tick;
 
-    if (sensor->type != NODE_SENSOR) {
-        error("SensorTrip: Error: Called with non-sensor node %s", sensor->name);
-    }
+    ASSERT((train->nextSensor != NULL && sensor != NULL), "SensorTrip: NULL sensor");
+    ASSERT(train->nextSensor == sensor, "SensorTrip: Expected sensor vs actual differ");
+    ASSERT(sensor->type == NODE_SENSOR, "SensorTrip called with non-sensor");
 
     tick = Time();
     if (train->lastSensorTick >= 0 && !train->transition.valid) {
-        train->microPerTick = (train->microPerTick >> 1) + (train->distToNextSensor * 500 / (tick - train->lastSensorTick));
+        // 80% of original speed, 20% of new
+        train->microPerTick = ( (train->microPerTick * 4) + (train->distToNextSensor * 1000 / (tick - train->lastSensorTick)) ) / 5;
     }
 
     train->transition.stopping_distance = MAX(0, train->transition.stopping_distance - train->distToNextSensor);
@@ -284,13 +501,10 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
     train->lastSensor = sensor;
     train->currentEdge = getNextEdge(sensor);
 
-    if (train->path) {
-        ASSERT(train->path != NULL, "train path is NULL");
-        ASSERT(train->pathNodeRem != 0, "train path is zero length");
+    updateNextSensor(train);
 
-        if (train->path[0] != sensor) {
-            error("SensorTrip: Error: Expected path to be at %s but it is at %s", sensor->name, train->path[0]->name);
-        }
+    if (train->path) {
+        ASSERT(train->path[0] == sensor, "tripped sensor but path[0] was not sensor");
 
         while (*(train->path) != sensor && train->pathNodeRem > 0) {
             train->path++;
@@ -306,13 +520,37 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
         debug("Train %u: Compute path: %d", train->id, train->pathRemain);
     }
 
-    updateNextSensor(train);
+
+    if (train->speed != 0) {
+        track_node *resvHead;
+
+        while (true)  {
+            resvHead = peek_head_Resv(&(train->resv));
+
+            if (!resvHead || resvHead == sensor) {
+                break;
+            }
+
+            freeHeadResv(train);
+        }
+
+        ASSERT(resvHead != NULL, "Expected sensor to be resv but it was not");
+        freeHeadResv(train);
+
+        track_node *lastResv = peek_back_Resv(&(train->resv));
+
+        if (reserveTrack(train, MAX(0, train->stoppingDist - train->currentEdge->dist)) > 0) {
+            setTrainSpeed(train, 0);
+        }
+
+        execPath(train, lastResv);
+    }
+
 }
 
 
 static void updateLocation(Train_t *train) {
     unsigned int traveledDist;
-    unsigned int start_speed, stop_speed;
     int ticks, numTraverse, timeTransition, srtmove;
 
     traveledDist = 0;
@@ -320,19 +558,31 @@ static void updateLocation(Train_t *train) {
     ticks = Time();
     if (train->transition.valid) {
         timeTransition = ticks - train->transition.time_issued;
-        start_speed = train->transition.start_speed;
-        stop_speed = train->transition.dest_speed;
+        uint32_t start_speed = train->transition.start_speed;
+        uint32_t stop_speed = train->transition.dest_speed;
         if (timeTransition >= getTransitionTicks(train->id, start_speed, stop_speed)) {
             debug("Train %u: Transition finished at time %u", train->id, ticks);
             train->transition.valid = false;
             train->microPerTick = getTrainVelocity(train->id, stop_speed);
             train->speed = stop_speed;
+            train->distSinceLastSensor += (timeTransition - getTransitionTicks(train->id, start_speed, stop_speed)) * train->microPerTick;
+            train->distSinceLastNode = train->distSinceLastSensor;
+
+            if (train->speed == 0) {
+                while (size_Resv(&(train->resv)) > 1 && peek_head_Resv(&(train->resv)) != train->currentEdge->src) {
+                    freeHeadResv(train);
+                }
+                Log("final resv node: %s, tran edge: %s\n", d(peek_head_Resv(&(train->resv))).name, train->currentEdge->src->name);
+                ASSERT(peek_head_Resv(&(train->resv)) == train->currentEdge->src, "Train stopped but rsv wrong node");
+            }
         } else {
+            /*
             srtmove = shortmoves_dist(train->id, stop_speed, timeTransition);
             traveledDist = srtmove <= 0 ? 0 : srtmove - train->transition.shortmove;
             debug("Traveled Distance = %u mm\tTransiton Time = %u", traveledDist, timeTransition);
             train->microPerTick = (srtmove * 1000) / timeTransition;
             train->transition.shortmove = srtmove;
+            */
         }
     } else {
         traveledDist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
@@ -348,21 +598,36 @@ static void updateLocation(Train_t *train) {
         debug("Critical path remaining reached at %d for stopping dist %d, stopping", train->pathRemain, train->stoppingDist);
     }
 
-    while (train->distSinceLastNode > train->currentEdge->dist) {
+    bool hasTraverse = false;
+
+    while ( train->distSinceLastNode > train->currentEdge->dist ) {
         if (train->currentEdge->dest == train->nextSensor) {
+            // TODO: this is kind of concerning...
+            //error("model beat train to %s", train->nextSensor->name);
             break;
         }
-        // debug("Traversing to %s and freeing %s", train->currentEdge->dest->name, train->currentEdge->src->name);
-        numTraverse++;
+
+        hasTraverse = true;
+
+        Log("traverse: %s, resv: %s\n", train->currentEdge->dest->name, d(peek_head_Resv(&(train->resv))).name);
+        ASSERT(train->currentEdge->dest == peek_head_Resv(&(train->resv)), "Traverse != resv");
+        freeHeadResv(train);
+
         train->currentEdge = getNextEdge(train->currentEdge->dest);
         train->distSinceLastNode -= train->currentEdge->dist;
+
+        if (train->path) {
+            train->path++;
+            train->pathNodeRem--;
+        }
     }
 
-    if (train->path && numTraverse > 0) {
-        // TODO: free traversed
-        // TODO: reserve, recompute path dist, stop if necessary
-        train->path += numTraverse;
-        train->pathNodeRem -= numTraverse;
+    if (hasTraverse && train->speed != 0) {
+        track_node *lastResv = peek_back_Resv(&(train->resv));
+        if (reserveTrack(train, MAX(0, train->stoppingDist - train->currentEdge->dist)) > 0) {
+            setTrainSpeed(train, 0);
+        }
+        execPath(train, lastResv);
     }
 
     CalibrationSnapshot(train);
@@ -443,6 +708,8 @@ static void setTrainSpeed(Train_t *train, int speed) {
             train->transition.stopping_distance = 0;
         }
         train->speed = speed;
+        // debug("Dist to Next Sensor: %u, Current Edge Distance: %u, Stopping Distance: %u",
+        //      train->distToNextSensor, train->distSinceLastSensor, train->transition.stopping_distance);
     }
     buf[0] = train->speed + train->aux;
     buf[1] = train->id;
@@ -474,6 +741,14 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     train->distOffset = 0;
     train->pathRemain = 0;
 
+    // reservation array
+    int i;
+    for (i = 0; i < (1 << RESV_BUF_BITS); ++i) {
+        train->resv.arr[i] = 0;
+    }
+    train->resv.head = 0;
+    train->resv.tail = 0;
+
     /* initialize transition */
     train->transition.valid = false;
     train->transition.start_speed = 0;
@@ -481,6 +756,21 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     train->transition.time_issued = 0;
     train->transition.stopping_distance = 0;
     train->transition.shortmove = 0;
+
+    // if train moved far enough past sensor, update it here
+    // similar to updateLocation's update but this lets us get our initial reservation
+    // whereas that guy also tries to free
+    while (train->distSinceLastNode > train->currentEdge->dist) {
+        train->currentEdge = getNextEdge(train->currentEdge->dest);
+        train->distSinceLastNode -= train->currentEdge->dist;
+    }
+
+    updateNextSensor(train);
+
+    // reserve your initial sensor
+    track_node *sensor = DispatchReserveTrack(train->id, &(train->currentEdge->src), 1);
+    ASSERT(sensor == train->currentEdge->src, "Train initial sensor reservation failed");
+    push_back_Resv(&(train->resv), sensor);
 }
 
 
@@ -531,6 +821,8 @@ static void TrainTask() {
         Exit();
     }
 
+    Reply(callee, NULL, 0);
+
     initTrain(&train, &request);
 
     /* initialize couriers */
@@ -540,11 +832,7 @@ static void TrainTask() {
     waitingSensor = -1;
     delayCourier = -1;
     gotoBlocked = 0;
-
-    Reply(callee, NULL, 0);
-
-    updateNextSensor(&train);
-    locationTimer = Create(4, TrainTimer);
+    locationTimer = Create(2, TrainTimer);
 
     while (true) {
         if ((bytes = Receive(&callee, &request, sizeof(request))) < 0) {
@@ -578,10 +866,22 @@ static void TrainTask() {
                     train.pathNodeRem = 0;
                     train.pathRemain = request.arg2;
                 } else {
+                    track_node *lastResv = peek_back_Resv(&(train.resv));
                     train.path = (track_node**)request.arg0;
                     train.pathNodeRem = request.arg1;
                     train.distOffset = request.arg2;
                     train.pathRemain = pathRemaining(&train);
+
+                    if (reserveTrack(&train, getStoppingDistance(train.id, GOTO_SPEED, 0) - train.currentEdge->dist) <= 0) {
+                        // free old reservations
+                        while (size_Resv(&(train.resv)) > 0 && peek_head_Resv(&(train.resv)) != lastResv) {
+                            freeHeadResv(&train);
+                        }
+                        freeHeadResv(&train);
+                        execPath(&train, NULL);
+                        setTrainSpeed(&train, GOTO_SPEED);
+                        waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
+                    }
                 }
                 if (train.pathRemain < getStoppingDistance(train.id, 10, 0) + STOP_BUFFER_MM) {
                     delayTime = shortmoves(train.id, 10, train.pathRemain);
@@ -595,10 +895,27 @@ static void TrainTask() {
                 break;
             case TRM_SPEED:
                 speed = request.arg0;
-                setTrainSpeed(&train, speed);
-                waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
                 status = 1;
                 Reply(callee, &status, sizeof(status));
+
+                if (speed == 0) {
+                    setTrainSpeed(&train, speed);
+                } else {
+                    track_node *lastResv = peek_back_Resv(&(train.resv));
+
+                    if (reserveTrack(&train, getStoppingDistance(train.id, speed, 0) - train.currentEdge->dist) <= 0) {
+
+                        // free old reservations
+                        while (size_Resv(&(train.resv)) > 0 && peek_head_Resv(&(train.resv)) != lastResv) {
+                            freeHeadResv(&train);
+                        }
+
+                        freeHeadResv(&train);
+                        execPath(&train, NULL);
+                        setTrainSpeed(&train, speed);
+                        waitOnNextTarget(&train, &sensorCourier, &waitingSensor);
+                    }
+                }
                 break;
             case TRM_AUX:
                 train.aux = request.arg0;

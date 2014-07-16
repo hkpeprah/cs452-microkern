@@ -36,7 +36,7 @@ int DispatchTrainReverse(unsigned int tr);
 int DispatchStopRoute(unsigned int tr);
 int DispatchTrainMove(unsigned int tr, unsigned int dist);
 track_node *DispatchGetTrackNode(unsigned int id);
-track_node *DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, uint32_t dist);
+track_node *DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist);
 track_node *DispatchReserveTrack(unsigned int tr, track_node **track, unsigned int n);
 track_node *DispatchReleaseTrack(unsigned int tr, track_node **track, unsigned int n);
 

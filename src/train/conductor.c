@@ -73,17 +73,11 @@ void Conductor() {
                 #if DEBUG
                 printf((i == node_count - 1 ? "%s(%d)\r\n" : "%s(%d) -> "), path[i]->name, path[i]->num);
                 #endif
-                if (path[i]->type == NODE_BRANCH) {
-                    if (path[i]->edge[DIR_STRAIGHT].dest == path[i + 1]) {
-                        trainSwitch(path[i]->num, 'S');
-                    } else if (path[i]->edge[DIR_CURVED].dest == path[i + 1]) {
-                        trainSwitch(path[i]->num, 'C');
-                    }
-                }
             }
         }
         TrGotoAfter(train, path, node_count, destDist);
     } else {
+        /* TODO: Traverse to find path */
         destDist = req.arg2;
         TrGotoAfter(train, NULL, 0, destDist);
     }
