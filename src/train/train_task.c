@@ -336,7 +336,7 @@ static uint32_t pathRemaining(const Train_t *train) {
 // flip switches
 // compute path distance, stop if necessary
 // 0 on success, -1 if no paths reserved
-static int reservePath(Train_t *train, int resvDist) {
+static int reserveTrack(Train_t *train, int resvDist) {
     track_node *lastReserved = NULL;
 
     int numResv = 0;
@@ -370,7 +370,7 @@ static int reservePath(Train_t *train, int resvDist) {
             edge = getNextEdge(node);
         }
 
-        ASSERT(node != NULL, "reservePath: node should not be NULL");
+        ASSERT(node != NULL, "reserveTrack: node should not be NULL");
 
         // overshoot so we have extra stopping dist
         toResv[numResv++] = node;
@@ -382,7 +382,7 @@ static int reservePath(Train_t *train, int resvDist) {
         }
 
         debug("EXPECT: reserving %d new nodes, dist remaining: %d", numResv, distRemaining);
-        ASSERT(numResv < RESV_MOD, "reservePath: overshot number of nodes to reserve");
+        ASSERT(numResv < RESV_MOD, "reserveTrack: overshot number of nodes to reserve");
 
         lastReserved = DispatchReserveTrackDist(train->id, toResv, numResv, &resvDist);
     }
@@ -419,6 +419,12 @@ static int reservePath(Train_t *train, int resvDist) {
 done:
     Log("After resv\n");
     dump_Resv(&(train->resv));
+
+    if (train->path && train->path[train->pathNodeRem - 1] == lastReserved) {
+        // reserved up to the path's last node, return neg value to indicate okay to go
+        // and the path computation code will take care of stopping the train
+        return 0;
+    }
 
     debug("returning resvDist: %d", resvDist);
     return resvDist;
@@ -519,7 +525,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
 
         track_node *lastResv = peek_back_Resv(&(train->resv));
 
-        if (reservePath(train, MAX(0, train->stoppingDist - train->currentEdge->dist)) > 0) {
+        if (reserveTrack(train, MAX(0, train->stoppingDist - train->currentEdge->dist)) > 0) {
             setTrainSpeed(train, 0);
         }
 
@@ -593,7 +599,7 @@ static void updateLocation(Train_t *train) {
 
     if (hasTraverse && train->speed != 0) {
         track_node *lastResv = peek_back_Resv(&(train->resv));
-        if (reservePath(train, MAX(0, train->stoppingDist - train->currentEdge->dist)) > 0) {
+        if (reserveTrack(train, MAX(0, train->stoppingDist - train->currentEdge->dist)) > 0) {
             setTrainSpeed(train, 0);
         }
         execPath(train, lastResv);
@@ -807,7 +813,7 @@ static void TrainTask() {
                 } else {
                     track_node *lastResv = peek_back_Resv(&(train.resv));
 
-                    if (reservePath(&train, getStoppingDistance(train.id, GOTO_SPEED, 0) - train.currentEdge->dist) <= 0) {
+                    if (reserveTrack(&train, getStoppingDistance(train.id, GOTO_SPEED, 0) - train.currentEdge->dist) <= 0) {
                         // free old reservations
                         while (size_Resv(&(train.resv)) > 0 && peek_head_Resv(&(train.resv)) != lastResv) {
                             freeHeadResv(&train);
@@ -830,7 +836,7 @@ static void TrainTask() {
                 } else {
                     track_node *lastResv = peek_back_Resv(&(train.resv));
 
-                    if (reservePath(&train, getStoppingDistance(train.id, speed, 0) - train.currentEdge->dist) <= 0) {
+                    if (reserveTrack(&train, getStoppingDistance(train.id, speed, 0) - train.currentEdge->dist) <= 0) {
 
                         // free old reservations
                         while (size_Resv(&(train.resv)) > 0 && peek_head_Resv(&(train.resv)) != lastResv) {
