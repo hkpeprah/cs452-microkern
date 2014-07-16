@@ -214,3 +214,30 @@ int shortmoves(unsigned int tr, unsigned int speed, int dist) {
     }
     return delay;
 }
+
+
+static inline int compute_shortmove_dist(int ticks, int a, int b, int c, int d) {
+    return ((a * pow(ticks, 3)) / pow(10, 5)) - ((b * pow(ticks, 2)) / pow(10, 4)) +
+        ((c * ticks) / pow(10, 4)) - d;
+}
+
+
+int shortmoves_dist(uint32_t tr, uint32_t speed, uint32_t ticks) {
+    int dist;
+    /* TODO: Consider speed as some multiplicative value */
+    switch (tr) {
+        case 48:
+            dist = compute_shortmove_dist(ticks, 2, 50, 13166, 52);
+            break;
+        case 51:
+        case 50:
+        case 49:
+        case 45:
+        case 47:
+            dist = compute_shortmove_dist(ticks, 5, 127, 21513, 66);
+            break;
+        default:
+            dist = ticks;
+    }
+    return dist;
+}

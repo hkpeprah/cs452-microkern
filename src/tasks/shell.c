@@ -117,6 +117,10 @@ void Shell() {
                 backspace();
             }
         } else if (ch == CR || ch == LF) {
+            if (i == 0) {
+                continue;
+            }
+
             newline();
             i = 0;
 

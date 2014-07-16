@@ -22,6 +22,7 @@ typedef struct {
     unsigned int dest_speed : 8;
     unsigned int time_issued;
     unsigned int stopping_distance;
+    unsigned int shortmove;
 } TransitionState_t;
 
 typedef struct __Train_t {
@@ -310,26 +311,29 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
 
 
 static void updateLocation(Train_t *train) {
-    int ticks, numTraverse;;
-    unsigned int start_speed, stop_speed;
     unsigned int traveledDist;
+    unsigned int start_speed, stop_speed;
+    int ticks, numTraverse, timeTransition, srtmove;
 
     traveledDist = 0;
     numTraverse = 0;
     ticks = Time();
     if (train->transition.valid) {
+        timeTransition = ticks - train->transition.time_issued;
         start_speed = train->transition.start_speed;
         stop_speed = train->transition.dest_speed;
-        if (ticks - train->transition.time_issued >= getTransitionTicks(train->id, start_speed, stop_speed)) {
+        if (timeTransition >= getTransitionTicks(train->id, start_speed, stop_speed)) {
             debug("Train %u: Transition finished at time %u", train->id, ticks);
             train->transition.valid = false;
-            train->distSinceLastSensor = train->transition.stopping_distance;
             train->microPerTick = getTrainVelocity(train->id, stop_speed);
-            train->distSinceLastSensor += (ticks - train->transition.time_issued -
-                                           getTransitionTicks(train->id, start_speed, stop_speed)) * train->microPerTick;
             train->speed = stop_speed;
-            train->distSinceLastNode = train->distSinceLastSensor;
-         }
+        } else {
+            srtmove = shortmoves_dist(train->id, stop_speed, timeTransition);
+            traveledDist = srtmove <= 0 ? 0 : srtmove - train->transition.shortmove;
+            debug("Traveled Distance = %u mm\tTransiton Time = %u", traveledDist, timeTransition);
+            train->microPerTick = (srtmove * 1000) / timeTransition;
+            train->transition.shortmove = srtmove;
+        }
     } else {
         traveledDist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
     }
@@ -429,6 +433,7 @@ static void setTrainSpeed(Train_t *train, int speed) {
         train->transition.start_speed = train->speed;
         train->transition.dest_speed = speed;
         train->transition.time_issued = tick;
+        train->transition.shortmove = 0;
         train->lastUpdateTick = tick;
         train->lastSensorTick = -1;
         // debug("Stopping Distance for %d -> %d: %d", train->speed, speed, train->stoppingDist);
@@ -475,6 +480,7 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     train->transition.dest_speed = 0;
     train->transition.time_issued = 0;
     train->transition.stopping_distance = 0;
+    train->transition.shortmove = 0;
 }
 
 
