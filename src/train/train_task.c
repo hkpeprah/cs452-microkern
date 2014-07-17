@@ -327,8 +327,8 @@ static void updateNextSensor(Train_t *train) {
     track_edge *edge;
 
     i = 0;
-    node = train->lastSensor;
-    edge = getNextEdge(node);
+    node = train->currentEdge->src;
+    edge = NULL;
     train->distToNextSensor = 0;
     path = train->path;
 
@@ -341,12 +341,11 @@ static void updateNextSensor(Train_t *train) {
             nextNodeDist = validNextNode(path[i], path[i + 1]);
             ASSERT(nextNodeDist != INVALID_NEXT_NODE, "Train's path is wrong: %s([%d]) to %s([%d])",
                    d(path[i]).name, i, d(path[i + 1]).name, i + 1);
-            train->distToNextSensor += edge->dist;
-            node = path[i + 1];
-            i += 1;
+            train->distToNextSensor += nextNodeDist;
+            node = path[++i];
         } else {
             edge = getNextEdge(node);
-            train->distToNextSensor += edge->dist;
+            train->distToNextSensor += d(edge).dist;
             node = d(edge).dest;
         }
     } while (node && node->type != NODE_SENSOR);
@@ -375,9 +374,7 @@ static uint32_t pathRemaining(const Train_t *train) {
 }
 
 // request path
-// flip switches
-// compute path distance, stop if necessary
-// 0 on success, -1 if no paths reserved
+// returns amount of dist left to reserve (can be negative, ie. there's extra)
 static int reserveTrack(Train_t *train, int resvDist) {
     int numResv = 0;
     track_edge *lastResvEdge;
@@ -393,7 +390,7 @@ static int reserveTrack(Train_t *train, int resvDist) {
 
     if (train->path) {
         /* train has a path, need to reserve along it */
-        ASSERT(train->currentEdge->dest == train->path[0], "Train edge dest is not equal to start of path")
+        ASSERT(train->currentEdge->dest == train->path[0], "Train edge dest is not equal to start of path");
         toResv = train->path;
         lastReserved = DispatchReserveTrackDist(train->id, train->path, train->pathNodeRem, &resvDist);
     } else {
@@ -426,10 +423,12 @@ static int reserveTrack(Train_t *train, int resvDist) {
     }
 
     if (lastResvEdge && lastResvEdge->dest == lastReserved) {
+        // reserve only 1 edge - since we're node-based, reserving 1 node only doesn't correctly
+        // update the distance reserved
+        debug("resv only 1 node past already resv");
         resvDist -= lastResvEdge->dist;
     }
 
-    Log("Resv up to %s\n", d(lastReserved).name);
     Log("Before resv\n");
     dump_Resv(&(train->resv));
 
@@ -458,7 +457,7 @@ done:
     dump_Resv(&(train->resv));
 
     if (train->path && train->path[train->pathNodeRem - 1] == lastReserved) {
-        // reserved up to the path's last node, return neg value to indicate okay to go
+        // reserved up to the path's last node, return "good to go" value to indicate okay to go
         // and the path computation code will take care of stopping the train
         return 0;
     }
@@ -547,7 +546,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
 
     updateNextSensor(train);
 
-    if (train->speed != 0) {
+    if (train->speed != 0 || train->transition.valid) {
         track_node *resvHead, *lastResv;
         while (true)  {
             resvHead = peek_head_Resv(&(train->resv));
