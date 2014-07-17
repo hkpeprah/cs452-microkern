@@ -9,7 +9,6 @@
 
 static struct train_speed_state trainSpeeds[6];
 
-
 void initTrainSpeeds() {
     char *trains[] = {"45", "47", "48", "49", "50", "51"};
     struct train_speed_state *state;

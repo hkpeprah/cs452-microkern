@@ -27,6 +27,7 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
 
         if (!validRes) {
             // node was already taken or tried to free something belonging to someone else
+            debug("%s res fail, expected %d but got oldValue %d -> newValue %d", currentNode->name, currentNode->reservedBy, oldValue, newValue);
             break;
         }
 
