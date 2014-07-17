@@ -5,6 +5,7 @@
 int TrCreate(int priority, int tr, track_node *start_sensor);
 int TrSpeed(unsigned int tid, unsigned int speed);
 int TrReverse(unsigned int tid);
+int TrDirection(unsigned int tid);
 int TrAuxiliary(unsigned int tid, unsigned int aux);
 int TrGetSpeed(unsigned int tid);
 int TrGotoAfter(unsigned int tid, track_node **path, unsigned int pathLen, unsigned int dist);

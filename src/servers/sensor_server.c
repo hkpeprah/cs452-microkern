@@ -71,7 +71,7 @@ void SensorServer() {
     SensorRequest_t req, reply;
     char calleeByte;
     int tid, callee, status;
-    unsigned int i, timeout, sensor, time = 0;
+    unsigned int i, timeout, sensor;
     unsigned int bytes, notifier, *sensors;
     unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
     SensorQueue_t sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {{0}};
@@ -138,17 +138,6 @@ void SensorServer() {
                     status = 1;
                     sensors = (uint32_t*)req.sensor;
 
-                    // TODO: is this actually better than using Time all the time?
-                    if (random_range(0, 9) == 0) {
-                        // re-sync clock with probability 10%
-                        time = Time();
-                    } else {
-                        // otherwise, roughly estimate the time. the sensor poll loop is roughly every 6 ticks
-                        // a loss of granularity here, but it only applies for cases of error sensors and our
-                        // time-based location re-sync in the train should handle it just fine
-                        time += 6;
-                    }
-
                     for (i = 0; i < maxId; ++i) {
                         tid = -1;
                         if (sensors[i] && !lastPoll[i]) {
@@ -157,15 +146,13 @@ void SensorServer() {
                             tid = sensorQueue[i].tid;
                             sensorQueue[i].tid = -1;
                             status = SENSOR_TRIP;
-                            sensor = (sensor ? sensor : i);
-                        } else if (sensorQueue[i].timeout > 0 && sensorQueue[i].timeout < time) {
-                            tid = sensorQueue[i].tid;
-                            sensorQueue[i].tid = -1;
-                            status = TIMER_TRIP;
                         }
 
                         if (tid >= 0) {
                             Reply(tid, &status, sizeof(status));
+                        } else if (sensor <= 0) {
+                            /* assign the sensor to the one not being waited on */
+                            sensor = i;
                         }
                         lastPoll[i] = sensors[i];
                     }

@@ -94,14 +94,18 @@ void swap_ptr(void **a, void **b) {
 
 
 inline int pow(int i, int n) {
-    return (n <= 0 ? 1 :
-            (n == 1 ? i : i * pow(i, n - 1)));
+    if (n <= 0) {
+        return 1;
+    } else if (n == 1) {
+        return i;
+    }
+    return i * pow(i, n - 1);
 }
 
 
 inline void *pointer_check(void *x, int line, char *file, const char *function) {
-    if ( !x ) {
-        Panic(ASSERT_MSG, line, file, function, "NULL DEREF");
+    if (x == NULL) {
+        Panic(ASSERT_MSG, line, file, function, "Dereference of variable whose value was NULL");
     }
     return x;
 }

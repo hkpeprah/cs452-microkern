@@ -65,7 +65,8 @@ void Conductor() {
                     TrGotoAfter(train, &(path[i - fractured]), fractured, 0);
                     fractured = 0;
                 }
-                TrReverse(train);
+                TrDirection(train);
+                i++;
             } else if (fractured > 0 && i == node_count - 1) {
                 /* if we have fractals and we have exhausted our nodes, just move */
                 printf("%s(%d)\r\n", path[i]->name, path[i]->num);
