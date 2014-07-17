@@ -150,15 +150,11 @@ int trainSwitch(unsigned int sw, char ch) {
     }
 
     swtch = getSwitch(sw);
-    if (swtch->state == ss) {
-        // TODO: don't send?
-    }
-
     if (buf[0] != 0  && sw >= 0 && sw <= 255) {
         buf[1] = sw;
         trnputs(buf, 2);
         swtch->state = ss;
-        printSwitch(sw, toUpperCase(ch));
+        printSwitch(swtch->id, (toUpperCase(ch)));
         return 0;
     }
     return INVALID_SWITCH_ID;

@@ -7,7 +7,7 @@
 #define DEBUG_MOVE   "\033[s\033[%d;%dr\033[%d;%dH\r\n"
 #define TERM_MOVE    "\033[%d;%dr\033[%d;%dH\033[u"
 
-static int TERM_OFFSET;
+static volatile int TERM_OFFSET;
 static int TERM_BOTTOM;
 static unsigned int SENSORS_PER_LINE;
 

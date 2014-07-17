@@ -303,5 +303,4 @@ void sys_panic(char *msg, va_list va) {
     strcat(fmt, "\033[0m");
     format(fmt, va, buffer);
     kputstr(buffer);
-    dumpLog();
 }

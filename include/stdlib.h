@@ -4,7 +4,7 @@
 #include <syscall.h>
 #include <kernel.h>
 
-#define ASSERT_MSG               "\033[31mPanic: assert failed at line %d of file %s (function <%s>): %s\033[0m\r\n\r\n"
+#define ASSERT_MSG               "\033[31mPanic: assert failed at line %d of file %s (function <%s>):\r\n%s\033[0m\r\n\r\n"
 
 /* http://www.cocoawithlove.com/2008/04/using-pointers-to-recast-in-c-is-bad.html */
 #define UNION_CAST(x, destType)  (((union {__typeof__(x) a; destType b;}) x).b)

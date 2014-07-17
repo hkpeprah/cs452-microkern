@@ -98,11 +98,6 @@ static void heapifyUp(Heap_t *heap, Node_t *node) {
             break;
         }
 
-#if RAW_DEBUG
-        kprintf("me: %d dist {%d}, parent: %d dist {%d}\n",
-                index, heap->arr[index]->dist, parent, heap->arr[parent]->dist);
-#endif 
-
         swap(&heap->arr[index], &heap->arr[parent]);
     }
 }
@@ -178,11 +173,6 @@ static void addNode(Heap_t *heap, Node_t *nodes, Node_t *currentNode, unsigned i
         } else {
             heapInsert(heap, nextNode);
         }
-#if RAW_DEBUG
-        kprintf("added new node with name %s, distance %d, pred %s\n",
-                nextTrackNode->name, nextNode->dist, currentTrackNode->name);
-        dumpHeap(heap);
-#endif
     }
 }
 
@@ -219,10 +209,7 @@ int findPath(unsigned int tr, track_node *start, track_node *end, track_node **p
         // get head of heap
         currentNode = heapPop(&heap);
         currentTrackNode = currentNode->trackNode;
-#if RAW_DEBUG
-        kprintf("processing node %s dist %d\n", currentTrackNode->name, currentNode->dist);
-        bwgetc(COM2);
-#endif
+
         if (currentTrackNode == end) {
             break;
         }
@@ -238,7 +225,7 @@ int findPath(unsigned int tr, track_node *start, track_node *end, track_node **p
             case NODE_MERGE:
             case NODE_SENSOR:
             case NODE_ENTER:
-                //addNode(&heap, nodes, currentNode, DIR_REVERSE);
+                addNode(&heap, nodes, currentNode, DIR_REVERSE);
                 addNode(&heap, nodes, currentNode, DIR_STRAIGHT);
                 break;
             default:

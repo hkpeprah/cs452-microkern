@@ -25,28 +25,14 @@ typedef enum {
 } ConductorMessageTypes;
 
 
-/*
-static int getOptimalSpeed(unsigned int tr, unsigned int distance) {
-    unsigned int i;
-    for (i = TRAIN_MAX_SPEED - 2; i > 1; ++i) {
-        if (getStoppingDistance(tr, i, 0) <= distance) {
-            break;
-        }
-    }
-    return i;
-}
-*/
-
-
 void Conductor() {
     int callee, status;
     unsigned int train;
     ConductorMessage_t req;
     track_node *source, *dest, *path[32] = {0};
-    unsigned int node_count, i;
+    unsigned int node_count, i, fractured;
     unsigned int total_distance, nextSensorDist, destDist;
 
-    source = NULL;
     status = Receive(&callee, &req, sizeof(req));
     if (status < 0) {
         error("Conductor: Error: Error in send, received %d from %d", status, callee);
@@ -56,10 +42,10 @@ void Conductor() {
     status = 1;
     Reply(callee, &status, sizeof(status));
 
+    fractured = 0;
     train = req.arg0;
     source = TrGetNextLocation(train, &nextSensorDist);
     ASSERT((req.type == GOTO || req.type == MOVE), "conductor recieved a message not of type GOTO or MOVE");
-
     /* check if goto or just a short move */
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
@@ -67,15 +53,28 @@ void Conductor() {
         if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
             error("Conductor: Error: No path to destination %u found", dest->num);
             Exit();
-        } else {
-            /* set up the couriers to navigate to destination */
-            for (i = 0; i < node_count; ++i) {
-                #if DEBUG
-                printf((i == node_count - 1 ? "%s(%d)\r\n" : "%s(%d) -> "), path[i]->name, path[i]->num);
-                #endif
+        }
+
+        /* break up path into forward and back tracks */
+        for (i = 0; i < node_count; ++i) {
+            if (path[i]->reverse == path[i + 1]) {
+                /* if next path is a reveral, reverse */
+                if (fractured > 0) {
+                    /* check if we had path leading up to the reverse, if so, goto first */
+                    printf("%s(%d)\r\n", path[i]->name, path[i]->num);
+                    TrGotoAfter(train, &(path[i - fractured]), fractured, 0);
+                    fractured = 0;
+                }
+                TrReverse(train);
+            } else if (fractured > 0 && i == node_count - 1) {
+                /* if we have fractals and we have exhausted our nodes, just move */
+                printf("%s(%d)\r\n", path[i]->name, path[i]->num);
+                TrGotoAfter(train, &(path[i - fractured]), fractured + 1, destDist);
+            } else {
+                printf("%s(%d) -> ", path[i]->name, path[i]->num);
+                fractured++;
             }
         }
-        TrGotoAfter(train, path, node_count, destDist);
     } else {
         /* TODO: Traverse to find path */
         destDist = req.arg2;

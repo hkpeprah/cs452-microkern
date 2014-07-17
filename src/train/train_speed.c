@@ -239,5 +239,5 @@ int shortmoves_dist(uint32_t tr, uint32_t speed, uint32_t ticks) {
         default:
             dist = ticks;
     }
-    return dist;
+    return MAX(dist, 0);
 }

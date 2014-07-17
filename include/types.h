@@ -8,6 +8,9 @@
 #define MINSINT          0x80000000
 #define MAXUINT          0xFFFFFFFF
 #define MINUINT          0x0
+#define MAX_SINT         MAXSINT
+#define MIN_SINT         MINSINT
+#define MAX_UINT         MAXUINT
 typedef unsigned int     bool;
 typedef int              int8_t;
 typedef int              int16_t;

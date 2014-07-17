@@ -23,7 +23,7 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
     int nextEdgeDist;
 
     while (currentNode && (validRes = cmpAndSwapResvBy(currentNode, oldValue, newValue))) {
-        debug("%d res %s, %d node %d dist left", newValue, currentNode->name, n, *dist);
+        // debug("%d res %s, %d node %d dist left", newValue, currentNode->name, n, *dist);
 
         if (!validRes) {
             // node was already taken or tried to free something belonging to someone else
@@ -40,12 +40,12 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
         nextNode = *track++;
         if ( (nextEdgeDist = validNextNode(currentNode, nextNode)) < 0 ) {
             // path is not contiguous (not DIR_AHEAD/DIR_STRAIGHT or DIR_CURVED)
-            error("Incorrect path at %s to %s", currentNode->name, nextNode->name);
+            // error("Incorrect path at %s to %s", currentNode->name, nextNode->name);
             break;
         }
 
         if (*dist <= 0) {
-            debug("out of distance with dist = %d", *dist);
+            // debug("out of distance with dist = %d", *dist);
             break;
         }
 
