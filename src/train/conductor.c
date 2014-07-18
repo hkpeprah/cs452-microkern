@@ -8,6 +8,7 @@
 #include <term.h>
 #include <path.h>
 #include <stdlib.h>
+#include <clock.h>
 
 typedef struct {
     int type;
@@ -61,18 +62,24 @@ void Conductor() {
                 /* if next path is a reveral, reverse */
                 if (fractured > 0) {
                     /* check if we had path leading up to the reverse, if so, goto first */
-                    printf("%s(%d)\r\n", path[i]->name, path[i]->num);
-                    TrGotoAfter(train, &(path[i - fractured]), fractured, 0);
+                    printf("%s(%d)@[%d]\r\n", path[i]->name, path[i]->num, i);
+                    if (i == node_count - 2) {
+                        printf("Finished pathing.\r\n");
+                    }
+                    Delay(20);
+                    TrGotoAfter(train, &(path[i - fractured]), fractured + 1, 0);
                     fractured = 0;
                 }
+                printf("%s(%d)@[%d] <-> ", path[i]->name, path[i]->num, i);
+                Delay(20);
                 TrDirection(train);
-                i++;
-            } else if (fractured > 0 && i == node_count - 1) {
+            } else if (i == node_count - 1) {
                 /* if we have fractals and we have exhausted our nodes, just move */
-                printf("%s(%d)\r\n", path[i]->name, path[i]->num);
+                printf("%s(%d)@[%d]\r\nFinished pathing.\r\n", path[i]->name, path[i]->num, i);
+                Delay(20);
                 TrGotoAfter(train, &(path[i - fractured]), fractured + 1, destDist);
             } else {
-                printf("%s(%d) -> ", path[i]->name, path[i]->num);
+                printf("%s(%d)@[%d] -> ", path[i]->name, path[i]->num, i);
                 fractured++;
             }
         }

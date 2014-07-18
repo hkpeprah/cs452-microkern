@@ -10,11 +10,12 @@ typedef enum {
   NODE_EXIT,
 } node_type;
 
-#define DIR_AHEAD 0
-#define DIR_STRAIGHT 0
-#define DIR_CURVED 1
-#define RESERVED_BY_NOBODY -1
-#define INVALID_NEXT_NODE -2
+#define DIR_AHEAD             0
+#define DIR_STRAIGHT          0
+#define DIR_CURVED            1
+#define RESERVED_BY_NOBODY    -1
+#define INVALID_NEXT_NODE     -2
+#define REVERSE_DIST          75
 
 struct track_node;
 typedef struct track_node track_node;
@@ -35,6 +36,7 @@ struct track_node {
 
   int reservedBy;       /* train # of train that reserved this node */
 };
+
 
 int validNextNode(track_node *current, track_node *next);
 

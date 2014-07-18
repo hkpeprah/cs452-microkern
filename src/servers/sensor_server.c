@@ -139,6 +139,7 @@ void SensorServer() {
                     sensors = (uint32_t*)req.sensor;
 
                     for (i = 0; i < maxId; ++i) {
+                        bool tripped = false;
                         tid = -1;
                         if (sensors[i] && !lastPoll[i]) {
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
@@ -146,11 +147,12 @@ void SensorServer() {
                             tid = sensorQueue[i].tid;
                             sensorQueue[i].tid = -1;
                             status = SENSOR_TRIP;
+                            tripped = true;
                         }
 
                         if (tid >= 0) {
                             Reply(tid, &status, sizeof(status));
-                        } else if (sensor <= 0) {
+                        } else if (sensor <= 0 && tripped) {
                             /* assign the sensor to the one not being waited on */
                             sensor = i;
                         }

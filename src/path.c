@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <term.h>
 
-#define REVERSE_DIST   100
 #define DIR_REVERSE    2
 #ifndef RAW_DEBUG
 #define RAW_DEBUG      0

@@ -15,6 +15,8 @@ int validNextNode(track_node *current, track_node *next) {
         case NODE_ENTER:
             if (straight->dest == next) {
                 return straight->dist;
+            } else if (current->reverse == next) {
+                return REVERSE_DIST;
             }
             return INVALID_NEXT_NODE;
         case NODE_NONE:
