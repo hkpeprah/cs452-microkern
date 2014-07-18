@@ -810,13 +810,20 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     train->transition.stopping_distance = 0;
     train->transition.shortmove = 0;
 
+    debug("before traversal edge %s to %s", train->currentEdge->src->name, train->currentEdge->dest->name);
+    debug("dist left BEFORE LOOP: %d", train->distSinceLastNode);
+
     // if train moved far enough past sensor, update it here
     // similar to updateLocation's update but this lets us get our initial reservation
     // whereas that guy also tries to free
     while (train->distSinceLastNode > train->currentEdge->dist) {
-        train->currentEdge = getNextEdge(train->currentEdge->dest);
         train->distSinceLastNode -= train->currentEdge->dist;
+        train->currentEdge = getNextEdge(train->currentEdge->dest);
+        debug("edge->dest: %s, dist: %d", train->currentEdge->dest->name, train->distSinceLastNode);
+        getchar();
     }
+
+    Log("after traversal edge %s to %s", train->currentEdge->src->name, train->currentEdge->dest->name);
 
     updateNextSensor(train);
 
