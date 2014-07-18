@@ -196,8 +196,8 @@ static void TrainCreateCourier() {
         req.type = TRM_CREATE_TRAIN;
         req.tr = req.tr;
         req.arg0 = tid;
-        TrAuxiliary(tid, 16);
         Send(parent, &req, sizeof(req), NULL, 0);
+        TrAuxiliary(tid, 16);
     } else {
         error("TrainCreateCourier: Error: Failed to create new Train task");
     }

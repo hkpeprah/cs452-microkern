@@ -30,9 +30,10 @@ void Conductor() {
     int callee, status;
     unsigned int train;
     ConductorMessage_t req;
-    track_node *source, *dest, *path[32] = {0};
+    track_node *dest, *path[32] = {0};
+    track_edge *source;
     unsigned int node_count, i, fractured;
-    unsigned int total_distance, nextSensorDist, destDist;
+    unsigned int total_distance, destDist;
 
     status = Receive(&callee, &req, sizeof(req));
     if (status < 0) {
@@ -45,7 +46,7 @@ void Conductor() {
 
     fractured = 0;
     train = req.arg0;
-    source = TrGetNextLocation(train, &nextSensorDist);
+    source = TrGetEdge(train);
     ASSERT((req.type == GOTO || req.type == MOVE), "conductor recieved a message not of type GOTO or MOVE");
     /* check if goto or just a short move */
     if (req.type == GOTO) {

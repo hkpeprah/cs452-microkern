@@ -70,7 +70,7 @@ static int trackReservation(int type, unsigned int tr, int start, int end) {
     debug("got reservation %d for train %d from %s to %s", type, tr, startNode->name, endNode->name);
 
     unsigned int pathDist;
-    int pathLen = findPath(tr, startNode, endNode, path, 32, &pathDist);
+    int pathLen = findPath(tr, &(startNode->edge[DIR_STRAIGHT]), endNode, path, 32, &pathDist);
 
     track_node *lastNode;
 

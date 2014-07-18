@@ -176,7 +176,7 @@ static void addNode(Heap_t *heap, Node_t *nodes, Node_t *currentNode, unsigned i
 }
 
 
-int findPath(unsigned int tr, track_node *start, track_node *end, track_node **path, int pathlen, unsigned int *length) {
+int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **path, int pathlen, unsigned int *length) {
     int i;
     Node_t nodes[TRACK_MAX] = {{0}};
     Heap_t heap = {.arr = {0}, .size = 0};
@@ -195,14 +195,22 @@ int findPath(unsigned int tr, track_node *start, track_node *end, track_node **p
         nodes[i].inHeap = 0;
     }
 
-    index = trackNodeToIndex(start);
-    nodes[index].trackNode = start;
+    index = trackNodeToIndex(start->src->reverse);
+    nodes[index].trackNode = start->src->reverse;
     nodes[index].dist = 0;
     nodes[index].pathLenNodes = 1;
 
-    nodes[trackNodeToIndex(end)].trackNode = end;
+    heapInsert(&heap, &nodes[index]);
+
+    index = trackNodeToIndex(start->dest);
+    nodes[index].trackNode = start->dest;
+    nodes[index].dist = 0;
+    nodes[index].pathLenNodes = 1;
 
     heapInsert(&heap, &nodes[index]);
+
+    nodes[trackNodeToIndex(end)].trackNode = end;
+
 
     while (heap.size > 0) {
         // get head of heap
@@ -247,7 +255,8 @@ int findPath(unsigned int tr, track_node *start, track_node *end, track_node **p
     while (i --> 0) {
         path[i] = currentNode->trackNode;
 
-        if (currentNode->trackNode == start || currentNode->pred == NULL) {
+        if (currentNode->trackNode == start->src || currentNode->trackNode == start->dest
+            || currentNode->pred == NULL) {
             break;
         }
 

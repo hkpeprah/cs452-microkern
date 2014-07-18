@@ -10,7 +10,7 @@
  *
  * return: actual size of path array
  */
-int findPath(unsigned int tr, track_node *start, track_node *end, track_node **path, int pathlen, unsigned int *length);
+int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **path, int pathlen, unsigned int *length);
 
 #if TEST
 void testHeap();
