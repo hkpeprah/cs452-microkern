@@ -15,7 +15,7 @@ typedef enum {
 #define DIR_CURVED            1
 #define RESERVED_BY_NOBODY    -1
 #define INVALID_NEXT_NODE     -2
-#define REVERSE_DIST          75
+#define REVERSE_DIST          100
 
 struct track_node;
 typedef struct track_node track_node;

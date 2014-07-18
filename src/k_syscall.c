@@ -296,11 +296,11 @@ void sys_panic(char *msg, va_list va) {
     sys_sigterm();
     dumpTaskState();
     zombify();
-    strcpy(fmt, "\033[80;0H\033[2K\033[");
+    strcpy(fmt, RESTORE_CURSOR NEW_LINE ERASE_LINE "\033[");
     uitoa(RED, 10, &fmt[strlen(fmt)]);
     strcat(fmt, "m");
     strcat(fmt, msg);
-    strcat(fmt, "\033[0m");
+    strcat(fmt, "\033[0m" SAVE_CURSOR);
     format(fmt, va, buffer);
     kputstr(buffer);
 }

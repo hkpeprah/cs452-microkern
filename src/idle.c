@@ -3,44 +3,26 @@
 #include <clock.h>
 #include <term.h>
 
-static volatile unsigned int idle = 0;
-static volatile unsigned int count = 1;
+static volatile int idle = 0;
+static volatile int count = 0;
+static volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
+static volatile uint32_t *timerLow = (uint32_t*)0x80810060;
 
 
-void cpuIdle(bool isIdle) {
-    static bool enabled = false;
-    static bool wasIdle = 0;
-    volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
-    volatile uint32_t *timerLow = (uint32_t*)0x80810060;
-    int ticks = 0;
+void cpu_idle(bool isIdle) {
+    static int t = 0;
 
-    if (enabled == false) {
-        *timerHigh = 0x100;
-        enabled = true;
-        idle = 0;
-        count = 0;
-    } else {
-        if ((*timerLow / 9380) - count >= 1) {
-            ticks = (*timerLow / 9380) - count;
-            count += ticks;
-        }
+    if ((*timerLow / CYCLES_PER_TICK) - count >= 1) {
+        count = (*timerLow / CYCLES_PER_TICK);
+    }
 
-        if (wasIdle > 0 && !isIdle) {
-            idle += (count - wasIdle);
-            wasIdle = 0;
-        }
-
-        if (isIdle && wasIdle == 0) {
-            wasIdle = count;
-        }
-
-        if (idle > count) {
-            /*
-             * TODO: Figure out why we need this, some race conditioning
-             */
-            idle = 0;
-            count = 1;
-        }
+    if (isIdle == true) {
+        /* when state is idle, set t to the current time */
+        t = count;
+    } else if (t > 0 && isIdle == false) {
+        /* when state is no longer idle, add the difference */
+        idle += (count - t);
+        t = 0;
     }
 }
 
@@ -50,7 +32,13 @@ int getIdleTime() {
 }
 
 
+void enableIdleTimer() {
+    *timerHigh = 0x100;
+    idle = 0;
+    count = 0;
+}
+
+
 void disableIdleTimer() {
-    volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
     *timerHigh = 0x000;
 }

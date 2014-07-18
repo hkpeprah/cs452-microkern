@@ -819,8 +819,6 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     while (train->distSinceLastNode > train->currentEdge->dist) {
         train->distSinceLastNode -= train->currentEdge->dist;
         train->currentEdge = getNextEdge(train->currentEdge->dest);
-        debug("edge->dest: %s, dist: %d", train->currentEdge->dest->name, train->distSinceLastNode);
-        getchar();
     }
 
     Log("after traversal edge %s to %s", train->currentEdge->src->name, train->currentEdge->dest->name);
@@ -953,7 +951,7 @@ static void TrainTask() {
                     }
                 }
                 if (train.pathRemain < getStoppingDistance(train.id, 10, 0) + STOP_BUFFER_MM) {
-                    delayTime = shortmoves(train.id, 10, train.pathRemain);
+                    delayTime = shortmoves(train.id, 10, train.pathRemain) + 5;
                     notice("Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm",
                            train.id, delayTime, train.pathNodeRem, train.pathRemain);
                     delayCourier = CourierDelay(delayTime, 7);

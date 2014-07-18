@@ -57,6 +57,11 @@ void Conductor() {
             Exit();
         }
 
+        if (path[0] != source->dest) {
+            /* initial starting position is the reverse of our current position */
+            TrDirection(train);
+        }
+
         /* break up path into forward and back tracks */
         for (i = 0; i < node_count; ++i) {
             if (path[i]->reverse == path[i + 1]) {
@@ -74,6 +79,7 @@ void Conductor() {
                 printf("%s(%d)@[%d] <-> ", path[i]->name, path[i]->num, i);
                 Delay(20);
                 TrDirection(train);
+                i++;
             } else if (i == node_count - 1) {
                 /* if we have fractals and we have exhausted our nodes, just move */
                 printf("%s(%d)@[%d]\r\nFinished pathing.\r\n", path[i]->name, path[i]->num, i);

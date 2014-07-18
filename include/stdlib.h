@@ -24,6 +24,7 @@
             kernel_disable();                                              \
             kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));  \
         }                                                                  \
+    }
 
 #if DEBUG
     #define d(p) ( *((typeof(p)) pointer_check(p, __LINE__, __FILE__, __FUNCTION__)) )

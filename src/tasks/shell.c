@@ -121,13 +121,12 @@ void Shell() {
                 continue;
             }
 
-            newline();
             i = 0;
-
             while (isspace(buf[i])) {
                 i++;
             }
 
+            newline();
             if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
                 /* quit the terminal and stop the kernel */
                 newline();

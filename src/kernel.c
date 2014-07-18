@@ -141,6 +141,7 @@ void boot () {
     displayInfo();
     seed(43539805);                /* seed random number generator */
     enableInterrupts();            /* enable interrupts */
+    enableIdleTimer();             /* enable the 40-bit timer */
     kdebug("Kernel: Booted");
 }
 
@@ -175,8 +176,9 @@ void kernel_main() {
     Task_t *task = NULL;
 
     status = sys_create(0, NullTask, &nullTaskTid);
+    KASSERT(status >= 0 && nullTaskTid >= 0, "Kernel failed to create NullTask");
     setExit(0);
-    cpuIdle(false);
+    cpu_idle(false);
 
     FOREVER {
         task = schedule();
@@ -186,9 +188,7 @@ void kernel_main() {
             break;
         } else if (task->tid == nullTaskTid) {
             // switching to the null task, cpu is idle
-            cpuIdle(true);
-        } else {
-            cpuIdle(false);
+            cpu_idle(true);
         }
 
         // default to interrupt, ie. if not swi then the pointer is not modified and we know
@@ -205,6 +205,7 @@ void kernel_main() {
             break;
         }
 
+        cpu_idle(false);
         result = handleRequest(args);
         if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT && args->code != SYS_PANIC) {
             setResult(task, result);
