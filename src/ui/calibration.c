@@ -37,7 +37,7 @@ void printTrainSnapshot(CalibrationSnapshot_t *snapshot) {
     }
 
     if (index < 6) {
-        int snapshotHash = hash_djb2n((char*) snapshot, sizeof(CalibrationSnapshot_t));
+        int snapshotHash = hash_djb2n((char*)snapshot, sizeof(CalibrationSnapshot_t));
 
         if (snapshotHash == last[index]) {
             return;
@@ -53,5 +53,22 @@ void printTrainSnapshot(CalibrationSnapshot_t *snapshot) {
                RESTORE_CURSOR, offset, RIGHT_HALF + 5, snapshot->tr, RIGHT_HALF + 13, snapshot->sp,
                RIGHT_HALF + 24, snapshot->landmark, RIGHT_HALF + 35, snapshot->dist, RIGHT_HALF + 51, snapshot->nextmark,
                RIGHT_HALF + 67, snapshot->eta, RIGHT_HALF + 81, snapshot->ata, RIGHT_HALF + 95);
+    }
+}
+
+
+void clearTrainSnapshot(unsigned int tr) {
+    int offset, index;
+
+    offset = getTermOffset() + 2;
+    for (index = 0; index < 6; ++index) {
+        if (snapshots[index] == tr) {
+            break;
+        }
+    }
+
+    if (index < 6) {
+        offset += index;
+        printf(SAVE_CURSOR MOVE_CURSOR "\033[0K" RESTORE_CURSOR, offset, RIGHT_HALF + 5);
     }
 }

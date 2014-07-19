@@ -27,11 +27,10 @@ typedef enum {
 
 
 void Conductor() {
-    int callee, status;
-    unsigned int train;
     ConductorMessage_t req;
-    track_node *dest, *path[32] = {0};
     track_edge *source;
+    track_node *dest, *path[32] = {0};
+    int callee, status, myTid, train;
     unsigned int node_count, i, fractured;
     unsigned int total_distance, destDist;
 
@@ -47,13 +46,23 @@ void Conductor() {
     fractured = 0;
     train = req.arg0;
     source = TrGetEdge(train);
-    ASSERT((req.type == GOTO || req.type == MOVE), "conductor recieved a message not of type GOTO or MOVE");
+    myTid = MyTid();
+
+    ASSERT((req.type == GOTO || req.type == MOVE),
+           "conductor recieved a message not of type GOTO or MOVE: type %d from %d", req.type, callee);
+
     /* check if goto or just a short move */
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
         destDist = req.arg2;
         if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
             error("Conductor: Error: No path to destination %u found", dest->num);
+            DispatchStopRoute(req.arg3);
+            Exit();
+        }
+
+        if (path == NULL) {
+            DispatchStopRoute(req.arg3);
             Exit();
         }
 
@@ -72,26 +81,29 @@ void Conductor() {
                     if (i == node_count - 2) {
                         printf("Finished pathing.\r\n");
                     }
-                    Delay(20);
-                    TrGotoAfter(train, &(path[i - fractured]), fractured + 1, 0);
+                    status = TrGotoAfter(train, &(path[i - fractured]), fractured + 1, 0);
+                    debug("Condcutor(Tid %u): TrGotoAfter returned status %d", myTid, status);
                     fractured = 0;
                 }
-                printf("%s(%d)@[%d] <-> ", path[i]->name, path[i]->num, i);
-                Delay(20);
-                TrDirection(train);
-                i++;
+                /* train should have be stopped by now, send direction change */
+                printf("Reversed on %s(%d)@[%d]\r\n", path[i]->name, path[i]->num, i);
+                if ((status = TrDirection(train)) < 0) {
+                    error("Conductor(Tid %u): Train %u(Tid %u) cannot reverse, %s, dying...", myTid, req.arg3,
+                          train, (status == -2 ? "could not reverse" : "train is moving"));
+                    DispatchStopRoute(req.arg3);
+                    Exit();
+                }
             } else if (i == node_count - 1) {
                 /* if we have fractals and we have exhausted our nodes, just move */
                 printf("%s(%d)@[%d]\r\nFinished pathing.\r\n", path[i]->name, path[i]->num, i);
-                Delay(20);
-                TrGotoAfter(train, &(path[i - fractured]), fractured + 1, destDist);
+                status = TrGotoAfter(train, &(path[i - fractured]), fractured + 1, destDist);
+                debug("Conductor(Tid %u): TrGotoAfter returned status %d", myTid, status);
             } else {
                 printf("%s(%d)@[%d] -> ", path[i]->name, path[i]->num, i);
                 fractured++;
             }
         }
     } else {
-        /* TODO: Traverse to find path */
         destDist = req.arg2;
         TrGotoAfter(train, NULL, 0, destDist);
     }
@@ -100,7 +112,7 @@ void Conductor() {
     if (status < 0) {
         error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
     }
-    debug("Conductor: Tid %u, removing self from parent %u", MyTid(), MyParentTid());
+    debug("Conductor: Tid %u, removing self from parent %u", myTid, MyParentTid());
     Exit();
 }
 

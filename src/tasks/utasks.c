@@ -94,8 +94,8 @@ static int trackReservation(int type, unsigned int tr, int start, int end) {
 
 void TrainUserTask() {
     ControllerMessage_t req;
-    int status, cmd, callee, bytes;
     unsigned int dispatcher;
+    int status, cmd, callee, bytes, sensor;
 
     RegisterAs(USER_TRAIN_DISPATCH);
     dispatcher = WhoIs(TRAIN_DISPATCHER);
@@ -154,7 +154,11 @@ void TrainUserTask() {
             case TRAIN_CMD_GOTO:
                 req.args[4] = 0;
             case TRAIN_CMD_GOTO_AFTER:
-                status = DispatchRoute(req.args[1], sensorToInt(req.args[2], req.args[3]), req.args[4]);
+                if ((sensor = sensorToInt(req.args[2], req.args[3])) >= 0) {
+                    status = DispatchRoute(req.args[1], sensor, req.args[4]);
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
                 break;
             case TRAIN_CMD_RESERVE:
                 status = trackReservation(RESERVE, req.args[1], sensorToInt(req.args[2], req.args[3]), sensorToInt(req.args[4], req.args[5]));

@@ -117,10 +117,6 @@ void Shell() {
                 backspace();
             }
         } else if (ch == CR || ch == LF) {
-            if (i == 0) {
-                continue;
-            }
-
             i = 0;
             while (isspace(buf[i])) {
                 i++;
@@ -197,7 +193,7 @@ void Shell() {
                         tid = Create(random_range(2, 3), (void*)command);
                         WaitTid(tid);
                     }
-                } else {
+                } else if (strlen(&buf[i]) > 0) {
                     printf("%s: command not found.\r\n", &buf[i]);
                 }
             }

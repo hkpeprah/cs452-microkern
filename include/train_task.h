@@ -3,6 +3,7 @@
 #include <track_node.h>
 
 int TrCreate(int priority, int tr, track_node *start_sensor);
+int TrDelete(unsigned int tid);
 int TrSpeed(unsigned int tid, unsigned int speed);
 int TrDir(unsigned int tid);
 int TrReverse(unsigned int tid);

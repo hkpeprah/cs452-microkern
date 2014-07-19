@@ -16,5 +16,6 @@ typedef struct {
 
 void initCalibration();
 void printTrainSnapshot(CalibrationSnapshot_t *snapshot);
+void clearTrainSnapshot();
 
 #endif /* __CALIBRATION_H__ */

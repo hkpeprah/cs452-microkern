@@ -18,12 +18,16 @@
 #define SWITCH_INDEX_TO_ID(x) ((x >= TRAIN_SWITCH_COUNT - 4 ? x + MULTI_SWITCH_OFFSET : x) + 1)
 #define SWITCH_ID_TO_INDEX(x) (((unsigned int)(TRAIN_SWITCH_COUNT + MULTI_SWITCH_OFFSET - x) < 4 ? x - MULTI_SWITCH_OFFSET : x) - 1)
 
-
 static Switch_t trainSwitches[TRAIN_SWITCH_COUNT];
 static Sensor_t trainSensors[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT];
 
+
 int sensorToInt(char module, unsigned int id) {
-    return (toUpperCase(module) - 'A') * TRAIN_SENSOR_COUNT + id - 1;
+    id = (toUpperCase(module) - 'A') * TRAIN_SENSOR_COUNT + id - 1;
+    if (id >= TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
+        return -1;
+    }
+    return id;
 }
 
 

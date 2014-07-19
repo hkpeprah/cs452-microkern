@@ -14,6 +14,10 @@
 #define MIN(x, y)                ((x) < (y) ? (x) : (y))
 #define MAX(x, y)                ((x) > (y) ? (x) : (y))
 #define EXTRACT_BIT(n, k)        (((n) & (1 << (k))) >> (k))
+#ifdef NOASSERTS
+#define ASSERT(...)
+#define KASSERT(...)
+#else
 #define ASSERT(condition, msg, ...)   {                                                   \
         if ((condition) == false) {                                                       \
             Assert(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg), ## __VA_ARGS__);  \
@@ -25,6 +29,7 @@
             kprintf(ASSERT_MSG, __LINE__, __FILE__, __FUNCTION__, (msg));  \
         }                                                                  \
     }
+#endif
 
 #if DEBUG
     #define d(p) ( *((typeof(p)) pointer_check(p, __LINE__, __FILE__, __FUNCTION__)) )

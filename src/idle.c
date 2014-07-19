@@ -35,10 +35,15 @@ int getIdleTime() {
 void enableIdleTimer() {
     *timerHigh = 0x100;
     idle = 0;
-    count = 0;
+    count = 1;
+    /* clear the lower of the 40 bit timer */
+    (void)*timerLow;
 }
 
 
 void disableIdleTimer() {
     *timerHigh = 0x000;
+    /* clears the 40-bit timer by issuing a read */
+    (void)*timerLow;
+    (void)*timerHigh;
 }

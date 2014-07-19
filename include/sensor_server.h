@@ -8,6 +8,7 @@
 #define SENSOR_TRIP                     1
 #define TIMER_TRIP                      2
 
+
 void SensorServer();
 int WaitWithTimeout(unsigned int id, unsigned int timeout);
 int WaitOnSensorN(unsigned int id);

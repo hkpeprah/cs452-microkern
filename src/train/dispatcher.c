@@ -10,9 +10,9 @@
 #include <sensor_server.h>
 #include <conductor.h>
 #include <track_reservation.h>
+#include <random.h>
 
-static uint32_t train_dispatcher_tid = -1;
-static uint32_t num_of_trains = 0;
+#define MAX_NUM_OF_TRAINS    NUM_OF_TRAINS
 
 typedef enum {
     TRM_ADD = 77,
@@ -29,7 +29,8 @@ typedef enum {
     TRM_RESERVE_TRACK_DIST,
     TRM_RELEASE_TRACK,
     TRM_CREATE_TRAIN,
-    TRM_MOVE
+    TRM_MOVE,
+    TRM_REMOVE
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
@@ -41,10 +42,17 @@ typedef struct DispatcherMessage {
 } DispatcherMessage_t;
 
 typedef struct {
-    uint32_t train;
-    uint32_t tr_number : 8;
+    int train;
+    int tr_number : 8;
     int conductor;
 } DispatcherNode_t;
+
+
+static uint32_t train_dispatcher_tid = -1;
+static uint32_t num_of_trains = 0;
+static void removeDispatcherNode(DispatcherNode_t*, DispatcherNode_t*);
+static DispatcherNode_t *addDispatcherNode(DispatcherNode_t*, unsigned int, unsigned int);
+static DispatcherNode_t *getDispatcherNode(DispatcherNode_t*, uint32_t);
 
 
 static int SendDispatcherMessage(DispatcherMessageType type, uint32_t tr, int arg0, int arg1, int arg2) {
@@ -141,7 +149,7 @@ track_node *DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n) {
 
 
 track_node *DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
-    int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int) track, n, 0);
+    int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int)track, n, 0);
     if (result < 0) {
         error("DispatchReleaseTrack: error: %d", result);
         return NULL;
@@ -151,22 +159,10 @@ track_node *DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
 }
 
 
-static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tid, unsigned int tr) {
-    unsigned int i;
-    i = num_of_trains;
-    nodes[i].train = tid;
-    nodes[i].tr_number = tr;
-    nodes[i].conductor = -1;
-    notice("Dispatcher: Created Train %u with tid %u", tr, nodes[i].train);
-    num_of_trains++;
-    return &nodes[i];
-}
-
-
 static int findSensorForTrain(unsigned int tr) {
     int sensorNum;
     trainSpeed(tr, 0);
-    Delay(300);
+    Delay(random_range(150, 200));
     trainSpeed(tr, 3);
     sensorNum = WaitAnySensor();
     trainSpeed(tr, 0);
@@ -205,11 +201,88 @@ static void TrainCreateCourier() {
 }
 
 
+static void TrainDeleteCourier() {
+    DispatcherMessage_t req;
+    int callee, tid, parent;
+
+    parent = MyParentTid();
+    Receive(&callee, &req, sizeof(req));
+    if (callee != parent) {
+        error("TrainDeleteCourier: Error: Received request from %u, expected %u", callee, parent);
+        Exit();
+    }
+    Reply(callee, NULL, 0);
+    tid = req.arg0;
+    debug("TrainDeleteCourier: Deleting train %u with tid %u", req.tr, tid);
+    TrDelete(tid);
+    Exit();
+}
+
+
+static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int tid, unsigned int tr) {
+    unsigned int i;
+    for (i = 0; i < MAX_NUM_OF_TRAINS; ++i) {
+        if (nodes[i].train < 0) {
+            nodes[i].train = tid;
+            nodes[i].tr_number = tr;
+            nodes[i].conductor = -1;
+            notice("Dispatcher: Created Train %u with tid %u, Total Number of Trains: %u",
+                   tr, nodes[i].train, num_of_trains);
+            break;
+        }
+    }
+    if (i >= MAX_NUM_OF_TRAINS) {
+        return NULL;
+    }
+    num_of_trains++;
+    return &nodes[i];
+}
+
+
+static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *node) {
+    DispatcherMessage_t req;
+    unsigned int i, tid;
+    for (i = 0; i < MAX_NUM_OF_TRAINS; ++i) {
+        if (trains[i].train == node->train) {
+            /* create the message to send to deletion courier */
+            tid = Create(10, TrainDeleteCourier);
+            req.type = TRM_REMOVE;
+            req.tr = trains[i].tr_number;
+            req.arg0 = trains[i].train;
+            trains[i].train = -1;
+
+            /* remove the trains conductor */
+            if (trains[i].conductor != -1) {
+                Destroy(trains[i].conductor);
+            }
+            trains[i].conductor = -1;
+            trains[i].tr_number = -1;
+            num_of_trains--;
+
+            /* send off the message */
+            Send(tid, &req, sizeof(req), NULL, 0);
+            break;
+        }
+    }
+}
+
+
+static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, uint32_t tr) {
+    uint32_t i;
+    for (i = 0; i < MAX_NUM_OF_TRAINS; ++i) {
+        if (nodes[i].tr_number == tr) {
+            return &nodes[i];
+        }
+    }
+    return NULL;
+}
+
+
 static int addDispatcherTrain(unsigned int tr, int sensor) {
     DispatcherMessage_t req;
     unsigned int tid;
 
-    if (num_of_trains < NUM_OF_TRAINS) {
+    if (num_of_trains < MAX_NUM_OF_TRAINS) {
         tid = Create(9, TrainCreateCourier);
         req.type = TRM_ADD;
         req.tr = tr;
@@ -221,23 +294,12 @@ static int addDispatcherTrain(unsigned int tr, int sensor) {
 }
 
 
-static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, uint32_t tr) {
-    uint32_t i;
-    for (i = 0; i < num_of_trains; ++i) {
-        if (nodes[i].tr_number == tr) {
-            return &nodes[i];
-        }
-    }
-    return NULL;
-}
-
-
 void Dispatcher() {
     int callee, status;
     unsigned int CreateCourier;
     DispatcherMessage_t request;
     track_node track[TRACK_MAX];
-    DispatcherNode_t trains[NUM_OF_TRAINS], *node;
+    DispatcherNode_t *node, trains[MAX_NUM_OF_TRAINS] = {{-1}};
 
     init_track(track);
     RegisterAs(TRAIN_DISPATCHER);
@@ -261,6 +323,9 @@ void Dispatcher() {
 
         switch (request.type) {
             case TRM_ADD:
+                if (node != NULL) {
+                    removeDispatcherNode(trains, node);
+                }
                 if (getDispatcherNode(trains, request.tr)) {
                     status = INVALID_TRAIN_ID;
                     break;
@@ -269,9 +334,8 @@ void Dispatcher() {
                 goto addnode;
                 break;
             case TRM_ADD_AT:
-                if (getDispatcherNode(trains, request.tr)) {
-                    status = INVALID_TRAIN_ID;
-                    break;
+                if (node != NULL) {
+                    removeDispatcherNode(trains, node);
                 }
                 status = sensorToInt(request.arg0, request.arg1);
                 if (status < 0 || status >= 80) {
