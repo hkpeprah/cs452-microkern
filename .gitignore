@@ -37,6 +37,8 @@ build
 # generated code
 include/track_data.h
 src/track_data.c
+include/train_speed_measurements.h
+src/train_speed_measurements.h
 
 # Vim temporary files
 *.swp

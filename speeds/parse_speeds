@@ -1,0 +1,170 @@
+#!/bin/python
+import os
+import re
+import json
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
+
+
+SCRIPT = os.path.basename(__file__)
+VAR_NAME = "trains"
+
+INDEX_TMPL = """
+    {0}[{1}].ticks[{2}] = {3};
+    {0}[{1}].speed[{2}] = {4};
+    {0}[{1}].stoppingDistances[{2}] = {5};
+    {0}[{1}].stoppingTicks[{2}] = {6};"""
+
+HEADER_TMPL = """#ifndef __TRAIN_SPEED_MEASUREMENTS_H__
+#define __TRAIN_SPEED_MEASUREMENTS_H__
+typedef struct train_speed_state_t {{
+    const char *train;
+    unsigned int ticks[{0}];
+    unsigned int speed[{0}];
+    unsigned int stoppingDistances[{0}];
+    unsigned int stoppingTicks[{0}];
+}} train_speed_state;
+void init_train_speeds(train_speed_state *{1});
+#endif /* __TRAIN_SPEED_MEASUREMENTS_H__ */
+"""
+
+BASE_TMPL = """#include <train_speed_measurements.h>
+
+void init_train_speeds(train_speed_state %s) {
+%s
+}
+"""
+
+def read_or_die(f):
+    """
+    Open and read a file or die trying
+    """
+    if os.path.exists(f):
+        try:
+            f = open(f, 'r')
+            return f.read()
+        except OSError:
+            print "%s: Error: Failed to open file %s" % (SCRIPT, f)
+            exit(1)
+    print "%s: Error: %s does not exist" % (SCRIPT, f)
+    exit(2)
+
+
+def parse_tmpl_json(string):
+    """
+    Parses a string into the appropriate json object based on
+    the template
+    """
+    strings = string.split('\n')
+    assert len(strings) > 0, 'Given string was empty'
+    train, strings = strings[0], strings[1:]
+    train = re.search('Train ([0-9]+)', train)
+    assert train is not None, 'No train identifier found in file'
+    train = train.group(1)
+    data = {}
+    speed = None
+    while len(strings) > 0:
+        line = strings.pop(0)
+        if len(line) == 0:
+            continue
+        elif 'speed' in line.lower():
+            speed = line.split(':')[1].strip()
+            data[speed] = {}
+        else:
+            key, val = line.split(':')
+            key = key.strip().lower()
+            val = val.strip()
+            data[speed][key] = val
+    return train, OrderedDict(sorted(data.items(), key=lambda d: int(d[0])))
+
+
+def pretty_print(data):
+    """
+    Pretty print a formatted json object
+    """
+    print json.dumps(data, indent=4, separators=(',', ': '))
+
+
+def generate_speed_array(f, index):
+    """
+    Generates the array configuration for the given file:
+    expects the file to be formatted as the template.
+    """
+    string = read_or_die(f)
+    train, data = parse_tmpl_json(string)
+    string = "%s    // TRAIN {0} MEASUREMENTS, GENERATED CODE, DO NOT EDIT DIRECTLY\n" % ('\n\n' if index > 0 else '')
+    string += "    {0}[{1}].train = \"{2}\";".format(VAR_NAME, index, train);
+    string = string.format(train)
+    for speed, measurements in data.iteritems():
+        tmpl = INDEX_TMPL
+        tmpl = tmpl.format(VAR_NAME, index, speed, measurements.get('ticks'),
+                           measurements.get('velocity'), measurements.get('stopping distance'),
+                           measurements.get('stopping ticks'))
+        string += tmpl
+    return string
+
+
+def generate_for_trains(files, measurement_count=15):
+    """
+    Generates a configuration for all the files listed in the
+    passed list.
+    """
+    train_count = len(files)
+    if train_count == 0:
+        return None
+
+    header = HEADER_TMPL.format(measurement_count, VAR_NAME)
+
+    string = ""
+    for index in range(0, train_count):
+        string += generate_speed_array(files[index], index)
+    cfile = BASE_TMPL % (VAR_NAME, string)
+
+    return header, cfile
+
+
+def generate_all():
+    """
+    Generates the array configurations for all the found trains in
+    the data folder.
+    """
+    directory = os.path.join(os.path.dirname(__file__), 'data')
+    files = list(os.path.join(directory, f) for f in os.listdir(directory) if \
+                 os.path.isfile(os.path.join(directory, f)))
+    return generate_for_trains(files)
+
+
+def write_to_file(f, data):
+    """
+    WRites the given data out to the specified file
+    """
+    with open(f, 'w') as output:
+        output.write(data)
+
+
+if __name__ == "__main__":
+    import sys
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description='generate train measurement configuration files')
+    parser.add_argument('-C', dest='c',  nargs=1, default='train_speed_measurements.c',
+                      help='output .c file (default is train_speed_measurements.c',
+                      metavar='OUTPUT-C-FILE')
+    parser.add_argument('-H', dest='h', nargs=1, default='train_speed_measurements.h',
+                      help='output .h file (default is train_speed_measurements.h',
+                      metavar='OUTPUT-H-FILE')
+    parser.add_argument('-S', dest='s', nargs='*', default=(),
+                        help='specific data files to use to generate output',
+                        metavar='CONFIG_FILE')
+    args = parser.parse_args()
+    if len(args) == 0 or not args.c or not args.h:
+        parser.print_help()
+        exit(0)
+
+    if len(args.s) > 0:
+        header, cfile = generate_for_trains(args.s)
+    else:
+        header, cfile = generate_all()
+    write_to_file(args.c, cfile)
+    write_to_file(args.h, header)

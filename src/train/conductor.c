@@ -73,7 +73,7 @@ void Conductor() {
         int i, base = 0;
         for (i = 0; i < node_count - 1; ++i) {
             if (path[i]->reverse == path[i + 1]) {
-                TrGotoAfter(train, &(path[base]), (i - base + 1), 100);
+                TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
                 if ((status == TrDirection(train)) < 0) {
                     error("Conductor[%u]: Train %u[%u] cannot reverse, %s, dying...", myTid, req.arg3,
                           train, (status == -2 ? "could not reserve reverse" : "train is moving"));

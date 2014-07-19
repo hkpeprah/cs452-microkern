@@ -1,0 +1,76 @@
+Train 49:
+    Speed: 0
+        Ticks: 0
+        Velocity: 0
+        Stopping Distance: 0
+        Stopping Ticks: 0
+    Speed: 1
+        Ticks: 3657
+        Velocity: 1275
+        Stopping Distance: 90
+        Stopping Ticks: 200
+    Speed: 2
+        Ticks: 3657
+        Velocity: 1275
+        Stopping Distance: 90
+        Stopping Ticks: 200
+    Speed: 3
+        Ticks: 3657
+        Velocity: 1275
+        Stopping Distance: 90
+        Stopping Ticks: 200
+    Speed: 4
+        Ticks: 2736
+        Velocity: 1704
+        Stopping Distance: 160
+        Stopping Ticks: 210
+    Speed: 5
+        Ticks: 2009
+        Velocity: 2321
+        Stopping Distance: 240
+        Stopping Ticks: 270
+    Speed: 6
+        Ticks: 1637
+        Velocity: 2846
+        Stopping Distance: 319
+        Stopping Ticks: 281
+    Speed: 7
+        Ticks: 1361
+        Velocity: 3426
+        Stopping Distance: 380
+        Stopping Ticks: 314
+    Speed: 8
+        Ticks: 1185
+        Velocity: 3935
+        Stopping Distance: 510
+        Stopping Ticks: 336
+    Speed: 9
+        Ticks: 1032
+        Velocity: 4518
+        Stopping Distance: 530
+        Stopping Ticks: 341
+    Speed: 10
+        Ticks: 934
+        Velocity: 4993
+        Stopping Distance: 597
+        Stopping Ticks: 351
+    Speed: 11
+        Ticks: 855
+        Velocity: 5454
+        Stopping Distance: 676
+        Stopping Ticks: 370
+    Speed: 12
+        Ticks: 848
+        Velocity: 5498
+        Stopping Distance: 757
+        Stopping Ticks: 392
+    Speed: 13
+        Ticks: 842
+        Velocity: 5538
+        Stopping Distance: 838
+        Stopping Ticks: 402
+    Speed: 14
+        Ticks: 818
+        Velocity: 5700
+        Stopping Distance: 842
+        Stopping Ticks: 422

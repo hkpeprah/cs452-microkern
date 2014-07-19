@@ -72,6 +72,7 @@ init:
 		exit 1; \
 	fi
 	@track/parse_track track/new/track$(TRACK)_new -C src/track_data.c -H include/track_data.h
+	@speeds/parse_speeds -C src/train_speed_measurements.c -H include/train_speed_measurements.h
 	@echo "Source files:"
 	@echo $(SOURCEFILES)
 
