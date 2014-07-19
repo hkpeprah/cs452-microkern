@@ -66,7 +66,7 @@ void Conductor() {
 
         for (i = 0; i < node_count - 1; ++i) {
             if (path[i]->reverse == path[i + 1]) {
-                TrGotoAfter(train, &(path[base]), (i - base + 1), 100);
+                TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
                 TrDirection(train);
                 base = ++i;
             }
