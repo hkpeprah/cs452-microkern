@@ -32,7 +32,7 @@ void Conductor() {
     ConductorMessage_t req;
     track_node *dest, *path[32] = {0};
     track_edge *source;
-    unsigned int node_count, i, fractured;
+    unsigned int node_count, fractured;
     unsigned int total_distance, destDist;
 
     status = Receive(&callee, &req, sizeof(req));
@@ -57,33 +57,25 @@ void Conductor() {
             Exit();
         }
 
-        /* break up path into forward and back tracks */
-        for (i = 0; i < node_count; ++i) {
+        if (path[0] != source->dest) {
+            // TODO: only this when stopped
+            TrDirection(train);
+        }
+
+        int base = 0, i;
+
+        for (i = 0; i < node_count - 1; ++i) {
             if (path[i]->reverse == path[i + 1]) {
-                /* if next path is a reveral, reverse */
-                if (fractured > 0) {
-                    /* check if we had path leading up to the reverse, if so, goto first */
-                    printf("%s(%d)@[%d]\r\n", path[i]->name, path[i]->num, i);
-                    if (i == node_count - 2) {
-                        printf("Finished pathing.\r\n");
-                    }
-                    Delay(20);
-                    TrGotoAfter(train, &(path[i - fractured]), fractured + 1, 0);
-                    fractured = 0;
-                }
-                printf("%s(%d)@[%d] <-> ", path[i]->name, path[i]->num, i);
-                Delay(20);
+                TrGotoAfter(train, &(path[base]), (i - base + 1), 100);
                 TrDirection(train);
-            } else if (i == node_count - 1) {
-                /* if we have fractals and we have exhausted our nodes, just move */
-                printf("%s(%d)@[%d]\r\nFinished pathing.\r\n", path[i]->name, path[i]->num, i);
-                Delay(20);
-                TrGotoAfter(train, &(path[i - fractured]), fractured + 1, destDist);
-            } else {
-                printf("%s(%d)@[%d] -> ", path[i]->name, path[i]->num, i);
-                fractured++;
+                base = ++i;
             }
         }
+
+        if (base != node_count) {
+            TrGotoAfter(train, &(path[base]), node_count - base, 0);
+        }
+
     } else {
         /* TODO: Traverse to find path */
         destDist = req.arg2;

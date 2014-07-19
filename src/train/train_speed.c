@@ -7,6 +7,13 @@
 #define MEASUREMENT_TOTAL   15
 #define TRAIN_COUNT         6
 
+#define POW_10_3 1000
+#define POW_10_4 10000
+#define POW_10_5 100000
+#define POW_10_6 1000000
+#define POW_10_7 10000000
+#define POW_10_8 100000000
+
 static struct train_speed_state trainSpeeds[6];
 
 void initTrainSpeeds() {
@@ -188,36 +195,35 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
 
 
 static inline int compute_shortmove(int dist, int a, int b, int c, int d) {
-    return ((a * pow(dist, 3)) / pow(10, 7)) - ((b * pow(dist, 2)) / pow(10, 4)) +
-        ((c * dist) / pow(10, 4)) + d;
+    int a_res = (a * (pow(dist, 3) / POW_10_3) ) / POW_10_5;
+    int b_res = ((b * pow(dist, 2)) / POW_10_4);
+    int c_res = ((c * dist) / POW_10_3);
+    return a_res + b_res + c_res + d;
 }
 
 
 
 int shortmoves(unsigned int tr, unsigned int speed, int dist) {
-    int delay;
     /* TODO: Consider speed as some multiplicative value */
     switch (tr) {
         case 48:
-            delay = compute_shortmove(dist, 7, 13, 9486, 52);
-            break;
+            return compute_shortmove(dist, 59, -11, 889, 58);
         case 51:
         case 50:
         case 49:
+            return compute_shortmove(dist, 31, -7, 654, 58);
         case 45:
+            return compute_shortmove(dist, 34, -8, 734, 49);
         case 47:
-            delay = compute_shortmove(dist, 5, 11, 8978, 44);
-            break;
-        default:
-            delay = dist;
+            return compute_shortmove(dist, 35, -8, 760, 60);
     }
-    return delay;
+    return dist;
 }
 
 
 static inline int compute_shortmove_dist(int ticks, int a, int b, int c, int d) {
-    return ((a * pow(ticks, 3)) / pow(10, 5)) - ((b * pow(ticks, 2)) / pow(10, 4)) +
-        ((c * ticks) / pow(10, 4)) - d;
+    return ((a * pow(ticks, 3)) / pow(10, 6)) + ((b * pow(ticks, 2)) / pow(10, 4)) +
+        ((c * ticks) / pow(10, 4)) + d;
 }
 
 
@@ -226,14 +232,15 @@ int shortmoves_dist(uint32_t tr, uint32_t speed, uint32_t ticks) {
     /* TODO: Consider speed as some multiplicative value */
     switch (tr) {
         case 48:
-            dist = compute_shortmove_dist(ticks, 2, 50, 13166, 52);
-            break;
+            dist = compute_shortmove_dist(ticks, 27, -70, 17500, -79);
         case 51:
         case 50:
         case 49:
+            dist = compute_shortmove_dist(ticks, -23, 284, -40500, 204);
         case 45:
+            dist = compute_shortmove_dist(ticks, 21, 19, 316, 31);
         case 47:
-            dist = compute_shortmove_dist(ticks, 5, 127, 21513, 66);
+            dist = compute_shortmove_dist(ticks, 70, -275, 50600, -79);
             break;
         default:
             dist = ticks;
