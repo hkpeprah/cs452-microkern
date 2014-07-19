@@ -34,9 +34,11 @@ void ShortMoveTask() {
     puts("Enter train number: ");
     gets(IO, buf, 5);
     tr_number = atoin(buf, &status);
+    puts("Enter init ticks: ");
+    gets(IO, buf, 5);
+    delay = atoin(buf, &status);
     printf("Short move testing for train %u\r\n", tr_number);
     if (tr_number >= 0) {
-        delay = 10;
         while (true) {
             printf("Train %u with delay %u\r\n", tr_number, delay);
             trainSpeed(tr_number, 10);

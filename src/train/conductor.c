@@ -31,7 +31,7 @@ void Conductor() {
     track_edge *source;
     track_node *dest, *path[32] = {0};
     int callee, status, myTid, train;
-    unsigned int node_count, i, fractured;
+    unsigned int node_count;
     unsigned int total_distance, destDist;
 
     status = Receive(&callee, &req, sizeof(req));
@@ -43,7 +43,6 @@ void Conductor() {
     status = 1;
     Reply(callee, &status, sizeof(status));
 
-    fractured = 0;
     train = req.arg0;
     source = TrGetEdge(train);
     myTid = MyTid();
@@ -67,41 +66,26 @@ void Conductor() {
         }
 
         if (path[0] != source->dest) {
-            /* initial starting position is the reverse of our current position */
+            // TODO: only this when stopped
             TrDirection(train);
         }
 
-        /* break up path into forward and back tracks */
-        for (i = 0; i < node_count; ++i) {
+        int i, base = 0;
+        for (i = 0; i < node_count - 1; ++i) {
             if (path[i]->reverse == path[i + 1]) {
-                /* if next path is a reveral, reverse */
-                if (fractured > 0) {
-                    /* check if we had path leading up to the reverse, if so, goto first */
-                    printf("%s(%d)@[%d]\r\n", path[i]->name, path[i]->num, i);
-                    if (i == node_count - 2) {
-                        printf("Finished pathing.\r\n");
-                    }
-                    status = TrGotoAfter(train, &(path[i - fractured]), fractured + 1, 0);
-                    debug("Condcutor(Tid %u): TrGotoAfter returned status %d", myTid, status);
-                    fractured = 0;
-                }
-                /* train should have be stopped by now, send direction change */
-                printf("Reversed on %s(%d)@[%d]\r\n", path[i]->name, path[i]->num, i);
-                if ((status = TrDirection(train)) < 0) {
-                    error("Conductor(Tid %u): Train %u(Tid %u) cannot reverse, %s, dying...", myTid, req.arg3,
-                          train, (status == -2 ? "could not reverse" : "train is moving"));
+                TrGotoAfter(train, &(path[base]), (i - base + 1), 100);
+                if ((status == TrDirection(train)) < 0) {
+                    error("Conductor[%u]: Train %u[%u] cannot reverse, %s, dying...", myTid, req.arg3,
+                          train, (status == -2 ? "could not reserve reverse" : "train is moving"));
                     DispatchStopRoute(req.arg3);
                     Exit();
                 }
-            } else if (i == node_count - 1) {
-                /* if we have fractals and we have exhausted our nodes, just move */
-                printf("%s(%d)@[%d]\r\nFinished pathing.\r\n", path[i]->name, path[i]->num, i);
-                status = TrGotoAfter(train, &(path[i - fractured]), fractured + 1, destDist);
-                debug("Conductor(Tid %u): TrGotoAfter returned status %d", myTid, status);
-            } else {
-                printf("%s(%d)@[%d] -> ", path[i]->name, path[i]->num, i);
-                fractured++;
+                base = ++i;
             }
+        }
+
+        if (base != node_count) {
+            TrGotoAfter(train, &(path[base]), node_count - base, 0);
         }
     } else {
         destDist = req.arg2;

@@ -11,6 +11,8 @@ typedef struct {
     unsigned int ata;
     const char *landmark;
     const char *nextmark;
+    const char *headResv;
+    const char *tailResv;
 } CalibrationSnapshot_t;
 
 

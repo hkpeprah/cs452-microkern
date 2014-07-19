@@ -20,17 +20,14 @@ typedef enum {
     TRM_GOTO_STOP,
     TRM_GOTO,
     TRM_GOTO_AFTER,
-    TRM_AUX,
-    TRM_RV,
-    TRM_GET_SPEED,
-    TRM_SPEED,
     TRM_GET_TRACK_NODE,
     TRM_RESERVE_TRACK,
     TRM_RESERVE_TRACK_DIST,
     TRM_RELEASE_TRACK,
     TRM_CREATE_TRAIN,
     TRM_MOVE,
-    TRM_REMOVE
+    TRM_REMOVE,
+    TRM_GET
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
@@ -62,10 +59,6 @@ static int SendDispatcherMessage(DispatcherMessageType type, uint32_t tr, int ar
 
     status = 0;
     dispatcher = WhoIs(TRAIN_DISPATCHER);
-    if (type == TRM_SPEED && arg0 > TRAIN_MAX_SPEED) {
-        status = INVALID_SPEED;
-    }
-
     msg.type = type;
     msg.tr = tr;
     msg.arg0 = arg0;
@@ -81,13 +74,8 @@ static int SendDispatcherMessage(DispatcherMessageType type, uint32_t tr, int ar
 }
 
 
-int DispatchTrainAuxiliary(uint32_t tr, uint32_t aux) {
-    return SendDispatcherMessage(TRM_AUX, tr, aux, 0, 0);
-}
-
-
-int DispatchTrainSpeed(uint32_t tr, uint32_t speed) {
-    return SendDispatcherMessage(TRM_SPEED, tr, speed, 0, 0);
+int DispatchGetTrainTid(uint32_t tr) {
+    return SendDispatcherMessage(TRM_GET, tr, 0, 0, 0);
 }
 
 
@@ -106,11 +94,6 @@ int DispatchAddTrainAt(uint32_t tr, char module, uint32_t id) {
 }
 
 
-int DispatchTrainReverse(uint32_t tr) {
-    return SendDispatcherMessage(TRM_RV, tr, 0, 0, 0);
-}
-
-
 int DispatchStopRoute(uint32_t tr) {
     return SendDispatcherMessage(TRM_GOTO_STOP, tr, 0, 0, 0);
 }
@@ -121,8 +104,8 @@ track_node *DispatchGetTrackNode(uint32_t id) {
 }
 
 
-int DispatchTrainMove(uint32_t id, uint32_t dist) {
-    return SendDispatcherMessage(TRM_MOVE, id, dist, 0, 0);
+int DispatchTrainMove(uint32_t tr, uint32_t dist) {
+    return SendDispatcherMessage(TRM_MOVE, tr, dist, 0, 0);
 }
 
 
@@ -400,32 +383,11 @@ void Dispatcher() {
                     status = INVALID_TRAIN_ID;
                 }
                 break;
-            case TRM_AUX:
+            case TRM_GET:
                 if (node == NULL) {
                     status = INVALID_TRAIN_ID;
                 } else if (status != TRAIN_BUSY) {
-                    status = TrAuxiliary(node->train, request.arg0);
-                }
-                break;
-            case TRM_RV:
-                if (node == NULL) {
-                    status = INVALID_TRAIN_ID;
-                } else if (status != TRAIN_BUSY) {
-                    status = TrReverse(node->train);
-                }
-                break;
-            case TRM_GET_SPEED:
-                if (node == NULL) {
-                    status = INVALID_TRAIN_ID;
-                } else if (status != TRAIN_BUSY) {
-                    status = TrGetSpeed(node->train);
-                }
-                break;
-            case TRM_SPEED:
-                if (node == NULL) {
-                    status = INVALID_TRAIN_ID;
-                } else if (status != TRAIN_BUSY) {
-                    status = TrSpeed(node->train, request.arg0);
+                    status = node->train;
                 }
                 break;
             case TRM_GET_TRACK_NODE:

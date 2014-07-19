@@ -21,7 +21,10 @@
 #include <track_node.h>
 #include <sensor_server.h>
 #include <dispatcher.h>
-#include <path.h> // for command line reservation testing
+#include <path.h>
+
+#define RESERVE   0
+#define RELEASE   1
 
 
 void firstTask() {
@@ -55,8 +58,6 @@ void TimerTask() {
     Exit();
 }
 
-#define RESERVE 0
-#define RELEASE 1
 
 static int trackReservation(int type, unsigned int tr, int start, int end) {
     track_node *path[32] = {0};
@@ -92,10 +93,11 @@ static int trackReservation(int type, unsigned int tr, int start, int end) {
     return 0;
 }
 
+
 void TrainUserTask() {
     ControllerMessage_t req;
     unsigned int dispatcher;
-    int status, cmd, callee, bytes, sensor;
+    int status, cmd, callee, bytes, sensor1, sensor2, trainTid;
 
     RegisterAs(USER_TRAIN_DISPATCH);
     dispatcher = WhoIs(TRAIN_DISPATCHER);
@@ -129,17 +131,29 @@ void TrainUserTask() {
                 status = DispatchAddTrainAt(req.args[1], req.args[2], req.args[3]);
                 break;
             case TRAIN_CMD_SPEED:
-                status = DispatchTrainSpeed(req.args[1], req.args[2]);
+                if ((trainTid = DispatchGetTrainTid(req.args[1])) >= 0) {
+                    status = TrSpeed(trainTid, req.args[2]);
+                } else {
+                    status = trainTid;
+                }
                 break;
             case TRAIN_CMD_AUX:
         auxiliary:
-                status = DispatchTrainAuxiliary(req.args[1], req.args[2]);
+                if ((trainTid = DispatchGetTrainTid(req.args[1])) >= 0) {
+                    status = TrAuxiliary(trainTid, req.args[2]);
+                } else {
+                    status = trainTid;
+                }
                 break;
             case TRAIN_CMD_MOVE:
                 status = DispatchTrainMove(req.args[1], req.args[2]);
                 break;
             case TRAIN_CMD_RV:
-                status = DispatchTrainReverse(req.args[1]);
+                if ((trainTid = DispatchGetTrainTid(req.args[1])) >= 0) {
+                    status = TrReverse(trainTid);
+                } else {
+                    status = trainTid;
+                }
                 break;
             case TRAIN_CMD_GOTO_STOP:
                 status = DispatchStopRoute(req.args[1]);
@@ -154,17 +168,25 @@ void TrainUserTask() {
             case TRAIN_CMD_GOTO:
                 req.args[4] = 0;
             case TRAIN_CMD_GOTO_AFTER:
-                if ((sensor = sensorToInt(req.args[2], req.args[3])) >= 0) {
-                    status = DispatchRoute(req.args[1], sensor, req.args[4]);
+                if ((sensor1 = sensorToInt(req.args[2], req.args[3])) >= 0) {
+                    status = DispatchRoute(req.args[1], sensor1, req.args[4]);
                 } else {
                     status = INVALID_SENSOR_ID;
                 }
                 break;
             case TRAIN_CMD_RESERVE:
-                status = trackReservation(RESERVE, req.args[1], sensorToInt(req.args[2], req.args[3]), sensorToInt(req.args[4], req.args[5]));
+                if ((sensor1 = sensorToInt(req.args[2], req.args[3])) >= 0 && (sensor2 = sensorToInt(req.args[2], req.args[3])) >= 0) {
+                    status = trackReservation(RESERVE, req.args[1], sensor1, sensor2);
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
                 break;
             case TRAIN_CMD_RELEASE:
-                status = trackReservation(RELEASE, req.args[1], sensorToInt(req.args[2], req.args[3]), sensorToInt(req.args[4], req.args[5]));
+                if ((sensor1 = sensorToInt(req.args[2], req.args[3])) >= 0 && (sensor2 = sensorToInt(req.args[2], req.args[3])) >= 0) {
+                    status = trackReservation(RELEASE, req.args[1], sensor1, sensor2);
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
                 break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);
@@ -174,8 +196,10 @@ void TrainUserTask() {
         }
 
         switch (status) {
-            case 0:
-            case 1:
+            case 0: case 1:
+                break;
+            case INVALID_AUXILIARY:
+                printf("Error: Invalid auxiliary number.\r\n");
                 break;
             case INVALID_TRAIN_ID:
                 printf("Error: Invalid train number.  Did you remember to do add?\r\n");
