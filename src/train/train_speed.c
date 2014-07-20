@@ -22,11 +22,6 @@ void initTrainSpeeds() {
 }
 
 
-bool isValidTrainId(unsigned int tr) {
-    return getTrainId(tr) != -1;
-}
-
-
 static int getTrainId(unsigned int tr) {
     unsigned int id;
 
@@ -38,6 +33,11 @@ static int getTrainId(unsigned int tr) {
     }
     error("getTrainId: Unkown train %d", tr);
     return -1;
+}
+
+
+bool isValidTrainId(unsigned int tr) {
+    return getTrainId(tr) != -1;
 }
 
 
@@ -123,14 +123,17 @@ int shortmoves(unsigned int tr, unsigned int speed, int dist) {
         case 51:
         case 50:
         case 49:
-        case 56:
             return compute_shortmove(dist, 31, -7, 654, 58);
         case 45:
-        case 53:
             return compute_shortmove(dist, 34, -8, 734, 49);
         case 47:
-        case 54:
             return compute_shortmove(dist, 35, -8, 760, 60);
+        case 53:
+            return compute_shortmove(dist, 48, -10, 848, 46);
+        case 54:
+            return compute_shortmove(dist, 42, -10, 879, 47);
+        case 56:
+            return compute_shortmove(dist, 59, -12, 937, 47);
     }
     return dist;
 }
@@ -152,16 +155,22 @@ int shortmoves_dist(uint32_t tr, uint32_t speed, uint32_t ticks) {
         case 51:
         case 50:
         case 49:
-        case 56:
             dist = compute_shortmove_dist(ticks, -23, 284, -40500, 204);
             break;
         case 45:
-        case 53:
             dist = compute_shortmove_dist(ticks, 21, 19, 316, 31);
             break;
         case 47:
-        case 54:
             dist = compute_shortmove_dist(ticks, 70, -275, 50600, -79);
+            break;
+        case 53:
+            dist = compute_shortmove_dist(ticks, 30, -28, 8200, 23);
+            break;
+        case 54:
+            dist = compute_shortmove_dist(ticks, 40, -95, 17570, 54);
+            break;
+        case 56:
+            dist = compute_shortmove_dist(ticks, 40, -80, 14707, -44);
             break;
         default:
             dist = ticks;
