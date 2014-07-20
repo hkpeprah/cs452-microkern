@@ -406,7 +406,7 @@ static void updateNextSensor(Train_t *train) {
                 request.arg0 = train->speed;
                 Send(tid, &request, sizeof(request), NULL, 0);
                 edge = train->currentEdge;
-                node = NULL;
+                node = edge->src->reverse;
             } else {
                 train->distToNextSensor += d(edge).dist;
                 node = d(edge).dest;
@@ -598,6 +598,11 @@ static void execPath(Train_t *train, track_node *lastExec) {
 static void sensorTrip(Train_t *train, track_node *sensor) {
     int tick;
 
+    /* if train->nextSensor is NULL, we've reached an exit node */
+    if (train->nextSensor == NULL) {
+        return;
+    }
+
     ASSERT((train->nextSensor != NULL && sensor != NULL), "SensorTrip: NULL sensor");
     ASSERT(train->nextSensor == sensor, "SensorTrip: Expected sensor(%s) vs actual differ(%s)",
            train->nextSensor->name, sensor->name);
@@ -759,11 +764,6 @@ static void updateLocation(Train_t *train) {
 
     if (fullStop == true) {
         freeResvOnStop(train);
-/*
-        ASSERT(peek_head_Resv(&(train->resv)) == train->currentEdge->src,
-                "Train stopped but reserved wrong node: %s, expected: %s",
-                d(peek_head_Resv(&(train->resv))).name, train->currentEdge->src->name);
-*/
     }
 
 

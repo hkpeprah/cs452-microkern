@@ -6,7 +6,6 @@
 #include <train_speed_measurements.h>
 
 #define MEASUREMENT_TOTAL   15
-#define TRAIN_COUNT         9
 #define POW_10_3            1000
 #define POW_10_4            10000
 #define POW_10_5            100000
@@ -22,12 +21,19 @@ void initTrainSpeeds() {
 }
 
 
+void getTrainIds(int *train_ids) {
+    int i;
+    for (i = 0; i < TRAIN_COUNT; i++) {
+        train_ids[i] = train_states[i].train;
+    }
+}
+
+
 static int getTrainId(unsigned int tr) {
     unsigned int id;
 
     for (id = 0; id < TRAIN_COUNT; ++id) {
-        /* TODO: Finish measurements for 54 */
-        if (train_states[id].train == tr && tr != 54) {
+        if (train_states[id].train == tr) {
             return id;
         }
     }

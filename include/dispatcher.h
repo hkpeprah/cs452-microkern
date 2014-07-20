@@ -20,6 +20,7 @@
 #define NO_PATH_EXISTS           -10
 #define INVALID_REQUEST          -11
 #define TRAIN_BUSY               -12
+#define INVALID_AUX              -13
 
 
 void Dispatcher();

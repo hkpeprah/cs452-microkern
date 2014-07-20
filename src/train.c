@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <ts7200.h>
 #include <dispatcher.h>
+#include <train_speed.h>
 
 #define TRAIN_AUX_SOLENOID    32
 #define TRAIN_AUX_STRAIGHT    33
@@ -50,16 +51,18 @@ static inline void setTrainSwitchState(int index, int state, int swstate) {
 
 void setTrainSetState() {
     unsigned int i;
-    char trains[] = {45, 46, 47, 48, 49, 50, 51};
+    int trains[TRAIN_COUNT];
 
     debug("Setting the state of switches.");
     for (i = 0; i < TRAIN_SWITCH_COUNT; ++i) {
         trainSwitch(trainSwitches[i].id, SWITCH_CHAR(trainSwitches[i].state));
     }
 
-    debug("Setting supported trains to speed 0.");
-    for (i = 0; i < 7; ++i) {
+    debug("Setting train speeds to zero(0), and turning on lights.");
+    getTrainIds(trains);
+    for (i = 0; i < TRAIN_COUNT; ++i) {
         trainSpeed(trains[i], 0);
+        trainAuxiliary(trains[i], TRAIN_LIGHT_OFFSET);
     }
 
     turnOffSolenoid();
@@ -185,6 +188,19 @@ int trainSpeed(unsigned int tr, unsigned int speed) {
 int trainReverse(unsigned int tr) {
     char buf[2];
     buf[0] = TRAIN_AUX_REVERSE;
+    buf[1] = tr;
+    trnputs(buf, 2);
+    return 0;
+}
+
+
+int trainAuxiliary(unsigned int tr, unsigned int aux) {
+    if (aux != 16 && aux != 17 && aux < 32) {
+        return INVALID_AUX;
+    }
+
+    char buf[2];
+    buf[0] = aux;
     buf[1] = tr;
     trnputs(buf, 2);
     return 0;

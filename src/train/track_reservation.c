@@ -57,14 +57,17 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
     return lastSuccessNode;
 }
 
+
 track_node *reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
     return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, dist);
 }
+
 
 track_node *reserveTrack(uint32_t tr, track_node **track, uint32_t n) {
     int maxint = MAXSINT;
     return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, &maxint);
 }
+
 
 track_node *releaseTrack(uint32_t tr, track_node **track, uint32_t n) {
     int maxint = MAXSINT;
