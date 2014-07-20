@@ -49,11 +49,12 @@ void printTrainSnapshot(CalibrationSnapshot_t *snapshot) {
         offset += index;
         snapshots[index] = snapshot->tr;
         printf(SAVE_CURSOR MOVE_CURSOR "| %u " "\033[%dG" "| %u      " "\033[%dG" "| %s      " "\033[%dG"
-               "| %u    " "\033[%dG" "| %s     \033[%dG" "| %u      " "\033[%dG" "| %u      " "\033[%dG" "| %s-%s    "
-               RESTORE_CURSOR,
+               "| %u    " "\033[%dG" "| %s     \033[%dG" "| %u      " "\033[%dG" "| %u      " "\033[%dG" "| %s - %s"
+               "\033[%dG |" RESTORE_CURSOR,
                offset, RIGHT_HALF + 5, snapshot->tr, RIGHT_HALF + 13, snapshot->sp,
                RIGHT_HALF + 24, snapshot->landmark, RIGHT_HALF + 35, snapshot->dist, RIGHT_HALF + 51, snapshot->nextmark,
-               RIGHT_HALF + 67, snapshot->eta, RIGHT_HALF + 81, snapshot->ata, RIGHT_HALF + 95, snapshot->headResv, snapshot->tailResv);
+               RIGHT_HALF + 67, snapshot->eta, RIGHT_HALF + 81, snapshot->ata, RIGHT_HALF + 95, snapshot->headResv,
+               snapshot->tailResv, RIGHT_HALF + 105);
     }
 }
 

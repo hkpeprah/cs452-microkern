@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python
 import os
 import re
 import json
@@ -32,7 +32,7 @@ void init_train_speeds(train_speed_state *{1});
 
 BASE_TMPL = """#include <train_speed_measurements.h>
 
-void init_train_speeds(train_speed_state %s) {
+void init_train_speeds(train_speed_state *%s) {
 %s
 }
 """
@@ -148,17 +148,17 @@ if __name__ == "__main__":
     import sys
     from argparse import ArgumentParser
     parser = ArgumentParser(description='generate train measurement configuration files')
-    parser.add_argument('-C', dest='c',  nargs=1, default='train_speed_measurements.c',
+    parser.add_argument('-C', dest='c',  nargs='?', default='train_speed_measurements.c',
                       help='output .c file (default is train_speed_measurements.c',
                       metavar='OUTPUT-C-FILE')
-    parser.add_argument('-H', dest='h', nargs=1, default='train_speed_measurements.h',
+    parser.add_argument('-H', dest='h', nargs='?', default='train_speed_measurements.h',
                       help='output .h file (default is train_speed_measurements.h',
                       metavar='OUTPUT-H-FILE')
     parser.add_argument('-S', dest='s', nargs='*', default=(),
                         help='specific data files to use to generate output',
                         metavar='CONFIG_FILE')
     args = parser.parse_args()
-    if len(args) == 0 or not args.c or not args.h:
+    if not args.c or not args.h:
         parser.print_help()
         exit(0)
 

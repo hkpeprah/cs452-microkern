@@ -38,7 +38,7 @@ build
 include/track_data.h
 src/track_data.c
 include/train_speed_measurements.h
-src/train_speed_measurements.h
+src/train_speed_measurements.c
 
 # Vim temporary files
 *.swp

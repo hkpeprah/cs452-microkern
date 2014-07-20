@@ -14,11 +14,11 @@
 #define POW_10_7            10000000
 #define POW_10_8            100000000
 
-static struct train_speed_state train_speed_states[TRAIN_COUNT];
+static train_speed_state train_states[TRAIN_COUNT];
 
 
 void initTrainSpeeds() {
-    init_train_speeds(&train_speed_states);
+    init_train_speeds(train_states);
 }
 
 
@@ -86,7 +86,7 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
     }
 
     if ((id = getTrainId(tr)) > 0) {
-        return train_speed_states[id].speed[sp];
+        return train_states[id].speed[sp];
     }
     return 0;
 }
@@ -100,7 +100,7 @@ unsigned int getStoppingDistance(unsigned int tr, int startsp, int destsp) {
     }
 
     /* stopping distance is measured in millimeters */
-    return train_speed_states[id].stoppingDistances[MAX(startsp, destsp)];
+    return train_states[id].stoppingDistances[MAX(startsp, destsp)];
 }
 
 
@@ -116,7 +116,7 @@ unsigned int getTransitionDistance(unsigned int tr, int startsp, int destsp, int
     /* get the total time it takes to transition between speeds */
     totalTime = getTransitionTicks(tr, startsp, destsp);
     /* determint the stopping distance, which is equivalent to acceleration distance */
-    distance = train_speed_states[id].stoppingDistances[MAX(startsp, destsp)] * 1000;
+    distance = train_states[id].stoppingDistances[MAX(startsp, destsp)] * 1000;
     /* distance travelled accelerating/decelerating is product of distance multiplied by the time spent
      * travelling, divided by the total time it takes to travel */
     distance = (distance * ticks) / totalTime;
@@ -138,7 +138,7 @@ unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
         return 0;
     }
 
-    totalTicks = train_speed_states[id].stoppingTicks[MAX(startsp, destsp)];
+    totalTicks = train_states[id].stoppingTicks[MAX(startsp, destsp)];
     return totalTicks;
 }
 
