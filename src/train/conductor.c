@@ -8,6 +8,7 @@
 #include <term.h>
 #include <path.h>
 #include <stdlib.h>
+#include <random.h>
 #include <clock.h>
 
 typedef struct {
@@ -50,46 +51,81 @@ void Conductor() {
     ASSERT((req.type == GOTO || req.type == MOVE),
            "conductor recieved a message not of type GOTO or MOVE: type %d from %d", req.type, callee);
 
+    GotoResult_t result;
+
     /* check if goto or just a short move */
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
         destDist = req.arg2;
-        if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
-            error("Conductor: Error: No path to destination %u found", dest->num);
-            DispatchStopRoute(req.arg3);
-            Exit();
-        }
 
-        if (path == NULL) {
-            DispatchStopRoute(req.arg3);
-            Exit();
-        }
+        int attemptsLeft = random_range(3, 5);
 
-        if (path[0] != source->dest) {
-            // TODO: only this when stopped
-            TrDirection(train);
-        }
+        while (attemptsLeft > 0) {
 
-        int i, base = 0;
-        for (i = 0; i < node_count - 1; ++i) {
-            if (path[i]->reverse == path[i + 1]) {
-                TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
-                if ((status == TrDirection(train)) < 0) {
-                    error("Conductor[%u]: Train %u[%u] cannot reverse, %s, dying...", myTid, req.arg3,
-                          train, (status == -2 ? "could not reserve reverse" : "train is moving"));
-                    DispatchStopRoute(req.arg3);
-                    Exit();
-                }
-                base = ++i;
+            if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
+                error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
+                Delay(random_range(0, 500));
+                continue;
             }
-        }
 
-        if (base != node_count) {
-            TrGotoAfter(train, &(path[base]), node_count - base, 0);
+            if (path[0] != source->dest) {
+                // TODO: only this when stopped
+                TrDirection(train);
+            }
+
+            int i, base = 0;
+            for (i = 0; i < node_count - 1; ++i) {
+                if (path[i]->reverse == path[i + 1]) {
+                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
+
+                    switch (result) {
+                        case GOTO_COMPLETE:
+                            // yay! do nothing
+                            break;
+                        case GOTO_REROUTE:
+                            goto reroute;
+                        case GOTO_LOST:
+                            goto lost;
+                        case GOTO_NONE:
+                            // wat
+                            ASSERT(false, "GOTO result of GOTO_NONE from train %d on path %s with len %d", train, path[base]->name, (i - base + 1));
+                        default:
+                            // waaaaaat
+                            ASSERT(false, "This should never happen...");
+                    }
+
+                    if (TrDirection(train) < 0) {
+                        // failed to reverse?
+                        Delay(random_range(1, 500));
+                        if (TrDirection(train) < 0) {
+                            // second fail, screw it reroute
+                            goto reroute;
+                        }
+                    }
+                    base = ++i;
+                }
+            }
+
+            if (base != node_count) {
+                if ((result = TrGotoAfter(train, &(path[base]), node_count - base, 0)) == GOTO_COMPLETE) {
+                    // success!
+                    break;
+                }
+            }
+
+reroute:
+            debug("Conductor: train route failed, rerouting...");
+            attemptsLeft -= 1;
         }
     } else {
         destDist = req.arg2;
-        TrGotoAfter(train, NULL, 0, destDist);
+        result = TrGotoAfter(train, NULL, 0, destDist);
+    }
+
+    if (result == GOTO_COMPLETE) {
+        // yay it worked
+    } else {
+
     }
 
     status = DispatchStopRoute(req.arg3);
@@ -97,7 +133,13 @@ void Conductor() {
         error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
     }
     debug("Conductor: Tid %u, removing self from parent %u", myTid, MyParentTid());
-    Exit();
+    return;
+
+lost:
+    // WE GOTTA GO BACK
+    // TODO: msg parent about this, handle in dispatcher
+    error("Train is totally lost, currently unhandled!");
+    status = DispatchStopRoute(req.arg3);
 }
 
 

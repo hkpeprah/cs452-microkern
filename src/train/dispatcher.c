@@ -109,36 +109,18 @@ int DispatchTrainMove(uint32_t tr, uint32_t dist) {
 }
 
 
-track_node *DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
-    int result = SendDispatcherMessage(TRM_RESERVE_TRACK_DIST, tr, (int) track, n, (int)dist);
-    if (result < 0) {
-        error("DispatchReserveTrackDist: error: %d", result);
-        return NULL;
-    }
-
-    return (track_node*) result;
+int DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
+    return SendDispatcherMessage(TRM_RESERVE_TRACK_DIST, tr, (int) track, n, (int)dist);
 }
 
 
-track_node *DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n) {
-    int result = SendDispatcherMessage(TRM_RESERVE_TRACK, tr, (int) track, n, 0);
-    if (result < 0) {
-        error("DispatchReserveTrack: error: %d", result);
-        return NULL;
-    }
-
-    return (track_node*) result;
+int DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n) {
+    return SendDispatcherMessage(TRM_RESERVE_TRACK, tr, (int) track, n, 0);
 }
 
 
-track_node *DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
-    int result = SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int)track, n, 0);
-    if (result < 0) {
-        error("DispatchReleaseTrack: error: %d", result);
-        return NULL;
-    }
-
-    return (track_node*) result;
+int DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
+    return SendDispatcherMessage(TRM_RELEASE_TRACK, tr, (int)track, n, 0);
 }
 
 
@@ -398,13 +380,13 @@ void Dispatcher() {
                 status = (int) &(track[request.arg0]);
                 break;
             case TRM_RESERVE_TRACK_DIST:
-                status = (int) reserveTrackDist(node->tr_number, (track_node**)request.arg0, request.arg1, (int*) request.arg2);
+                status = reserveTrackDist(node->tr_number, (track_node**)request.arg0, request.arg1, (int*) request.arg2);
                 break;
             case TRM_RESERVE_TRACK:
-                status = (int)reserveTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
+                status = reserveTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
                 break;
             case TRM_RELEASE_TRACK:
-                status = (int)releaseTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
+                status = releaseTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
                 break;
             default:
                 error("Dispatcher: Unknown request of type %d from %u", request.type, callee);
