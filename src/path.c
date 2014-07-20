@@ -221,6 +221,10 @@ int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **p
             break;
         }
 
+        if (currentNode->pathLenNodes > pathlen) {
+            return INSUFFICIENT_SUPPLIED_ARRAY_SIZE;
+        }
+
         if (currentTrackNode->reservedBy != RESERVED_BY_NOBODY && currentTrackNode->reservedBy != tr) {
             // someone else owns that node - skip it!
             continue;

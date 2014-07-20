@@ -15,12 +15,12 @@ static bool cmpAndSwapResvBy(track_node *node, int oldValue, int newValue) {
 
 
 // runs cmpAndSwapResvBy on each track, provided they are contineous
-static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **track, uint32_t n, int *dist) {
-    track_node *lastSuccessNode = NULL;
+static int swapTrackResvBy(int oldValue, int newValue, track_node **track, uint32_t n, int *dist) {
     track_node *currentNode = *track++;
     track_node *nextNode;
     bool validRes;
     int nextEdgeDist;
+    int numSuccess = 0;
 
     while (currentNode && (validRes = cmpAndSwapResvBy(currentNode, oldValue, newValue))) {
         // debug("%d res %s, %d node %d dist left", newValue, currentNode->name, n, *dist);
@@ -30,8 +30,7 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
             debug("%s res fail, expected %d but got oldValue %d -> newValue %d", currentNode->name, currentNode->reservedBy, oldValue, newValue);
             break;
         }
-
-        lastSuccessNode = currentNode;
+        numSuccess++;
 
         if (--n <= 0) {
             // no more nodes in the array
@@ -54,19 +53,19 @@ static track_node *swapTrackResvBy(int oldValue, int newValue, track_node **trac
         currentNode = nextNode;
     }
 
-    return lastSuccessNode;
+    return numSuccess;
 }
 
-track_node *reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
+int reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
     return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, dist);
 }
 
-track_node *reserveTrack(uint32_t tr, track_node **track, uint32_t n) {
+int reserveTrack(uint32_t tr, track_node **track, uint32_t n) {
     int maxint = MAXSINT;
     return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, &maxint);
 }
 
-track_node *releaseTrack(uint32_t tr, track_node **track, uint32_t n) {
+int releaseTrack(uint32_t tr, track_node **track, uint32_t n) {
     int maxint = MAXSINT;
     return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n, &maxint);
 }

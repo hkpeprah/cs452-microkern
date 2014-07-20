@@ -73,7 +73,7 @@ static int trackReservation(int type, unsigned int tr, int start, int end) {
     unsigned int pathDist;
     int pathLen = findPath(tr, &(startNode->edge[DIR_STRAIGHT]), endNode, path, 32, &pathDist);
 
-    track_node *lastNode;
+    int lastNode = 0;
 
     switch(type) {
         case RESERVE:
@@ -85,10 +85,9 @@ static int trackReservation(int type, unsigned int tr, int start, int end) {
             return -1337;
     }
 
-    if (lastNode) {
-        printf("reserved up to node %s\n", lastNode->name);
-    } else {
-        printf("no nodes reserved");
+    printf("Reserved %d nodes out of %d", lastNode, pathLen);
+    if (lastNode < pathLen && path[lastNode - 1]) {
+        printf("Last resv: %s", path[lastNode - 1]->name);
     }
     return 0;
 }

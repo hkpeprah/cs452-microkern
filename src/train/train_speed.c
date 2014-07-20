@@ -21,7 +21,6 @@ void initTrainSpeeds() {
     init_train_speeds(train_states);
 }
 
-
 static int getTrainId(unsigned int tr) {
     unsigned int id;
 
