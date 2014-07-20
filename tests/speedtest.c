@@ -33,6 +33,7 @@ void SpeedTest() {
     unsigned int speed, tr_number, startTime, endTime;
 
     Delay(10);
+    trainSwitch(8, 'C');
     trainSwitch(10, 'S');
     trainSwitch(13, 'S');
     trainSwitch(14, 'C');
@@ -54,7 +55,7 @@ void SpeedTest() {
 
         if (tr_number >= 0) {
             trainSpeed(tr_number, 0);
-            for (speed = 8; speed <= TRAIN_MAX_SPEED; ++speed) {
+            for (speed = 3; speed <= TRAIN_MAX_SPEED; ++speed) {
                 printf("Speed or acceleration test? (s|a|c) ");
                 ch = getchar();
                 printf("%c\r\n", ch);

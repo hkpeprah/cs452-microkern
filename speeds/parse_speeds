@@ -20,7 +20,7 @@ INDEX_TMPL = """
 HEADER_TMPL = """#ifndef __TRAIN_SPEED_MEASUREMENTS_H__
 #define __TRAIN_SPEED_MEASUREMENTS_H__
 typedef struct train_speed_state_t {{
-    const char *train;
+    int train;
     unsigned int ticks[{0}];
     unsigned int speed[{0}];
     unsigned int stoppingDistances[{0}];
@@ -76,6 +76,8 @@ def parse_tmpl_json(string):
             key, val = line.split(':')
             key = key.strip().lower()
             val = val.strip()
+            if len(val) == 0:
+                val = '0'
             data[speed][key] = val
     return train, OrderedDict(sorted(data.items(), key=lambda d: int(d[0])))
 
@@ -95,7 +97,7 @@ def generate_speed_array(f, index):
     string = read_or_die(f)
     train, data = parse_tmpl_json(string)
     string = "%s    // TRAIN {0} MEASUREMENTS, GENERATED CODE, DO NOT EDIT DIRECTLY\n" % ('\n\n' if index > 0 else '')
-    string += "    {0}[{1}].train = \"{2}\";".format(VAR_NAME, index, train);
+    string += "    {0}[{1}].train = {2};".format(VAR_NAME, index, train);
     string = string.format(train)
     for speed, measurements in data.iteritems():
         tmpl = INDEX_TMPL
@@ -133,6 +135,7 @@ def generate_all():
     directory = os.path.join(os.path.dirname(__file__), 'data')
     files = list(os.path.join(directory, f) for f in os.listdir(directory) if \
                  os.path.isfile(os.path.join(directory, f)))
+    files = sorted(files)
     return generate_for_trains(files)
 
 
@@ -163,6 +166,7 @@ if __name__ == "__main__":
         exit(0)
 
     if len(args.s) > 0:
+        args.s = sorted(args.s)
         header, cfile = generate_for_trains(args.s)
     else:
         header, cfile = generate_all()

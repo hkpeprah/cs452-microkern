@@ -14,7 +14,7 @@
 #define POW_10_7            10000000
 #define POW_10_8            100000000
 
-static train_speed_state train_states[TRAIN_COUNT];
+static train_speed_state train_states[TRAIN_COUNT] = {{0}};
 
 
 void initTrainSpeeds() {
@@ -23,57 +23,21 @@ void initTrainSpeeds() {
 
 
 bool isValidTrainId(unsigned int tr) {
-    bool valid;
-
-    valid = false;
-    switch (tr) {
-        case 45:
-        case 47:
-        case 48:
-        case 49:
-        case 50:
-        case 51:
-        case 53:
-        case 54:
-        case 56:
-            valid = true;
-            break;
-    }
-    return valid;
+    return getTrainId(tr) != -1;
 }
 
 
 static int getTrainId(unsigned int tr) {
     unsigned int id;
 
-    switch (tr) {
-        case 45:
-        case 53:
-            id = 0;
-            break;
-        case 47:
-        case 54:
-            id = 1;
-            break;
-        case 48:
-            id = 2;
-            break;
-        case 49:
-        case 56:
-            id = 3;
-            break;
-        case 50:
-            id = 4;
-            break;
-        case 51:
-            id = 5;
-            break;
-        default:
-            error("getTrainVelocity: Unknown train.");
-            return -1;
+    for (id = 0; id < TRAIN_COUNT; ++id) {
+        /* TODO: Finish measurements for 54 */
+        if (train_states[id].train == tr && tr != 54) {
+            return id;
+        }
     }
-
-    return id;
+    error("getTrainId: Unkown train %d", tr);
+    return -1;
 }
 
 
