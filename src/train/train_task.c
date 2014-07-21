@@ -626,11 +626,13 @@ static void execPath(Train_t *train, track_node *lastExec) {
     }
 
     if (train->currentEdge->dest != train->path[0]) {
-        Log("WARNING: execPath: Train edge dest(%s) is not equal to start of path(%s)\n", train->currentEdge->dest->name, train->path[0]->name);
+        Log("WARNING: execPath: Train edge dest(%s) is not equal to start of path(%s)\n",
+            train->currentEdge->dest->name, train->path[0]->name);
     }
 
     if (peek_head_Resv(&(train->resv)) != train->path[0]) {
-        Log("WARNING: execPath: Expected resv (%s) to be path[0] but got %s\n", peek_head_Resv(&(train->resv))->name, train->path[0]->name);
+        Log("WARNING: execPath: Expected resv (%s) to be path[0] but got %s\n",
+            d(peek_head_Resv(&(train->resv))).name, train->path[0]->name);
     }
 
     i = 0;
@@ -749,6 +751,7 @@ static void distTraverse(Train_t *train, bool traverseSensor) {
             // error("updateLocation: Error: Model beat train to %s", train->nextSensor->name);
             break;
         }
+
         Log("edge: %s -> %s, dist trav with %d > %d, head of resv %s\n",
                 train->currentEdge->src->name, train->currentEdge->dest->name,
                 train->distSinceLastNode, train->currentEdge->dist, d(peek_head_Resv(&(train->resv))).name);
@@ -1105,9 +1108,8 @@ static void TrainTask() {
             Reply(callee, NULL, 0);
             continue;
         } else if (callee == timeoutCourier) {
-            // debug("timed out! going to dist traverse");
+            debug("Train %u: Timed out, calling distTraverse", train.id);
             distTraverse(&train, true);
-            // debug("AFTER: on edge %s -> %s", train.currentEdge->src->name, train.currentEdge->dest->name);
             updateNextSensor(&train);
             waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
             continue;
