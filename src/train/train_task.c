@@ -340,6 +340,16 @@ static void push_back_Resv(TrainResv_t *resv, track_node *node) {
     resv->arr[ind] = node;
 }
 
+static int find_Resv(TrainResv_t *resv, track_node *node) {
+    int i;
+    for (i = 0; i < size_Resv(resv); ++i) {
+        if (peek_any_Resv(resv, i) == node) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 
 static void freeHeadResv(Train_t *train) {
     track_node *toFree = pop_head_Resv(&(train->resv));
@@ -424,7 +434,7 @@ static void updateNextSensor(Train_t *train) {
 
     train->nextSensor = node;
 
-    Log("UpdateNextSensor -> %s with dist %d\n", node->name, train->distToNextSensor);
+    Log("UpdateNextSensor, Train %u -> %s with dist %d\n", train->id, node->name, train->distToNextSensor);
 }
 
 
@@ -449,14 +459,14 @@ static uint32_t pathRemaining(const Train_t *train) {
 static void freeResvOnStop(Train_t *train) {
     track_node *node;
     while ((node = peek_head_Resv(&train->resv))) {
-        if (node == train->currentEdge->src) {
+        if (node == train->currentEdge->src || node == train->currentEdge->dest) {
             break;
         }
         freeHeadResv(train);
     }
 
     while ((node = peek_back_Resv(&train->resv))) {
-        if (node == train->currentEdge->src) {
+        if (node == train->currentEdge->src || node == train->currentEdge->dest) {
             break;
         }
         freeTailResv(train);
@@ -464,6 +474,7 @@ static void freeResvOnStop(Train_t *train) {
     Log("Full stop:\n");
     dump_Resv(&(train->resv));
 }
+
 
 
 // request path
@@ -481,11 +492,12 @@ static int reserveTrack(Train_t *train, int resvDist) {
     if (train->path != NULL) {
         /* train has a path, need to reserve along it */
 
-        if (train->currentEdge->dest != train->path[0]) {
+        if (train->currentEdge->dest != train->path[0] && find_Resv(&(train->resv), train->path[0]) == -1) {
             // oh no! we're a bit lost! do a short path find to train->path[0]
             // if it still fails, give up and ask to be rerouted
 
             Log("overshot path, edge dest %s but path[0] %s\n", train->currentEdge->dest->name, train->path[0]->name);
+            dump_Resv(&(train->resv));
 
             track_node *overshotComp[4];
             int ospathLen;
@@ -614,13 +626,11 @@ static void execPath(Train_t *train, track_node *lastExec) {
     }
 
     if (train->currentEdge->dest != train->path[0]) {
-        Log("WARNING: execPath: Train edge dest(%s) is not equal to start of path(%s)",
-            train->currentEdge->dest->name, train->path[0]->name);
+        Log("WARNING: execPath: Train edge dest(%s) is not equal to start of path(%s)\n", train->currentEdge->dest->name, train->path[0]->name);
     }
 
-    if (peek_head_Resv(&(train->resv)) == train->path[0]) {
-        Log("WARNING: execPath: Expected resv (%s) to be path[0] but got %s",
-            peek_head_Resv(&(train->resv))->name, train->path[0]->name);
+    if (peek_head_Resv(&(train->resv)) != train->path[0]) {
+        Log("WARNING: execPath: Expected resv (%s) to be path[0] but got %s\n", peek_head_Resv(&(train->resv))->name, train->path[0]->name);
     }
 
     i = 0;
@@ -628,7 +638,7 @@ static void execPath(Train_t *train, track_node *lastExec) {
         current = peek_any_Resv(&(train->resv), i++);
     } while (lastExec && current != lastExec);
 
-    Log("starting path exec at resv index %d node %s\n", d(current).name);
+    Log("starting path exec at resv index %d node %s\n", i, d(current).name);
 
     for (; i < size_Resv(&(train->resv)); ++i) {
         next = peek_any_Resv(&(train->resv), i);
@@ -720,7 +730,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
             RESV_DIST(train->stoppingDist - train->currentEdge->dist)));
         if (train->resv.extraResvDist < 0) {
             /* a collision has occured */
-            Log("sensorTrip - Collision detected on train %d, stopping", train->id);
+            Log("sensorTrip - Collision detected on train %d, stopping\n", train->id);
             setTrainSpeed(train, 0);
             train->gotoResult = GOTO_REROUTE;
         }
@@ -835,7 +845,7 @@ static void updateLocation(Train_t *train) {
 
         if (train->resv.extraResvDist < 0) {
             /* a collision has occured */
-            Log("updateLocation - Collision detected on train %d, stopping", train->id);
+            Log("updateLocation - Collision detected on train %d, stopping\n", train->id);
             setTrainSpeed(train, 0);
             train->gotoResult = GOTO_REROUTE;
         }
@@ -1137,12 +1147,13 @@ static void TrainTask() {
                     train.distOffset = request.arg2;
                     train.pathRemain = pathRemaining(&train);
 
-                    Log(">>>>>>>>>>>Exec move setup with dist %d\n", train.pathRemain);
+                    Log(">>>>>>>>>>>Exec move setup for train %u with dist %d\n", train.id, train.pathRemain);
 
                     updateNextSensor(&train);
 
                     train.resv.extraResvDist = -reserveTrack(&train, MAX(train.distToNextSensor,
                         RESV_DIST(train.stoppingDist - train.currentEdge->dist)));
+                    Log("Reserved track call succeeded for train %d\n", train.id);
                     if (train.resv.extraResvDist >= 0) {
                         /* remove the previously reserved nodes */
                         while (size_Resv(&(train.resv)) > 0 && peek_head_Resv(&(train.resv)) != lastResv) {
@@ -1159,7 +1170,7 @@ static void TrainTask() {
                         break;
                     }
 
-                    Log("<<<<<<<<<<<Finish Exec move setup");
+                    Log("<<<<<<<<<<<Finish Exec move setup for train %u \n", train.id);
                 }
 
                 // 2x stopping dist using short moves will probably break shit
@@ -1194,7 +1205,7 @@ static void TrainTask() {
                     setTrainSpeed(&train, GOTO_SPEED);
                     waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
                 }
-                Log("=================TRM_GOTO DONE");
+                Log("=================TRM_GOTO DONE\n");
                 break;
             case TRM_SPEED:
                 speed = request.arg0;
