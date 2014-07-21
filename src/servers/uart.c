@@ -10,6 +10,8 @@
 
 #define FIFO_SIZE 8
 
+DECLARE_CIRCULAR_BUFFER(char);
+
 static int is_tid = -1;
 static int os_tid = -1;
 
@@ -219,7 +221,7 @@ void OutputServer() {
     int result, sender;
 
     UartRequest_t req;
-    CircularBuffer_t cbuf[2];
+    CircularBuffer_char cbuf[2];
     UartRequestQueue_t requestQueue[2] = {{0}};
     UartRequestQueue_t *reqQueuep;
 
@@ -227,7 +229,7 @@ void OutputServer() {
     requestQueue[1].tid = -1;
 
     for (i = 0; i < 2; ++i) {
-        initcb(&(cbuf[i]));
+        initcb_char(&(cbuf[i]));
     }
 
     result = RegisterAs(OS_NAME);
@@ -253,24 +255,24 @@ void OutputServer() {
                     continue;
                 }
 
-                if (length(&cbuf[req.channel]) <= 0) {
+                if (length_char(&cbuf[req.channel]) <= 0) {
                     // read request but no available chars, add to queue && dont reply
                     requestQueue[req.channel].tid = sender;
                     requestQueue[req.channel].request = req;
                 } else {
                     // has at least one, read and reply
-                    result = read(&cbuf[req.channel], req.buf, req.len);
+                    result = read_char(&cbuf[req.channel], req.buf, req.len);
                     req.len = result;
                     Reply(sender, &req, sizeof(req));
                 }
                 break;
 
             case WRITE:
-                write(&cbuf[req.channel], req.buf, req.len);
+                write_char(&cbuf[req.channel], req.buf, req.len);
                 reqQueuep = &(requestQueue[req.channel]);
                 if (reqQueuep->tid >= 0) {
                     // waiting task exist and enough characters are on queue, then read and reply
-                    result = read(&cbuf[req.channel], reqQueuep->request.buf, reqQueuep->request.len);
+                    result = read_char(&cbuf[req.channel], reqQueuep->request.buf, reqQueuep->request.len);
                     reqQueuep->request.len = result;
                     Reply(reqQueuep->tid, &(reqQueuep->request), sizeof(reqQueuep->request));
                     reqQueuep->tid = -1;
@@ -289,7 +291,7 @@ void InputServer() {
     int result, sender;
 
     UartRequest_t req;
-    CircularBuffer_t cbuf[2];
+    CircularBuffer_char cbuf[2];
     UartRequestQueue_t requestQueue[2] = {{0}};
     UartRequestQueue_t *reqQueuep;
 
@@ -297,7 +299,7 @@ void InputServer() {
     requestQueue[1].tid = -1;
 
     for (i = 0; i < 2; ++i) {
-        initcb(&(cbuf[i]));
+        initcb_char(&(cbuf[i]));
     }
 
     result = RegisterAs(IS_NAME);
@@ -318,13 +320,13 @@ void InputServer() {
 
         switch(req.type) {
             case READ:
-                if (length(&cbuf[req.channel]) < req.len) {
+                if (length_char(&cbuf[req.channel]) < req.len) {
                     // read request but not enough chars, add to queue && dont reply
                     requestQueue[req.channel].tid = sender;
                     requestQueue[req.channel].request = req;
                 } else {
                     // has enough characters, read and reply
-                    read(&cbuf[req.channel], req.buf, req.len);
+                    read_char(&cbuf[req.channel], req.buf, req.len);
                     Reply(sender, NULL, 0);
                 }
             break;
@@ -336,13 +338,13 @@ void InputServer() {
                     continue;
                 }
                 // write to circular buffer, check waiting queue
-                write(&cbuf[req.channel], req.buf, req.len);
+                write_char(&cbuf[req.channel], req.buf, req.len);
 
                 reqQueuep = &(requestQueue[req.channel]);
 
-                if (reqQueuep->tid >= 0 && reqQueuep->request.len <= length(&cbuf[req.channel])) {
+                if (reqQueuep->tid >= 0 && reqQueuep->request.len <= length_char(&cbuf[req.channel])) {
                     // waiting task exist and enough characters are on queue, then read and reply
-                    read(&cbuf[req.channel], reqQueuep->request.buf, reqQueuep->request.len);
+                    read_char(&cbuf[req.channel], reqQueuep->request.buf, reqQueuep->request.len);
                     Reply(reqQueuep->tid, NULL, 0);
                     reqQueuep->tid = -1;
                 }

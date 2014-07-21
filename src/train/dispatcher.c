@@ -138,7 +138,7 @@ static int findSensorForTrain(unsigned int tr) {
 static void TrainCreateCourier() {
     DispatcherMessage_t req;
     int callee, tid, parent;
-    int sensor;
+    int sensor, status;
 
     parent = MyParentTid();
     Receive(&callee, &req, sizeof(req));
@@ -155,10 +155,14 @@ static void TrainCreateCourier() {
     if (tid >= 0) {
         debug("TrainCreateCourier: Creating Train %u with Tid %d", req.tr, tid);
         req.type = TRM_CREATE_TRAIN;
-        req.tr = req.tr;
         req.arg0 = tid;
-        Send(parent, &req, sizeof(req), NULL, 0);
-        TrAuxiliary(tid, 16);
+        Send(parent, &req, sizeof(req), &status, sizeof(status));
+        if (status < 0) {
+            debug("TrainCreateCourier: Failed to create, destroying train with Tid %u", tid);
+            Destroy(tid);
+        } else {
+            TrAuxiliary(tid, 16);
+        }
     } else {
         error("TrainCreateCourier: Error: Failed to create new Train task");
     }
@@ -191,8 +195,6 @@ static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int
             nodes[i].train = tid;
             nodes[i].tr_number = tr;
             nodes[i].conductor = -1;
-            notice("Dispatcher: Created Train %u with tid %u, Total Number of Trains: %u",
-                   tr, nodes[i].train, num_of_trains);
             break;
         }
     }
@@ -200,6 +202,8 @@ static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int
         return NULL;
     }
     num_of_trains++;
+    notice("Dispatcher: Created Train %u with tid %u, Total Number of Trains: %u",
+           tr, nodes[i].train, num_of_trains);
     return &nodes[i];
 }
 
@@ -264,7 +268,12 @@ void Dispatcher() {
     unsigned int CreateCourier;
     DispatcherMessage_t request;
     track_node track[TRACK_MAX];
-    DispatcherNode_t *node, trains[MAX_NUM_OF_TRAINS] = {{-1}};
+    DispatcherNode_t *node, trains[MAX_NUM_OF_TRAINS] = {{0}};
+
+    int i;
+    for (i = 0; i < MAX_NUM_OF_TRAINS; ++i) {
+        trains[i].train = -1;
+    }
 
     init_track(track);
     RegisterAs(TRAIN_DISPATCHER);
@@ -320,6 +329,7 @@ void Dispatcher() {
                 break;
             case TRM_CREATE_TRAIN:
                 status = 0;
+                ASSERT(callee == CreateCourier, "Dispatcher: Something not the CreateCourier tried to create a train");
                 if (addDispatcherNode(trains, request.arg0, request.tr) == NULL) {
                     status = OUT_OF_DISPATCHER_NODES;
                 }

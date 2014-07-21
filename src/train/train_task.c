@@ -516,7 +516,6 @@ static int reserveTrack(Train_t *train, int resvDist) {
         toResv = train->path;
         numResv = train->pathNodeRem;
 
-
     } else {
         /* train does not have a path, find nodes to reserve */
         numResv = 0;
@@ -615,11 +614,13 @@ static void execPath(Train_t *train, track_node *lastExec) {
     }
 
     if (train->currentEdge->dest != train->path[0]) {
-        Log("WARNING: execPath: Train edge dest(%s) is not equal to start of path(%s)", train->currentEdge->dest->name, train->path[0]->name);
+        Log("WARNING: execPath: Train edge dest(%s) is not equal to start of path(%s)",
+            train->currentEdge->dest->name, train->path[0]->name);
     }
 
     if (peek_head_Resv(&(train->resv)) == train->path[0]) {
-        Log("WARNING: execPath: Expected resv (%s) to be path[0] but got %s", peek_head_Resv(&(train->resv))->name, train->path[0]->name);
+        Log("WARNING: execPath: Expected resv (%s) to be path[0] but got %s",
+            peek_head_Resv(&(train->resv))->name, train->path[0]->name);
     }
 
     i = 0;
@@ -641,7 +642,7 @@ static void execPath(Train_t *train, track_node *lastExec) {
                     trainSwitch(d(current).num - 1, 'S');
                 }
             } else {
-                error("Error with path at %s to %s", current->name, next->name);
+                error("execPath: Train %u: Error with path at %s to %s", train->id, current->name, next->name);
             }
         }
         current = next;
@@ -825,12 +826,12 @@ static void updateLocation(Train_t *train) {
 
         track_node *lastResv = peek_back_Resv(&(train->resv));
 
-        debug("Extra resv dist: %d", train->resv.extraResvDist);
+        // debug("Extra resv dist: %d", train->resv.extraResvDist);
 
         train->resv.extraResvDist = -reserveTrack(train, MAX(train->distToNextSensor,
             RESV_DIST(train->stoppingDist - train->currentEdge->dist + train->distSinceLastNode)));
 
-        debug("Extra resv dist after resv: %d", train->resv.extraResvDist);
+        // debug("Extra resv dist after resv: %d", train->resv.extraResvDist);
 
         if (train->resv.extraResvDist < 0) {
             /* a collision has occured */
@@ -1093,17 +1094,12 @@ static void TrainTask() {
             setTrainSpeed(&train, 0);
             Reply(callee, NULL, 0);
             continue;
-        } else if(callee == timeoutCourier) {
-            debug("timed out! going to dist traverse");
+        } else if (callee == timeoutCourier) {
+            // debug("timed out! going to dist traverse");
             distTraverse(&train, true);
-            debug("AFTER: on edge %s -> %s", train.currentEdge->src->name, train.currentEdge->dest->name);
+            // debug("AFTER: on edge %s -> %s", train.currentEdge->src->name, train.currentEdge->dest->name);
             updateNextSensor(&train);
             waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
-            continue;
-        }
-
-        if (bytes == 0) {
-            debug("empty msg not from expected caller %d, skipping", callee);
             continue;
         }
 

@@ -8,6 +8,8 @@
 #include <util.h>
 #include <random.h>
 
+DECLARE_CIRCULAR_BUFFER(int);
+
 static unsigned int sensor_server_tid = -1;
 
 typedef enum {
@@ -69,18 +71,17 @@ static void SensorSlave() {
 
 void SensorServer() {
     SensorRequest_t req, reply;
-    char calleeByte;
-    int tid, callee, status;
-    unsigned int i, timeout, sensor;
+    int tid, callee, status, calleeByte;
+    unsigned int i, timeout;
     unsigned int bytes, notifier, *sensors;
     unsigned int maxId = TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT;
     SensorQueue_t sensorQueue[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {{0}};
-    CircularBuffer_t waitAnyQueue;
+    CircularBuffer_int waitAnyQueue;
     volatile uint32_t lastPoll[TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT] = {0};
 
     (void)reply; /* TODO: May use this in future */
 
-    initcb(&waitAnyQueue);
+    initcb_int(&waitAnyQueue);
     RegisterAs(SENSOR_SERVER);
     sensor_server_tid = MyTid();
     notifier = Create(13, SensorSlave);
@@ -97,7 +98,6 @@ void SensorServer() {
         }
 
         timeout = 0;
-        sensor = 0;
         switch (req.type) {
             case SENSOR_LAST_POLL:
                 for (i = 0; i < TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT; ++i) {
@@ -108,7 +108,7 @@ void SensorServer() {
                 break;
             case SENSOR_WAIT_ANY:
                 calleeByte = (char)callee;
-                write(&waitAnyQueue, &calleeByte, 1);
+                write_int(&waitAnyQueue, &calleeByte, 1);
                 break;
             case SENSOR_WAIT_TIMEOUT:
                 timeout = req.timeout;
@@ -133,9 +133,8 @@ void SensorServer() {
                 sensorQueue[req.sensor].tid = -1;
                 break;
             case SENSOR_RETURNED:
-                /* TODO: Would be optimal if knew which train triggered ? */
                 if (callee == notifier) {
-                    status = 1;
+                    int tripped_sensor = -1;
                     sensors = (uint32_t*)req.sensor;
 
                     for (i = 0; i < maxId; ++i) {
@@ -152,20 +151,20 @@ void SensorServer() {
 
                         if (tid >= 0) {
                             Reply(tid, &status, sizeof(status));
-                        } else if (sensor <= 0 && tripped) {
+                        } else if (tripped_sensor == -1 && tripped) {
                             /* assign the sensor to the one not being waited on */
-                            sensor = i;
+                            tripped_sensor = i;
                         }
                         lastPoll[i] = sensors[i];
                     }
 
-                    if ((status = sensor)) {
-                        while (length(&waitAnyQueue) > 0) {
-                            read(&waitAnyQueue, &calleeByte, 1);
+                    if ((status = tripped_sensor) >= 0) {
+                        while (length_int(&waitAnyQueue) > 0) {
+                            read_int(&waitAnyQueue, &calleeByte, 1);
                             Reply(calleeByte, &status, sizeof(status));
                         }
                     }
-                    sensor = 0;
+                    status = 1;
                 } else {
                     status = -1;
                 }

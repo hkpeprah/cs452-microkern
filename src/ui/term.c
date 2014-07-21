@@ -132,7 +132,7 @@ void displayInfo() {
     count = TRAIN_SWITCH_COUNT;
     kdebug("Debugging Enabled...\r\nNumber of Debug Lines: %d", lines);
     kprintf("====Switches===" MOVE_TO_COL CHANGE_COLOR "Train Calibration:" CHANGE_COLOR "\r\n" MOVE_TO_COL
-            "| Train | Velocity | Landmark | Distance (mm) | Next Landmark | ETA (ticks) | ATA (ticks) | Resv      | "
+            "| Train | Velocity | Landmark | Distance (mm) | Next Landmark | ETA (ticks) | ATA (ticks) | Resv          | "
             MOVE_TO_COL, RIGHT_HALF + 5, YELLOW, 0, RIGHT_HALF + 5, 0);
     while (count > 0) {
         for (i = 0; i < MIN(count, SENSORS_PER_LINE); ++i) {
