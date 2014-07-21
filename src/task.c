@@ -65,6 +65,7 @@ void initTasks() {
     availableEnvelopes = lastBlock;
 }
 
+
 Envelope_t *getEnvelope() {
     if (availableEnvelopes == NULL) {
         return NULL;
@@ -154,7 +155,9 @@ void destroyTaskD(Task_t *task) {
 
     t = task->waitQueue;
     while (t != NULL) {
-        setResult(t, task->tid);
+        if (t->tid >= 0) {
+            setResult(t, task->tid);
+        }
         addTask(t);
         t = t->next;
     }
@@ -322,14 +325,16 @@ Task_t *schedule() {
     return currentTask;
 }
 
+
 void setResult(Task_t *task, int result) {
     if (task->sp <= 0x00218000) {
-        kprintf("KERNEL: FATAL: trying to set result on tid {%d} sp {%d}\n", task->tid, task->sp);
+        kerror("KERNEL: FATAL: trying to set result on tid: %d, sp: %d", task->tid, task->sp);
         return;
     }
     int *sp = (int*)task->sp;
     sp[2] = result;
 }
+
 
 void dumpTaskState() {
     int prio = highestTaskPriority;

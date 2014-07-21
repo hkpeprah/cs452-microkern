@@ -1,5 +1,6 @@
 #ifndef __STRING__
 #define __STRING__
+#include <types.h>
 
 #define TAB               0x09
 #define NEWLINE           0x0A

@@ -172,6 +172,11 @@ static void RPSServer() {
                             break;
                     }
 
+                    /* wait for input to confirm the round */
+                    printf("Press any key to continue: \r\n");
+                    getchar();
+                    newline();
+
                     /* reply to the two players */
                     res.type = p1_choice;
                     errno = Reply(player1, &res, sizeof(res));
@@ -179,11 +184,6 @@ static void RPSServer() {
                     errno = Reply(player2, &res, sizeof(res));
                     p1_choice = -1;
                     p2_choice = -1;
-
-                    /* wait for input to confirm the round */
-                    printf("Press any key to continue: \r\n");
-                    getchar();
-                    newline();
                 }
                 break;
             default:
@@ -212,7 +212,6 @@ static void RPSComputer() {
     }
 
     /* register with the name server */
-    errno = RegisterAs(name);
     rps_server = WhoIs(RPS_SERVER);
     status = TIE;
     tid = MyTid();
@@ -236,7 +235,6 @@ static void RPSComputer() {
     /* should always reach here */
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
-    UnRegister(name);
     Exit();
 }
 
@@ -251,13 +249,13 @@ static void RPSPlayer() {
     GameMessage request, result;
 
     /* register with the name server */
-    errno = RegisterAs(name);
     rps_server = WhoIs(RPS_SERVER);
     status = TIE;
     tid = MyTid();
 
     /* signup to play the game */
     request.type = SIGNUP;
+    request.name = name;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
     change_color(BOLD);
     puts("Welcome to Rock-Paper-Scissors\r\n");
@@ -272,8 +270,7 @@ static void RPSPlayer() {
             puts("Make your play: ");
             end_color();
             ch = getchar();
-            printf("%c\r\n", ch);
-            save_cursor();
+            printf("%c\r\n" SAVE_CURSOR, ch);
             switch (ch) {
                 case 82:
                 case 114:
@@ -289,13 +286,11 @@ static void RPSPlayer() {
                     break;
                 default:
                     ch = 4;
-                    printf("Invalid input.  Choose one of R, P, S\r\n");
-                    save_cursor();
+                    puts("Invalid input.  Choose one of R, P, S\r\n" SAVE_CURSOR);
             }
         }
         request.type = PLAY;
         request.d0 = (int)ch;
-        request.name = name;
         errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
         if (errno < 0) {
             error("Player: Error in send: %d got %d, sending to: %d", tid, errno, rps_server);
@@ -307,7 +302,6 @@ static void RPSPlayer() {
     printf("Game Over.  Returning to prompt.\r\n");
     request.type = QUIT;
     errno = Send(rps_server, &request, sizeof(request), &result, sizeof(result));
-    UnRegister(name);
     Exit();
 }
 
@@ -315,6 +309,7 @@ static void RPSPlayer() {
 void RockPaperScissors() {
     unsigned int i;
     bool quit;
+    unsigned int tid1, tid2;
 
     if (WhoIs(RPS_SERVER) < 0) {
         /* check that the RPS Server exists */
@@ -330,19 +325,23 @@ void RockPaperScissors() {
 
         switch(i) {
             case 0:
-                Create(4, RPSComputer);
-                Create(4, RPSComputer);
+                tid1 = Create(4, RPSComputer);
+                tid2 = Create(4, RPSComputer);
                 quit = true;
                 break;
             case 1:
-                Create(4, RPSPlayer);
-                Create(4, RPSComputer);
+                tid1 = Create(4, RPSPlayer);
+                tid2 = Create(4, RPSComputer);
                 quit = true;
                 break;
             default:
                 printf("Invalid player count: %d\r\n", i);
         }
     }
+
+    /* force wait before exiting */
+    WaitTid(tid1);
+    WaitTid(tid2);
 
     Exit();
 }

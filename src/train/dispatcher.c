@@ -130,6 +130,7 @@ static int findSensorForTrain(unsigned int tr) {
     Delay(random_range(150, 200));
     trainSpeed(tr, 3);
     sensorNum = WaitAnySensor();
+    debug("findSensorForTrain: Sensor %d triggered", sensorNum);
     trainSpeed(tr, 0);
     return sensorNum;
 }

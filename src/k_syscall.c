@@ -25,7 +25,8 @@ int sys_create(int priority, void (*code)(), uint32_t *retval) {
     task = createTaskD(priority);
 
 #if LOG
-        sys_log_f("create task tid {%d} sp {0x%x} fn {0x%x} priority {%d} parent {%d}\n", task->tid, task->sp, code, task->priority, task->parentTid);
+        sys_log_f("create task tid {%d} sp {0x%x} fn {0x%x} priority {%d} parent {%d}\n",
+                  task->tid, task->sp, code, task->priority, task->parentTid);
 #endif
 
     if (task != NULL) {
@@ -76,7 +77,7 @@ int sys_send(int tid, void *msg, int msglen, void *reply, int replylen) {
     }
 
     if (target == currentTask) {
-        kprintf("Send: Error: %d sending to self, msg: 0x%x, len: %d\r\n", tid, msg, msglen);
+        kerror("Send: Error: %d sending to self, msg: 0x%x, len: %d\r\n", tid, msg, msglen);
         return TASK_ID_IMPOSSIBLE;
     }
 
@@ -266,15 +267,13 @@ int sys_waittid(uint32_t tid) {
     target = getTaskByTid(tid);
     currentTask = getCurrentTask();
 
-    if (target == NULL || currentTask->tid != tid) {
-        kerror("WaitTid: Task does not exist or exited already.");
+    if (target == NULL) {
         return TASK_DOES_NOT_EXIST;
     }
 
     currentTask->state = WAITTID_BL;
     currentTask->next = target->waitQueue;
     target->waitQueue = currentTask;
-
     return tid;
 }
 

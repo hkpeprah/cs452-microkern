@@ -2,6 +2,7 @@
 #define __CONDUCTOR_H__
 #include <track_node.h>
 
+
 void Conductor();
 int GoTo(unsigned int tid, unsigned int train, unsigned int tr_number, track_node *sensor, unsigned int distance);
 int Move(unsigned int tid, unsigned int train, unsigned int tr_number, unsigned int distance);

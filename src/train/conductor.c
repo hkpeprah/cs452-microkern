@@ -45,26 +45,23 @@ void Conductor() {
     Reply(callee, &status, sizeof(status));
 
     train = req.arg0;
-    source = TrGetEdge(train);
     myTid = MyTid();
 
     ASSERT((req.type == GOTO || req.type == MOVE),
            "conductor recieved a message not of type GOTO or MOVE: type %d from %d", req.type, callee);
 
     GotoResult_t result;
-
     /* check if goto or just a short move */
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
         destDist = req.arg2;
 
         int attemptsLeft = random_range(3, 5);
-
         while (attemptsLeft > 0) {
-
-            if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
+            source = TrGetEdge(train);
+            if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) <= 0) {
                 error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
-                Delay(random_range(0, 500));
+                Delay(random_range(10, 500));
                 continue;
             }
 
@@ -88,7 +85,8 @@ void Conductor() {
                             goto lost;
                         case GOTO_NONE:
                             // wat
-                            ASSERT(false, "GOTO result of GOTO_NONE from train %d on path %s with len %d", train, path[base]->name, (i - base + 1));
+                            ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
+                                   req.arg3, train, path[base]->name, (i - base + 1));
                         default:
                             // waaaaaat
                             ASSERT(false, "This should never happen...");
@@ -114,7 +112,7 @@ void Conductor() {
             }
 
 reroute:
-            debug("Conductor: train route failed, rerouting...");
+            Log("Conductor (%d): train %d route failed, rerouting...", myTid, req.arg3);
             attemptsLeft -= 1;
         }
     } else {

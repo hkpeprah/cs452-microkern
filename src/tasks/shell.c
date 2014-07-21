@@ -13,9 +13,12 @@
 #include <utasks.h>
 #include <uart.h>
 #include <dispatcher.h>
+#include <demo.h>
 
 #define FOREVER            for (;;)
 #define HELP_MESSAGES      21
+#define PROMPT             "\033[32m[%d]\033[0m\033[34m%s@rtfolks $ \033[0m"
+
 
 static void print_help() {
     static char *help[] = {
@@ -48,7 +51,7 @@ static void print_help() {
 }
 
 
-static void whoami() {
+static char *getUsername() {
     static int id = -1;
     static char *names[] = {
         "mqchen",
@@ -59,25 +62,30 @@ static void whoami() {
 
     if (id == -1) {
         seed(Time());
+        seed(random());
         id = random() % 4;
     }
+    return names[id];
+}
 
-    printf("%s\r\n", names[id]);
+
+static void whoami() {
+    printf("%s\r\n", getUsername());
 }
 
 
 void Shell() {
     int args[6];
     char ch, buf[80];
-    unsigned int i, tid, cmd;
     char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
     HashTable commands;
-    int command, status;
-    unsigned int TrainController;
+    int command, status, i, tid, cmd;
+    unsigned int TrainController, totalCommands;
     ControllerMessage_t tr;
 
     init_ht(&commands);
-    insert_ht(&commands, "rps", (int)RockPaperScissors);
+    insert_ht(&commands, "rps", (int)RockPaperScissors + NUM_TRAIN_CMD_COMMANDS);
+    insert_ht(&commands, "demo", (int)TrainDemo + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "go", TRAIN_CMD_GO);
     insert_ht(&commands, "stop", TRAIN_CMD_STOP);
     insert_ht(&commands, "tr", TRAIN_CMD_SPEED);
@@ -98,10 +106,11 @@ void Shell() {
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
     i = 0;
+    totalCommands = 1;
     tr.args = args;
     TrainController = WhoIs(USER_TRAIN_DISPATCH);
     notice("Shell: Tid %d, User's Controller: %u", MyTid(), TrainController);
-    puts("> ");
+    printf(PROMPT, totalCommands, getUsername());
     save_cursor();
 
     FOREVER {
@@ -190,7 +199,7 @@ void Shell() {
                         }
                     } else {
                         /* this command spawns a user task */
-                        tid = Create(random_range(2, 3), (void*)command);
+                        tid = Create(random_range(2, 3), (void*)(command - NUM_TRAIN_CMD_COMMANDS));
                         WaitTid(tid);
                     }
                 } else if (strlen(&buf[i]) > 0) {
@@ -198,9 +207,10 @@ void Shell() {
                 }
             }
 
-            puts("> ");
             for (i = 0; i < 80; ++i) buf[i] = 0;
             i = 0;
+            totalCommands++;
+            printf(PROMPT, totalCommands, getUsername());
         } else {
             /* print character to the screen */
             if (i < 79) {

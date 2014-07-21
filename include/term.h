@@ -70,6 +70,7 @@
 #define move_to_debug()          (save_cursor(), set_scroll(0, BOTTOM_HALF - 1), move_cursor(0, BOTTOM_HALF - 1))
 #define return_to_term()         (set_scroll(BOTTOM_HALF + 1, TERMINAL_HEIGHT), move_cursor(0, BOTTOM_HALF + 1), restore_cursor())
 
+#define OPEN_ESCAPE              "\033["
 #define RESTORE_CURSOR           "\033[u"
 #define SAVE_CURSOR              "\033[s"
 #define MOVE_CURSOR              "\033[%d;%dH"

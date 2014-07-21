@@ -167,10 +167,14 @@ void TrainUserTask() {
             case TRAIN_CMD_GOTO:
                 req.args[4] = 0;
             case TRAIN_CMD_GOTO_AFTER:
-                if ((sensor1 = sensorToInt(req.args[2], req.args[3])) >= 0) {
-                    status = DispatchRoute(req.args[1], sensor1, req.args[4]);
+                if ((trainTid = DispatchGetTrainTid(req.args[1])) >= 0) {
+                    if ((sensor1 = sensorToInt(req.args[2], req.args[3])) >= 0) {
+                        status = DispatchRoute(req.args[1], sensor1, req.args[4]);
+                    } else {
+                        status = INVALID_SENSOR_ID;
+                    }
                 } else {
-                    status = INVALID_SENSOR_ID;
+                    status = trainTid;
                 }
                 break;
             case TRAIN_CMD_RESERVE:

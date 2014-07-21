@@ -96,10 +96,17 @@ int AwaitEvent(int eventType, void *buf, int buflen) {
 
 int WaitTid(unsigned int tid) {
     Args_t args;
+    int status;
     args.code = SYS_WAITTID;
     args.a0 = tid;
-    return swi_call(0, &args);
+    status = swi_call(0, &args);
+
+    if (status == TASK_DOES_NOT_EXIST) {
+        error("WaitTid: Task %u does not exist or exited already.", tid);
+    }
+    return status;
 }
+
 
 int Logn(const char *str, int n) {
     Args_t args;
@@ -109,6 +116,7 @@ int Logn(const char *str, int n) {
 
     return swi_call(0, &args);
 }
+
 
 int Log(const char *fmt, ...) {
     int len;
