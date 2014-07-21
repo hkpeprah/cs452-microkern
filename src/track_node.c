@@ -1,4 +1,6 @@
 #include <track_node.h>
+#include <train.h>
+#include <stdlib.h>
 
 // INVALID_NEXT_NODE on invalid
 // edge distance on valid
@@ -23,5 +25,23 @@ int validNextNode(track_node *current, track_node *next) {
         case NODE_EXIT:
         default:
             return INVALID_NEXT_NODE;
+    }
+}
+
+track_edge *getNextEdge(track_node *node) {
+    Switch_t *swtch;
+    switch (d(node).type) {
+        case NODE_SENSOR:
+        case NODE_MERGE:
+        case NODE_ENTER:
+            return &(d(node).edge[DIR_AHEAD]);
+        case NODE_BRANCH:
+            swtch = getSwitch(node->num);
+            return &(d(node).edge[d(swtch).state]);
+        case NODE_EXIT:
+            return NULL;
+        case NODE_NONE:
+        default:
+            return NULL;
     }
 }

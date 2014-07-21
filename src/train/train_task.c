@@ -97,7 +97,6 @@ typedef struct TrainMessage {
 static void TrainTask();
 static void TrainReverseCourier();
 static void setTrainSpeed(Train_t *train, int speed);
-static track_edge *getNextEdge(track_node *node);
 static track_node *peek_any_Resv(TrainResv_t *resv, uint32_t index);
 static track_node *peek_back_Resv(TrainResv_t *resv);
 static track_node *peek_head_Resv(TrainResv_t *resv);
@@ -369,27 +368,6 @@ static void freeTailResv(Train_t *train) {
         Log("Freed tail %s\n", toFree->name);
     }
 }
-
-
-static track_edge *getNextEdge(track_node *node) {
-    Switch_t *swtch;
-    switch (d(node).type) {
-        case NODE_SENSOR:
-        case NODE_MERGE:
-        case NODE_ENTER:
-            return &(d(node).edge[DIR_AHEAD]);
-        case NODE_BRANCH:
-            swtch = getSwitch(node->num);
-            return &(d(node).edge[d(swtch).state]);
-        case NODE_EXIT:
-            return NULL;
-        case NODE_NONE:
-        default:
-            error("getNextEdge: Error: Bad node type %u", d(node).type);
-            return NULL;
-    }
-}
-
 
 static void updateNextSensor(Train_t *train) {
     int i, nextNodeDist;
@@ -817,6 +795,7 @@ static void updateLocation(Train_t *train) {
     train->lastUpdateTick = ticks;
 
     if (train->path && train->pathRemain < train->stoppingDist + STOP_BUFFER_MM) {
+        debug("finish path, current src %s, end of path: %s", train->currentEdge->src->name, train->path[train->pathNodeRem - 1]);
         train->path = NULL;
         debug("Critical path remaining reached at %d for stopping dist %d, stopping", train->pathRemain, train->stoppingDist);
         train->gotoResult = GOTO_COMPLETE;
@@ -911,14 +890,15 @@ static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSen
     // last sensor trip and this
     if (train->nextSensor && train->nextSensor->reservedBy == train->id) {
         *waitingSensor = train->nextSensor->num;
-        *sensorCourier = Create(4, SensorCourierTask);
+        *sensorCourier = Create(10, SensorCourierTask); // used to be 4
         msg1.type = TRM_SENSOR_WAIT;
         msg1.arg0 = train->nextSensor->num;
         Send(*sensorCourier, &msg1, sizeof(msg1), NULL, 0);
         CalibrationSnapshot(train);
 
         if (train->speed != 0 && !train->transition.valid) {
-            *timeoutCourier = CourierDelay(20 + (train->distToNextSensor * 1000) / train->microPerTick, 10);
+//            *timeoutCourier = CourierDelay(20 + (train->distToNextSensor * 1000) / train->microPerTick, 10);
+            *timeoutCourier = CourierDelay(500, 9);
         }
     }
 }
@@ -1054,7 +1034,7 @@ static void TrainTask() {
     char command[2];
     TrainMessage_t request;
     unsigned int dispatcher, speed;
-    int status, bytes, callee, gotoBlocked, delayCourier, delayTime;
+    int status, bytes, callee, gotoBlocked, delayCourier;
     int sensorCourier, locationTimer, reverseCourier, waitingSensor, timeoutCourier;
 
     /* block on receive waiting for parent to send message */
@@ -1093,9 +1073,11 @@ static void TrainTask() {
             if (train.nextSensor) {
                 sensorTrip(&train, train.nextSensor);
                 waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
+                train.gotoResult = GOTO_COMPLETE;
             } else {
                 debug("Null next sensor detected on train %d, stopping", train.id);
                 setTrainSpeed(&train, 0);
+                train.gotoResult = GOTO_LOST;
             }
             CalibrationSnapshot(&train);
             continue;
@@ -1105,11 +1087,18 @@ static void TrainTask() {
             Reply(callee, NULL, 0);
             continue;
         } else if (callee == timeoutCourier) {
-            // debug("timed out! going to dist traverse");
-            distTraverse(&train, true);
-            // debug("AFTER: on edge %s -> %s", train.currentEdge->src->name, train.currentEdge->dest->name);
-            updateNextSensor(&train);
-            waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
+            if (train.gotoResult == GOTO_REROUTE) {
+                printf("Train %d missed 2 sensors (expecting %s), lost, stopping\n", train.id, (train.nextSensor ? train.nextSensor->name : "NULL"));
+                setTrainSpeed(&train, 0);
+                train.gotoResult = GOTO_LOST;
+            } else {
+                // debug("timed out! going to dist traverse");
+                distTraverse(&train, true);
+                // debug("AFTER: on edge %s -> %s", train.currentEdge->src->name, train.currentEdge->dest->name);
+                updateNextSensor(&train);
+                waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
+                train.gotoResult = GOTO_REROUTE;
+            }
             continue;
         }
 
@@ -1175,9 +1164,15 @@ static void TrainTask() {
 
                 // 2x stopping dist using short moves will probably break shit
                 // TODO: use piece-wise function
-                if (train.pathRemain < getStoppingDistance(train.id, GOTO_SPEED, 0) << 1) {
+                int stoppingDist = getStoppingDistance(train.id, GOTO_SPEED, 0);
+                if (train.pathRemain < stoppingDist << 1) {
                     Log(">>>>>>>>>>>Exec short move\n");
-                    delayTime = shortmoves(train.id, GOTO_SPEED, train.pathRemain);
+                    int delayTime;
+                    if (train.pathRemain < stoppingDist) {
+                        delayTime = shortmoves(train.id, GOTO_SPEED, train.pathRemain);
+                    } else {
+                        delayTime = shortmoves(train.id, GOTO_SPEED, stoppingDist) + ((train.pathRemain - stoppingDist) * 500 / getTrainVelocity(train.id, GOTO_SPEED));
+                    }
                     notice("Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm",
                            train.id, delayTime, train.pathNodeRem, train.pathRemain);
                     //delayCourier = CourierDelay(delayTime, 7);

@@ -1,4 +1,5 @@
 #include <track_reservation.h>
+#include <train.h>
 #include <term.h>
 
 // compare oldValue with existing. If true, swap to new value
@@ -33,23 +34,31 @@ static int swapTrackResvBy(int oldValue, int newValue, track_node **track, uint3
         numSuccess++;
 
         if (--n <= 0) {
-            // no more nodes in the array
-            break;
+            if (dist) {
+                // no more nodes left but still has dist, just use track state
+                nextNode = getNextEdge(currentNode)->dest;
+            } else {
+                break;
+            }
+        } else {
+            // still has node left
+            nextNode = *track++;
         }
 
-        nextNode = *track++;
         if ( (nextEdgeDist = validNextNode(currentNode, nextNode)) < 0 ) {
             // path is not contiguous (not DIR_AHEAD/DIR_STRAIGHT or DIR_CURVED)
             // error("Incorrect path at %s to %s", currentNode->name, nextNode->name);
             break;
         }
 
-        if (*dist <= 0) {
-            // debug("out of distance with dist = %d", *dist);
-            break;
+        if (dist) {
+            if (*dist <= 0) {
+                // debug("out of distance with dist = %d", *dist);
+                break;
+            } else {
+                *dist -= nextEdgeDist;
+            }
         }
-
-        *dist -= nextEdgeDist;
         currentNode = nextNode;
     }
 
@@ -63,13 +72,11 @@ int reserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist) {
 
 
 int reserveTrack(uint32_t tr, track_node **track, uint32_t n) {
-    int maxint = MAXSINT;
-    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, &maxint);
+    return swapTrackResvBy(RESERVED_BY_NOBODY, tr, track, n, NULL);
 }
 
 
 int releaseTrack(uint32_t tr, track_node **track, uint32_t n) {
-    int maxint = MAXSINT;
-    return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n, &maxint);
+    return swapTrackResvBy(tr, RESERVED_BY_NOBODY, track, n, NULL);
 }
 

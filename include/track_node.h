@@ -38,6 +38,12 @@ struct track_node {
 };
 
 
+// INVALID_NEXT_NODE when invalid
+// distance of edge when valid
 int validNextNode(track_node *current, track_node *next);
+
+// NULL when invalid (ie. exit node)
+// ptr to next edge when valid
+track_edge *getNextEdge(track_node *node);
 
 #endif
