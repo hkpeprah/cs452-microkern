@@ -50,16 +50,20 @@ void Conductor() {
     ASSERT((req.type == GOTO || req.type == MOVE),
            "conductor recieved a message not of type GOTO or MOVE: type %d from %d", req.type, callee);
 
-    GotoResult_t result;
+    GotoResult_t result = GOTO_NONE;
+
     /* check if goto or just a short move */
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
         destDist = req.arg2;
 
-        int attemptsLeft = random_range(3, 5);
-        while (attemptsLeft > 0) {
+        int attemptsLeft;
+        for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
+            debug("Routing attempts left: %d", attemptsLeft);
+
             source = TrGetEdge(train);
-            if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) <= 0) {
+
+            if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
                 error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
                 Delay(random_range(10, 500));
                 continue;
@@ -70,10 +74,16 @@ void Conductor() {
                 TrDirection(train);
             }
 
+            if (path[node_count - 2]->reverse == path[node_count - 1]) {
+                --node_count;
+            }
+
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
                 if (path[i]->reverse == path[i + 1]) {
                     result = TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
+
+                    Log("\n<><><><><>Finished partial route %s -> %s with result %d\n", path[base]->name, path[i]->name, result);
 
                     switch (result) {
                         case GOTO_COMPLETE:
@@ -109,11 +119,12 @@ void Conductor() {
                     // success!
                     break;
                 }
+            } else {
+                break;
             }
 
 reroute:
-            Log("Conductor (%d): train %d route failed, rerouting...", myTid, req.arg3);
-            attemptsLeft -= 1;
+            debug("Conductor: train route failed, rerouting...");
         }
     } else {
         destDist = req.arg2;
@@ -121,9 +132,9 @@ reroute:
     }
 
     if (result == GOTO_COMPLETE) {
-        // yay it worked
+        Log("goto complete successfully\n");
     } else {
-
+        Log("goto failed as %d\n", result);
     }
 
     status = DispatchStopRoute(req.arg3);
@@ -136,6 +147,7 @@ reroute:
 lost:
     // WE GOTTA GO BACK
     // TODO: msg parent about this, handle in dispatcher
+    Log("Train is lost oh noes\n");
     error("Train is totally lost, currently unhandled!");
     status = DispatchStopRoute(req.arg3);
 }
