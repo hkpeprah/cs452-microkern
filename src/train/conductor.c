@@ -59,7 +59,7 @@ void Conductor() {
 
         int attemptsLeft;
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
-            debug("Routing attempts left: %d", attemptsLeft);
+            Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
 
@@ -69,21 +69,26 @@ void Conductor() {
                 continue;
             }
 
+            Log("Found path of length %d\n", node_count);
+
             if (path[0] != source->dest) {
                 // TODO: only this when stopped
+                Log("Conductor %d: initial path reversal for train %d\n", myTid, train);
                 TrDirection(train);
             }
 
-            if (path[node_count - 2]->reverse == path[node_count - 1]) {
+            if (node_count >= 2 && path[node_count - 2]->reverse == path[node_count - 1]) {
                 --node_count;
             }
+
+            Log("Conductor starting loop\n");
 
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
                 if (path[i]->reverse == path[i + 1]) {
-                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
+                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 175);
 
-                    Log("\n<><><><><>Finished partial route %s -> %s with result %d\n", path[base]->name, path[i]->name, result);
+                    Log("\n<><><><><>Finished PARTIAL route %s -> %s with result %d\n", path[base]->name, path[i]->name, result);
 
                     switch (result) {
                         case GOTO_COMPLETE:
@@ -102,7 +107,7 @@ void Conductor() {
                             ASSERT(false, "This should never happen...");
                     }
 
-                    if (TrDirection(train) < 0) {
+                    if (i < node_count - 1 && TrDirection(train) < 0) {
                         // failed to reverse?
                         Delay(random_range(1, 500));
                         if (TrDirection(train) < 0) {
@@ -110,14 +115,25 @@ void Conductor() {
                             goto reroute;
                         }
                     }
+                    Log("Conductor rv train {%d} complete\n", req.arg3);
                     base = ++i;
                 }
             }
 
+            Log("Conductor finished partial path loop, starting final loop. base: %d, i: %d\n", base, i);
+
             if (base != node_count) {
                 if ((result = TrGotoAfter(train, &(path[base]), node_count - base, 0)) == GOTO_COMPLETE) {
-                    // success!
-                    break;
+                    Log("\n<><><><><>Finished FINAL route %s -> %s with result %d\n", d(path[base]).name, d(path[node_count - 1]).name, result);
+                    source = TrGetEdge(train);
+                    Log("Train edge: %s\n", d(d(source).src).name);
+                    if (source->src == dest || source->src->reverse == dest) {
+                        // success!
+                        Log("Success route!\n");
+                        break;
+                    }
+                    // otherwise, reroute
+                    Log("Fail and rerouting?!\n");
                 }
             } else {
                 break;
