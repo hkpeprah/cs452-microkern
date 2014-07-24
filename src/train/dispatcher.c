@@ -124,7 +124,7 @@ int DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n) {
 }
 
 
-static int findSensorForTrain(unsigned int tr) {
+static int findSensorForTrain(uint32_t tr) {
     int sensorNum;
     trainSpeed(tr, 0);
     Delay(random_range(150, 200));

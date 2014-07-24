@@ -24,15 +24,15 @@
 
 
 void Dispatcher();
-int DispatchRoute(unsigned int tr, unsigned int sensor, unsigned int dist);
-int DispatchAddTrain(unsigned int tr);
-int DispatchAddTrainAt(unsigned int tr, char module, unsigned int id);
-int DispatchStopRoute(unsigned int tr);
-int DispatchTrainMove(unsigned int tr, unsigned int dist);
-int DispatchGetTrainTid(unsigned int tr);
-track_node *DispatchGetTrackNode(unsigned int id);
+int DispatchRoute(uint32_t tr, uint32_t sensor, uint32_t dist);
+int DispatchAddTrain(uint32_t tr);
+int DispatchAddTrainAt(uint32_t tr, char module, uint32_t id);
+int DispatchStopRoute(uint32_t tr);
+int DispatchTrainMove(uint32_t tr, uint32_t dist);
+int DispatchGetTrainTid(uint32_t tr);
+track_node *DispatchGetTrackNode(uint32_t id);
 int DispatchReserveTrackDist(uint32_t tr, track_node **track, uint32_t n, int *dist);
-int DispatchReserveTrack(unsigned int tr, track_node **track, unsigned int n);
-int DispatchReleaseTrack(unsigned int tr, track_node **track, unsigned int n);
+int DispatchReserveTrack(uint32_t tr, track_node **track, uint32_t n);
+int DispatchReleaseTrack(uint32_t tr, track_node **track, uint32_t n);
 
 #endif /* __DISPATCHER_H__ */

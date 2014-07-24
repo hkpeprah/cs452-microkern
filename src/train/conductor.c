@@ -58,7 +58,7 @@ void Conductor() {
         destDist = req.arg2;
 
         int attemptsLeft;
-        for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
+        for (attemptsLeft = /*random_range(3, 5)*/ 1; attemptsLeft > 0; --attemptsLeft) {
             Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
@@ -161,11 +161,8 @@ reroute:
     return;
 
 lost:
-    // WE GOTTA GO BACK
-    // TODO: msg parent about this, handle in dispatcher
-    Log("Train is lost oh noes\n");
-    error("Train is totally lost, currently unhandled!");
-    status = DispatchStopRoute(req.arg3);
+    DispatchAddTrain(req.arg3);
+    return;
 }
 
 
