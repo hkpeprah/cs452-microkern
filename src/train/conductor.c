@@ -58,7 +58,7 @@ void Conductor() {
         destDist = req.arg2;
 
         int attemptsLeft;
-        for (attemptsLeft = /*random_range(3, 5)*/ 1; attemptsLeft > 0; --attemptsLeft) {
+        for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
             Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
@@ -86,7 +86,7 @@ void Conductor() {
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
                 if (path[i]->reverse == path[i + 1]) {
-                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 175);
+                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
 
                     Log("\n<><><><><>Finished PARTIAL route %s -> %s with result %d\n", path[base]->name, path[i]->name, result);
 
@@ -123,17 +123,45 @@ void Conductor() {
             Log("Conductor finished partial path loop, starting final loop. base: %d, i: %d\n", base, i);
 
             if (base != node_count) {
-                if ((result = TrGotoAfter(train, &(path[base]), node_count - base, 0)) == GOTO_COMPLETE) {
-                    Log("\n<><><><><>Finished FINAL route %s -> %s with result %d\n", d(path[base]).name, d(path[node_count - 1]).name, result);
-                    source = TrGetEdge(train);
-                    Log("Train edge: %s\n", d(d(source).src).name);
-                    if (source->src == dest || source->src->reverse == dest) {
-                        // success!
-                        Log("Success route!\n");
+                result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
+                switch (result) {
+                    case GOTO_LOST:
+                        goto lost;
+                    case GOTO_COMPLETE:
+                        Log("\n<><><><><>Finished FINAL route %s -> %s with result %d\n", d(path[base]).name, d(path[node_count - 1]).name, result);
+                        source = TrGetEdge(train);
+                        Log("Train edge: %s\n", d(d(source).src).name);
+                        if (source->src == dest || source->src->reverse == dest) {
+                            // success!
+                            Log("Success route!\n");
+                            goto done;
+                        } else {
+                            // reroute
+                            if (source->dest == dest || source->dest->reverse == dest) {
+                                // case 1: we are on right edge but just need to go a little bit more.
+                                // "nudge" it with a series of short moves
+                                int tries;
+                                for (tries = 5; tries > 0 && (source->src != dest && source->src->reverse != dest); --tries) {
+                                    result = TrGotoAfter(train, &(dest), 1, 50);
+                                    source = TrGetEdge(train);
+                                }
+                                if (source->src == dest || source->src->reverse == dest) {
+                                    Log("Success after nudging!\n");
+                                    goto done;
+                                }
+                                Log("Nudging failed :'(\n");
+                            }
+                            // 5 tries failed to get to dest OR not on edge to dest, fall-through to reroute
+                        }
+                    case GOTO_REROUTE:
                         break;
-                    }
-                    // otherwise, reroute
-                    Log("Fail and rerouting?!\n");
+                    case GOTO_NONE:
+                        // wat
+                        ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
+                                req.arg3, train, path[base]->name, (i - base + 1));
+                    default:
+                        // waaaaaat
+                        ASSERT(false, "This should never happen...");
                 }
             } else {
                 break;
@@ -147,6 +175,7 @@ reroute:
         result = TrGotoAfter(train, NULL, 0, destDist);
     }
 
+done:
     if (result == GOTO_COMPLETE) {
         Log("goto complete successfully\n");
     } else {

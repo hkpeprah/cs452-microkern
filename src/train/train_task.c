@@ -17,14 +17,11 @@
 #define GOTO_SPEED             10
 #define STOP_BUFFER_MM         15
 #define RESV_BUF_BITS          4
-#define PICKUP_FRONT           150
-#define PICKUP_BACK            75
+#define PICKUP_FRONT           165
+#define PICKUP_BACK            45
 #define RESV_MOD               ((1 << RESV_BUF_BITS) - 1)
 #define RESV_DIST(req_dist)    ((req_dist * 5) >> 2)
 #define SENSOR_MISS_THRESHOLD  2
-
-#define Log printf
-
 
 typedef struct {
     bool valid;
@@ -390,6 +387,12 @@ static void updateNextSensor(Train_t *train) {
         train->distToNextSensor += train->currentEdge->dist - train->distSinceLastNode;
     }
 
+    if (train->currentEdge->dest->type == NODE_SENSOR) {
+        // current dest is a sensor, no matter what that will be next sensor
+        train->nextSensor = train->currentEdge->dest;
+        return;
+    }
+
     do {
         if (path && path[i] != NULL && i < train->pathNodeRem - 1) {
             nextNodeDist = validNextNode(path[i], path[i + 1]);
@@ -489,14 +492,12 @@ static int reserveTrack(Train_t *train, int resvDist) {
 
             track_node *overshotComp[4];
             int ospathLen;
-            uint32_t total_distance;
+            uint32_t totalDistance;
 
-            if ((ospathLen = findPath(train->id, train->currentEdge, train->path[0], overshotComp, 4, &total_distance)) < 0) {
-                // stop and ask for reroute
+            if ((ospathLen = findPath(train->id, train->currentEdge, train->path[0], overshotComp, 4, &totalDistance)) < 0) {
+                // fail, return positive number
                 Log("findPath failed on overshot correction, stopping\n");
-                setTrainSpeed(train, 0);
-                train->gotoResult = GOTO_REROUTE;
-                return 0;
+                return 1;
             }
 
             // otherwise, we found a way back to the head of path!
@@ -508,12 +509,10 @@ static int reserveTrack(Train_t *train, int resvDist) {
             if (ospathLen != numSuccessResv) {
                 // ... but failed to reserve it
                 Log("reserve failed on overshot correction, stopping\n");
-                setTrainSpeed(train, 0);
-                train->gotoResult = GOTO_REROUTE;
-                return 0;
+                return 1;
             }
 
-            train->pathRemain += total_distance;
+            Log("Resv overshot path of length %d\n", totalDistance);
         }
 
         toResv = train->path;
@@ -1121,7 +1120,7 @@ static void TrainTask() {
             continue;
         } else if (callee == shortMvStop) {
             shortMvStop = -1;
-            Log("===shortMvStop at %d===\n", train.lastUpdateTick);
+            Log("===shortMvStop at TICK {%d}===\n", train.lastUpdateTick);
             trainSpeed(train.id, 0);
             Reply(callee, NULL, 0);
             continue;
@@ -1129,7 +1128,7 @@ static void TrainTask() {
             shortMvDone = -1;
             Reply(callee, NULL, 0);
             // set this to true so next updateLocation call will push us to the final location
-            Log("===shortMvDone at %d===\nBEFORE: at %d after %s\n", train.lastUpdateTick, train.distSinceLastNode, train.currentEdge->src->name);
+            Log("===shortMvDone at TICK {%d}===\nBEFORE: at %d after %s\n", train.lastUpdateTick, train.distSinceLastNode, train.currentEdge->src->name);
             train.distSinceLastNode += train.transition.stopping_distance;
             distTraverse(&train, false);
             if (train.distSinceLastNode >= train.currentEdge->dist) {
@@ -1186,7 +1185,6 @@ static void TrainTask() {
                     train.pathNodeRem = request.arg1;
                     train.distOffset = request.arg2;
                     train.pathRemain = pathRemaining(&train);
-
                     Log(">>>>>>>>>>>Exec move setup for train %u with dist %d\n", train.id, train.pathRemain);
                     updateNextSensor(&train);
 
@@ -1213,8 +1211,8 @@ static void TrainTask() {
                 // 2x stopping dist using short moves will probably break shit
                 // TODO: use piece-wise function
                 int stoppingDist = getStoppingDistance(train.id, GOTO_SPEED, 0);
-                if (train.pathRemain < stoppingDist << 1) {
-                    Log(">>>>>>>>>>>Exec short move\n");
+                if (train.pathRemain < stoppingDist + (stoppingDist >> 1)) {
+                    Log(">>>>>>>>>>Exec SHORT move at %d after %s\n", train.distSinceLastNode, train.currentEdge->src->name);
                     int delayTime;
                     if (train.pathRemain < stoppingDist) {
                         delayTime = shortmoves(train.id, GOTO_SPEED, train.pathRemain);
@@ -1222,8 +1220,8 @@ static void TrainTask() {
                         delayTime = shortmoves(train.id, GOTO_SPEED, stoppingDist) +
                             ((train.pathRemain - stoppingDist) * 500 / getTrainVelocity(train.id, GOTO_SPEED));
                     }
-                    Log("Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm\n",
-                           train.id, delayTime, train.pathNodeRem, train.pathRemain);
+                    Log("%d : Train %u: Short move with delay %d ticks and %d path nodes to cover %d mm\n",
+                           Time(), train.id, delayTime, train.pathNodeRem, train.pathRemain);
 
                     trainSpeed(train.id, GOTO_SPEED);
                     train.transition.stopping_distance = train.pathRemain;
@@ -1231,7 +1229,7 @@ static void TrainTask() {
                     shortMvDone = CourierDelay(delayTime << 1, 4);
                     train.path = NULL;
                 } else {
-                    Log(">>>>>>>>>>Exec normal move\n");
+                    Log(">>>>>>>>>>Exec NORMAL move at %d after %s\n", train.distSinceLastNode, train.currentEdge->src->name);
                     // normal move
                     setTrainSpeed(&train, GOTO_SPEED);
                 }
@@ -1347,7 +1345,10 @@ static void TrainTask() {
                     gotoBlocked = -1;
                 }
 
-                if (train.speed == 0 && gotoBlocked != -1 && (train.transition.valid == false) && shortMvDone == -1) {
+                if (train.speed == 0 && gotoBlocked != -1 && !train.transition.valid && shortMvDone == -1) {
+                    if (train.distSinceLastNode > train.currentEdge->dist) {
+                        train.gotoResult = GOTO_LOST;
+                    }
                     Log("Train %u: Finished pathing, replying to conductor (%d) with result %d\n", train.id, gotoBlocked, train.gotoResult);
                     Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
                     gotoBlocked = -1;
