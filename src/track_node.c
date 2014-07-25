@@ -28,6 +28,7 @@ int validNextNode(track_node *current, track_node *next) {
     }
 }
 
+
 track_edge *getNextEdge(track_node *node) {
     Switch_t *swtch;
     switch (d(node).type) {

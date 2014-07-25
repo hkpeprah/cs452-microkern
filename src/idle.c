@@ -38,6 +38,8 @@ void enableIdleTimer() {
     count = 1;
     /* clear the lower of the 40 bit timer */
     (void)*timerLow;
+    /* force clear of an overflow */
+    while (*timerLow < 0);
 }
 
 

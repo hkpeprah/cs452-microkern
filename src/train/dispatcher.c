@@ -25,6 +25,7 @@ typedef enum {
     TRM_RESERVE_TRACK_DIST,
     TRM_RELEASE_TRACK,
     TRM_CREATE_TRAIN,
+    TRM_REMOVE_TRAIN,
     TRM_MOVE,
     TRM_REMOVE,
     TRM_GET
@@ -173,7 +174,7 @@ static void TrainCreateCourier() {
 
 static void TrainDeleteCourier() {
     DispatcherMessage_t req;
-    int callee, tid, parent;
+    int callee, tid, parent, status;
 
     parent = MyParentTid();
     Receive(&callee, &req, sizeof(req));
@@ -185,6 +186,8 @@ static void TrainDeleteCourier() {
     tid = req.arg0;
     debug("TrainDeleteCourier: Deleting train %u with tid %u", req.tr, tid);
     TrDelete(tid);
+    req.type = TRM_REMOVE_TRAIN;
+    Send(parent, &req, sizeof(req), &status, sizeof(status));
     Exit();
 }
 
@@ -219,16 +222,7 @@ static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *nod
             req.type = TRM_REMOVE;
             req.tr = trains[i].tr_number;
             req.arg0 = trains[i].train;
-            trains[i].train = -1;
-
-            /* remove the trains conductor */
-            if (trains[i].conductor != -1) {
-                Destroy(trains[i].conductor);
-            }
-            trains[i].conductor = -1;
-            trains[i].tr_number = -1;
-            num_of_trains--;
-
+            req.arg1 = i;
             /* send off the message */
             Send(tid, &req, sizeof(req), NULL, 0);
             break;
@@ -301,10 +295,6 @@ void Dispatcher() {
                 if (node != NULL) {
                     removeDispatcherNode(trains, node);
                 }
-                if (getDispatcherNode(trains, request.tr)) {
-                    status = INVALID_TRAIN_ID;
-                    break;
-                }
                 status = -1;
                 goto addnode;
                 break;
@@ -327,6 +317,16 @@ void Dispatcher() {
                 } else {
                     status = 0;
                 }
+                break;
+            case TRM_REMOVE_TRAIN:
+                status = 0;
+                if (node->conductor != -1) {
+                    Destroy(node->conductor);
+                }
+                trains[request.arg1].tr_number = -1;
+                trains[request.arg1].conductor = -1;
+                trains[request.arg1].train = -1;
+                num_of_trains--;
                 break;
             case TRM_CREATE_TRAIN:
                 status = 0;

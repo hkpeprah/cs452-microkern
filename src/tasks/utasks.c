@@ -115,6 +115,9 @@ void TrainUserTask() {
                 debug("Stopping Train Controller");
                 turnOffTrainSet();
                 break;
+            case TRAIN_CMD_RAW:
+                status = trainRaw(req.args[1], req.args[2]);
+                break;
             case TRAIN_CMD_LI:
                 req.args[2] = TRAIN_LIGHT_OFFSET;
                 goto auxiliary;

@@ -207,6 +207,15 @@ int trainAuxiliary(unsigned int tr, unsigned int aux) {
 }
 
 
+int trainRaw(unsigned int byte2, unsigned int byte1) {
+    char buf[2];
+    buf[0] = byte1;
+    buf[1] = byte2;
+    trnputs(buf, 2);
+    return 0;
+}
+
+
 void turnOffSolenoid() {
     trputch(TRAIN_AUX_SOLENOID);
 }

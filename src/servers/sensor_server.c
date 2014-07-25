@@ -107,7 +107,7 @@ void SensorServer() {
                 Reply(callee, &status, sizeof(status));
                 break;
             case SENSOR_WAIT_ANY:
-                calleeByte = (char)callee;
+                calleeByte = (int)callee;
                 write_int(&waitAnyQueue, &calleeByte, 1);
                 break;
             case SENSOR_WAIT_TIMEOUT:

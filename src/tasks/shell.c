@@ -16,8 +16,8 @@
 #include <demo.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      21
-#define PROMPT             "\033[32m[%d]\033[0m\033[34m%s@rtfolks $ \033[0m"
+#define HELP_MESSAGES      22
+#define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
 
 
 static void print_help() {
@@ -40,6 +40,7 @@ static void print_help() {
         "st TRAIN                    -   Stop the train from routing",
         "rsv TRAIN SNSR1 SNSR2       -   Reserve sensors from SNSR1 to SNSR2 for TRAIN",
         "rls TRAIN SNSR1 SNSR2       -   Release sensors from SNSR1 to SNSR2 if they are assigned to TRAIN",
+        "raw BYTE1 BYTE2             -   Sends two raw bytes to the train controller",
         "whoami                      -   Prints the current user",
         "help                        -   Display this help dialog",
         "?                           -   Display this help dialog"
@@ -61,7 +62,7 @@ static char *getUsername() {
     };
 
     if (id == -1) {
-        seed(Time());
+        seed(random_seed());
         seed(random());
         id = random() % 4;
     }
@@ -102,6 +103,7 @@ void Shell() {
     insert_ht(&commands, "rsv", TRAIN_CMD_RESERVE);
     insert_ht(&commands, "rls", TRAIN_CMD_RELEASE);
     insert_ht(&commands, "mv", TRAIN_CMD_MOVE);
+    insert_ht(&commands, "raw", TRAIN_CMD_RAW);
 
     for (i = 0; i < 80; ++i) buf[i] = 0;
 
@@ -168,6 +170,7 @@ void Shell() {
                         case TRAIN_CMD_SPEED:
                         case TRAIN_CMD_AUX:
                         case TRAIN_CMD_MOVE:
+                        case TRAIN_CMD_RAW:
                             cmd = 2;
                             break;
                         case TRAIN_CMD_SWITCH:

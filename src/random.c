@@ -4,6 +4,7 @@
  */
 #include <random.h>
 #include <term.h>
+#include <stdlib.h>
 
 #define SIZE  624
 
@@ -11,6 +12,7 @@
 static long TWISTER[SIZE];
 static int index;
 static unsigned int SEED;
+static unsigned TRULY_RANDOM_SEED;
 
 
 void seed(unsigned int s) {
@@ -19,6 +21,7 @@ void seed(unsigned int s) {
     long *mt;
 
     SEED = s;
+    TRULY_RANDOM_SEED = ABS(*((uint32_t*)0x80810060));
     index = 0;
     c = 1812433253;
     mt = TWISTER;
@@ -27,6 +30,14 @@ void seed(unsigned int s) {
     for (i = 1; i < SIZE; ++i) {
         mt[i] = (c * (mt[i - 1] ^ (mt[i - 1] >> 30)) + i) & 0xFFFFFFFF;    /* lowest 32 bits of the xor product */
     }
+}
+
+
+long random_seed() {
+    unsigned int seed;
+    seed = TRULY_RANDOM_SEED;
+    TRULY_RANDOM_SEED = ABS(*((uint32_t*)0x80810060));
+    return seed;
 }
 
 

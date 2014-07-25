@@ -38,6 +38,7 @@ int trainSpeed(unsigned int tr, unsigned int speed);
 int trainSwitch(unsigned int id, char state);
 int trainReverse(unsigned int tr);
 int trainAuxiliary(unsigned int tr, unsigned int aux);
+int trainRaw(unsigned int byte2, unsigned int byte1);
 void turnOnTrainSet();
 void turnOffTrainSet();
 void setTrainSetState();

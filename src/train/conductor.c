@@ -62,7 +62,6 @@ void Conductor() {
             Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
-
             if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
                 error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
                 Delay(random_range(10, 500));
@@ -72,9 +71,11 @@ void Conductor() {
             Log("Found path of length %d\n", node_count);
 
             if (path[0] != source->dest) {
-                // TODO: only this when stopped
                 Log("Conductor %d: initial path reversal for train %d\n", myTid, train);
-                TrDirection(train);
+                while (TrDirection(train) == -1) {
+                    TrSpeed(train, 0);
+                    Delay(600); /* maximum possible time to wait for a train to finish moving */
+                }
             }
 
             if (node_count >= 2 && path[node_count - 2]->reverse == path[node_count - 1]) {
@@ -92,39 +93,38 @@ void Conductor() {
 
                     switch (result) {
                         case GOTO_COMPLETE:
-                            // yay! do nothing
                             break;
                         case GOTO_REROUTE:
                             goto reroute;
                         case GOTO_LOST:
                             goto lost;
                         case GOTO_NONE:
-                            // wat
+                            /* should never reach this case */
                             ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
                                    req.arg3, train, path[base]->name, (i - base + 1));
                         default:
-                            // waaaaaat
+                            /* this case is even worse, this should never happen */
                             ASSERT(false, "This should never happen...");
                     }
 
                     if (i < node_count - 1 && TrDirection(train) < 0) {
-                        // failed to reverse?
+                        /* failed to reverse, so wait and see if we can shortly */
                         Delay(random_range(1, 500));
                         if (TrDirection(train) < 0) {
-                            // second fail, screw it reroute
+                            /* if we've failed again, assume we can't reserve the reverse node */
                             goto reroute;
                         }
                     }
-                    Log("Conductor rv train {%d} complete\n", req.arg3);
+                    Log("Conductor: reversed train %d\n", req.arg3);
                     base = ++i;
                 }
             }
 
             Log("Conductor finished partial path loop, starting final loop. base: %d, i: %d\n", base, i);
-
             if (base != node_count) {
                 if ((result = TrGotoAfter(train, &(path[base]), node_count - base, 0)) == GOTO_COMPLETE) {
-                    Log("\n<><><><><>Finished FINAL route %s -> %s with result %d\n", d(path[base]).name, d(path[node_count - 1]).name, result);
+                    Log("\n<><><><><>Finished FINAL route %s -> %s with result %d\n",
+                        d(path[base]).name, d(path[node_count - 1]).name, result);
                     source = TrGetEdge(train);
                     Log("Train edge: %s\n", d(d(source).src).name);
                     if (source->src == dest || source->src->reverse == dest) {
@@ -138,31 +138,36 @@ void Conductor() {
             } else {
                 break;
             }
-
 reroute:
-            debug("Conductor: train route failed, rerouting...");
+            debug("Conductor: Routed failed for train %d, re-routing", req.arg3);
         }
     } else {
+        /* making a generic distance move */
         destDist = req.arg2;
         result = TrGotoAfter(train, NULL, 0, destDist);
     }
 
+    /* either the GOTO has been completed here, or we have failed in the Goto, either
+       way, we're not exiting */
     if (result == GOTO_COMPLETE) {
         Log("goto complete successfully\n");
     } else {
         Log("goto failed as %d\n", result);
     }
 
+    /* remove self from parent, so that train can be used again */
     status = DispatchStopRoute(req.arg3);
     if (status < 0) {
         error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
     }
     debug("Conductor: Tid %u, removing self from parent %u", myTid, MyParentTid());
-    return;
+    Exit();
 
 lost:
+    /* we're lost, so let's re-add the train */
     DispatchAddTrain(req.arg3);
-    return;
+    DispatchStopRoute(req.arg3);
+    Exit();
 }
 
 

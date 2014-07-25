@@ -27,10 +27,11 @@ void TrainDemo() {
             if (status == 0) {
                 printf("Invalid input: %s\r\n", buffer);
             } else {
-                status = DispatchAddTrain(train);
-                if (status == 0 || status == 1) {
+                if (DispatchAddTrain(train) >= 0) {
                     train_numbers[i++] = train;
                 }
+                printf("Press any key to continue once train has been added: \r\n");
+                getchar();
             }
         }
     }
@@ -44,8 +45,8 @@ void TrainDemo() {
     int sensor, distance;
     while (true) {
         char ch;
-        puts("Press any character to run the demo: ");
-        printf("%c\r\n", (ch = getchar()));
+        puts("Press any character to run the demo: \r\n");
+        ch = getchar();
         for (i = 0; i < train_count; ++i) {
             sensor = random() % (TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT);
             distance = random() % 40;
@@ -54,11 +55,9 @@ void TrainDemo() {
                    sensor / TRAIN_SENSOR_COUNT + 'A', sensor % TRAIN_SENSOR_COUNT + 1);
             DispatchRoute(train, sensor, distance);
         }
-        puts("Press q to quit, or c to continue: ");
-        printf("%c\r\n", (ch = getchar()));
-        if (ch == 'c') {
-            continue;
-        } else {
+        puts("Press q to quit, or any other key to continue: ");
+        ch = getchar();
+        if (ch == 'q') {
             break;
         }
     }

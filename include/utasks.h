@@ -24,6 +24,7 @@ typedef enum {
     TRAIN_CMD_RESERVE,
     TRAIN_CMD_RELEASE,
     TRAIN_CMD_MOVE,
+    TRAIN_CMD_RAW,
     NUM_TRAIN_CMD_COMMANDS
 } TrainCommandTypes;
 
