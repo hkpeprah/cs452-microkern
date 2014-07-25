@@ -26,6 +26,7 @@
 void Dispatcher();
 int DispatchRoute(uint32_t tr, uint32_t sensor, uint32_t dist);
 int DispatchAddTrain(uint32_t tr);
+int DispatchReAddTrain(uint32_t tr);
 int DispatchAddTrainAt(uint32_t tr, char module, uint32_t id);
 int DispatchStopRoute(uint32_t tr);
 int DispatchTrainMove(uint32_t tr, uint32_t dist);

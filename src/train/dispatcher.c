@@ -11,11 +11,15 @@
 #include <conductor.h>
 #include <track_reservation.h>
 #include <random.h>
+#include <util.h>
 
 #define MAX_NUM_OF_TRAINS    NUM_OF_TRAINS
 
+DECLARE_CIRCULAR_BUFFER(int);
+
 typedef enum {
     TRM_ADD = 77,
+    TRM_READD,
     TRM_ADD_AT,
     TRM_GOTO_STOP,
     TRM_GOTO,
@@ -90,6 +94,11 @@ int DispatchAddTrain(uint32_t tr) {
 }
 
 
+int DispatchReAddTrain(uint32_t tr) {
+    return SendDispatcherMessage(TRM_READD, tr, 0, 0, 0);
+}
+
+
 int DispatchAddTrainAt(uint32_t tr, char module, uint32_t id) {
     return SendDispatcherMessage(TRM_ADD_AT, tr, module, id, 0);
 }
@@ -140,7 +149,7 @@ static int findSensorForTrain(uint32_t tr) {
 static void TrainCreateCourier() {
     DispatcherMessage_t req;
     int callee, tid, parent;
-    int sensor, status;
+    int sensor, status, waiting;
 
     parent = MyParentTid();
     Receive(&callee, &req, sizeof(req));
@@ -168,6 +177,12 @@ static void TrainCreateCourier() {
     } else {
         error("TrainCreateCourier: Error: Failed to create new Train task");
     }
+
+    if ((waiting = req.arg1) >= 0) {
+        /* respond to the waiter with the Tid */
+        Send(req.arg1, &tid, sizeof(tid), NULL, 0);
+    }
+
     Exit();
 }
 
@@ -242,7 +257,7 @@ static DispatcherNode_t *getDispatcherNode(DispatcherNode_t *nodes, uint32_t tr)
 }
 
 
-static int addDispatcherTrain(unsigned int tr, int sensor) {
+static int addDispatcherTrain(unsigned int tr, int sensor, int callee) {
     DispatcherMessage_t req;
     unsigned int tid;
 
@@ -251,6 +266,7 @@ static int addDispatcherTrain(unsigned int tr, int sensor) {
         req.type = TRM_ADD;
         req.tr = tr;
         req.arg0 = sensor;
+        req.arg1 = callee;
         Send(tid, &req, sizeof(req), NULL, 0);
         return tid;
     }
@@ -259,10 +275,11 @@ static int addDispatcherTrain(unsigned int tr, int sensor) {
 
 
 void Dispatcher() {
-    int callee, status;
     unsigned int CreateCourier;
     DispatcherMessage_t request;
     track_node track[TRACK_MAX];
+    CircularBuffer_int addQueue;
+    int callee, status, waitingTrain, nextTrain, sensor;
     DispatcherNode_t *node, trains[MAX_NUM_OF_TRAINS] = {{0}};
 
     int i;
@@ -271,11 +288,13 @@ void Dispatcher() {
     }
 
     init_track(track);
+    initcb_int(&addQueue);
     RegisterAs(TRAIN_DISPATCHER);
     train_dispatcher_tid = MyTid();
     notice("Dispatcher: Tid %u", train_dispatcher_tid);
     num_of_trains = 0;
     CreateCourier = -1;
+    waitingTrain = -1;
     setTrainSetState();
 
     while (true) {
@@ -295,27 +314,58 @@ void Dispatcher() {
                 if (node != NULL) {
                     removeDispatcherNode(trains, node);
                 }
-                status = -1;
+                sensor = -1;
                 goto addnode;
                 break;
             case TRM_ADD_AT:
                 if (node != NULL) {
                     removeDispatcherNode(trains, node);
                 }
-                status = sensorToInt(request.arg0, request.arg1);
-                if (status < 0 || status >= 80) {
+                sensor = sensorToInt(request.arg0, request.arg1);
+                if (sensor < 0 || sensor >= 80) {
                     status = INVALID_SENSOR_ID;
                     break;
                 }
         addnode:
-                if (CreateCourier != -1) {
+                nextTrain = request.tr;
+                if (CreateCourier != -1 && nextTrain == waitingTrain) {
                     Destroy(CreateCourier);
                     CreateCourier = -1;
+                } else if (nextTrain != waitingTrain && waitingTrain >= 0) {
+                    debug("Dispatcher: Queueing add of train %d", nextTrain);
+                    status = -1;
+                    write_int(&addQueue, &nextTrain, 1);
+                    write_int(&addQueue, &status, 1);
+                    status = 0;
+                    break;
                 }
-                if ((CreateCourier = addDispatcherTrain(request.tr, status)) == -1) {
+                waitingTrain = nextTrain;
+                if ((CreateCourier = addDispatcherTrain(request.tr, sensor, -1)) == -1) {
                     status = OUT_OF_DISPATCHER_NODES;
                 } else {
                     status = 0;
+                }
+                break;
+            case TRM_READD:
+                if (node != NULL) {
+                    removeDispatcherNode(trains, node);
+                }
+                nextTrain = request.tr;
+        readd:
+                if (CreateCourier != -1 && nextTrain == waitingTrain) {
+                    Destroy(CreateCourier);
+                    CreateCourier = -1;
+                } else if (nextTrain != waitingTrain && waitingTrain >= 0) {
+                    debug("Dispatcher: Queueing add of train %d", nextTrain);
+                    write_int(&addQueue, &nextTrain, 1);
+                    write_int(&addQueue, &callee, 1);
+                    continue;
+                }
+                waitingTrain = nextTrain;
+                if ((CreateCourier = addDispatcherTrain(nextTrain, -1, callee)) == -1) {
+                    status = OUT_OF_DISPATCHER_NODES;
+                } else {
+                    continue;
                 }
                 break;
             case TRM_REMOVE_TRAIN:
@@ -330,11 +380,21 @@ void Dispatcher() {
                 break;
             case TRM_CREATE_TRAIN:
                 status = 0;
-                ASSERT(callee == CreateCourier, "Dispatcher: Something not the CreateCourier tried to create a train");
-                if (addDispatcherNode(trains, request.arg0, request.tr) == NULL) {
+                ASSERT(callee == CreateCourier, "Dispatcher: Something not the CreateCourier tried to create a train"
+                       "Expected Tid %d, instead received called from Tid %d", CreateCourier, callee);
+                if ((node = addDispatcherNode(trains, request.arg0, request.tr)) == NULL) {
                     status = OUT_OF_DISPATCHER_NODES;
                 }
                 CreateCourier = -1;
+                waitingTrain = -1;
+                status = node->train;
+                debug("Dispatcher: Checking addQueue for waiting: %d length", length_int(&addQueue));
+                if (length_int(&addQueue) > 0) {
+                    Reply(callee, &status, sizeof(status));
+                    read_int(&addQueue, &nextTrain, 1);
+                    read_int(&addQueue, &callee, 1);
+                    goto readd;
+                }
                 break;
             case TRM_GOTO_STOP:
                 if ((node = getDispatcherNode(trains, request.tr))) {

@@ -10,11 +10,13 @@
 #include <train_speed.h>
 #include <random.h>
 
+#define SENSOR_COUNT   TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT
 
 void TrainDemo() {
     char buffer[50];
     int train, status, i;
-    int train_numbers[TRAIN_COUNT];
+    int sensors[SENSOR_COUNT] = {0};
+    int train_numbers[TRAIN_COUNT] = {0};
 
     i = 0;
     while (i < TRAIN_COUNT) {
@@ -30,8 +32,6 @@ void TrainDemo() {
                 if (DispatchAddTrain(train) >= 0) {
                     train_numbers[i++] = train;
                 }
-                printf("Press any key to continue once train has been added: \r\n");
-                getchar();
             }
         }
     }
@@ -45,20 +45,24 @@ void TrainDemo() {
     int sensor, distance;
     while (true) {
         char ch;
-        puts("Press any character to run the demo: \r\n");
-        ch = getchar();
+        puts("Press q to quit, or any other key to continue:");
+        printf("%c\r\n", ((ch = getchar()) == 'q' ? 'q' : ' '));
+        if (ch == 'q') {
+            break;
+        }
         for (i = 0; i < train_count; ++i) {
-            sensor = random() % (TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT);
+            do {
+                sensor = random() % (SENSOR_COUNT);
+            } while (sensors[sensor] == 1);
+            sensors[sensor] = 1;
             distance = random() % 40;
             train = train_numbers[i];
             printf("Dispatching train %u to %u mm past sensor %c%u\r\n", train, distance,
                    sensor / TRAIN_SENSOR_COUNT + 'A', sensor % TRAIN_SENSOR_COUNT + 1);
             DispatchRoute(train, sensor, distance);
         }
-        puts("Press q to quit, or any other key to continue: ");
-        ch = getchar();
-        if (ch == 'q') {
-            break;
+        for (i = 0; i < SENSOR_COUNT; ++i) {
+            sensors[i] = 0;
         }
     }
 

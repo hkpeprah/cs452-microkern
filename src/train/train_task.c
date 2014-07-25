@@ -409,8 +409,12 @@ static void updateNextSensor(Train_t *train) {
         } else {
             edge = getNextEdge(node);
             if (edge == NULL) {
-                train->nextSensor = NULL;
-                return;
+                if ((train->transition.valid == true && train->transition.dest_speed != 0) ||
+                    (train->transition.valid == false && train->speed != 0)) {
+                    /* instead of reversing, just stop moving if we're reaching an end */
+                    Log("Train %u: Reached exit node %s\n", train->id, d(node).name);
+                }
+                node = NULL;
             } else {
                 train->distToNextSensor += d(edge).dist;
                 node = d(edge).dest;
@@ -527,7 +531,7 @@ static int reserveTrack(Train_t *train, int resvDist) {
         ASSERT(node != NULL, "reserveTrack: Train %u: node should not be NULL", train->id);
         /* train overshot, so there is extract stopping distance */
         toResv[numResv++] = node;
-        if (!edge) {
+        if (edge == NULL) {
             // edge null -> exit! has to stop now
             return 1;
         }
@@ -977,7 +981,6 @@ static int trainDir(Train_t *train) {
         freeHeadResv(train);
         push_back_Resv(&(train->resv), train->currentEdge->src);
     } else {
-        /* TODO: Handle this in caller */
         error("Train %u: Reverse reservation failed for %s", train->id, train->currentEdge->src->name);
         return -2;
     }

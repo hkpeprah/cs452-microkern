@@ -32,7 +32,7 @@ void Conductor() {
     track_edge *source;
     track_node *dest, *path[32] = {0};
     int callee, status, myTid, train;
-    unsigned int node_count;
+    unsigned int node_count, tr_number;
     unsigned int total_distance, destDist;
 
     status = Receive(&callee, &req, sizeof(req));
@@ -45,14 +45,14 @@ void Conductor() {
     Reply(callee, &status, sizeof(status));
 
     train = req.arg0;
+    tr_number = req.arg3;
     myTid = MyTid();
 
     ASSERT((req.type == GOTO || req.type == MOVE),
            "conductor recieved a message not of type GOTO or MOVE: type %d from %d", req.type, callee);
 
-    GotoResult_t result = GOTO_NONE;
-
     /* check if goto or just a short move */
+    GotoResult_t result = GOTO_NONE;
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
         destDist = req.arg2;
@@ -62,7 +62,7 @@ void Conductor() {
             Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
-            if ((node_count = findPath(req.arg3, source, dest, path, 32, &total_distance)) < 0) {
+            if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) < 0) {
                 error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
                 Delay(random_range(10, 500));
                 continue;
@@ -72,7 +72,7 @@ void Conductor() {
 
             if (path[0] != source->dest) {
                 Log("Conductor %d: initial path reversal for train %d\n", myTid, train);
-                while (TrDirection(train) == -1) {
+                while (TrDirection(train) < 0) {
                     TrSpeed(train, 0);
                     Delay(600); /* maximum possible time to wait for a train to finish moving */
                 }
@@ -86,11 +86,10 @@ void Conductor() {
 
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
-                if (path[i]->reverse == path[i + 1]) {
+                if (path[i] && path[i]->reverse == path[i + 1]) {
                     result = TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
-
-                    Log("\n<><><><><>Finished PARTIAL route %s -> %s with result %d\n", path[base]->name, path[i]->name, result);
-
+                    Log("\n<><><><><>Finished PARTIAL route %s -> %s with result %d\n",
+                        path[base]->name, path[i]->name, result);
                     switch (result) {
                         case GOTO_COMPLETE:
                             break;
@@ -101,7 +100,7 @@ void Conductor() {
                         case GOTO_NONE:
                             /* should never reach this case */
                             ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
-                                   req.arg3, train, path[base]->name, (i - base + 1));
+                                   tr_number, train, path[base]->name, (i - base + 1));
                         default:
                             /* this case is even worse, this should never happen */
                             ASSERT(false, "This should never happen...");
@@ -115,7 +114,7 @@ void Conductor() {
                             goto reroute;
                         }
                     }
-                    Log("Conductor: reversed train %d\n", req.arg3);
+                    Log("Conductor: reversed train %d\n", tr_number);
                     base = ++i;
                 }
             }
@@ -158,7 +157,7 @@ void Conductor() {
                     case GOTO_NONE:
                         // wat
                         ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
-                                req.arg3, train, path[base]->name, (i - base + 1));
+                                tr_number, train, path[base]->name, (i - base + 1));
                     default:
                         // waaaaaat
                         ASSERT(false, "This should never happen...");
@@ -167,7 +166,12 @@ void Conductor() {
                 break;
             }
 reroute:
-            debug("Conductor: Routed failed for train %d, re-routing", req.arg3);
+            debug("Conductor: Routed failed for train %d, re-routing", tr_number);
+            continue;
+lost:
+            /* we're lost, so let's re-add the train */
+            debug("Conductor: Train %d is lost, re-adding", tr_number);
+            train = DispatchReAddTrain(tr_number);
         }
     } else {
         /* making a generic distance move */
@@ -185,17 +189,11 @@ done:
     }
 
     /* remove self from parent, so that train can be used again */
-    status = DispatchStopRoute(req.arg3);
+    status = DispatchStopRoute(tr_number);
     if (status < 0) {
         error("Conductor: Error: Got %d in send to parent %u", status, MyParentTid());
     }
     debug("Conductor: Tid %u, removing self from parent %u", myTid, MyParentTid());
-    Exit();
-
-lost:
-    /* we're lost, so let's re-add the train */
-    DispatchAddTrain(req.arg3);
-    DispatchStopRoute(req.arg3);
     Exit();
 }
 
