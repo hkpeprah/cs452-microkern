@@ -325,7 +325,7 @@ static track_node *peek_any_Resv(TrainResv_t *resv, uint32_t index) {
 static void push_back_Resv(TrainResv_t *resv, track_node *node) {
     track_node *tail = peek_back_Resv(resv);
 
-    if (tail == node) {
+    if (tail == node || (tail && tail->reverse == node)) {
         /* addresses case where we reserve something that we already have */
         return;
     }
@@ -409,13 +409,8 @@ static void updateNextSensor(Train_t *train) {
         } else {
             edge = getNextEdge(node);
             if (edge == NULL) {
-                if ((train->transition.valid == true && train->transition.dest_speed != 0) ||
-                    (train->transition.valid == false && train->speed != 0)) {
-                    /* instead of reversing, just stop moving if we're reaching an end */
-                    setTrainSpeed(train, 0);
-                    Log("Train %u: Reached exit node %s", train->id, d(node).name);
-                }
-                node = NULL;
+                train->nextSensor = NULL;
+                return;
             } else {
                 train->distToNextSensor += d(edge).dist;
                 node = d(edge).dest;
@@ -532,6 +527,10 @@ static int reserveTrack(Train_t *train, int resvDist) {
         ASSERT(node != NULL, "reserveTrack: Train %u: node should not be NULL", train->id);
         /* train overshot, so there is extract stopping distance */
         toResv[numResv++] = node;
+        if (!edge) {
+            // edge null -> exit! has to stop now
+            return 1;
+        }
         distRemaining -= d(edge).dist;
 
         if (numResv <= 0) {
@@ -757,11 +756,12 @@ static void distTraverse(Train_t *train, bool traverseSensor) {
         }
 
         train->distSinceLastNode -= train->currentEdge->dist;
-        edge = getNextEdge(train->currentEdge->dest);
-        if (edge == NULL) {
-            break;
+
+        if ((edge = getNextEdge(train->currentEdge->dest))) {
+            train->currentEdge = edge;
+        } else {
+            ASSERT(false, "distTraverse hit null edge\n");
         }
-        train->currentEdge = edge;
     }
 }
 
@@ -950,6 +950,57 @@ static void setTrainSpeed(Train_t *train, int speed) {
     trnputs(buf, 2);
 }
 
+static int trainDir(Train_t *train) {
+    if (train->speed != 0 || train->transition.valid) {
+        error("Train %u: Cannot reverse while moving, ticks: %u, called by: %u",
+                train->id, Time());
+        return -1;
+    }
+
+    ASSERT(train->currentEdge, "Current edge is NULL pre-rev\n");
+
+    Log("Rev: initial %d from %s\n", train->distSinceLastNode, train->currentEdge->src->name);
+
+    /* recompute distances from sensors and nodes */
+    train->currentEdge = train->currentEdge->reverse;
+    train->distSinceLastNode = train->currentEdge->dist - train->distSinceLastNode;
+
+    ASSERT(train->currentEdge, "Current edge is NULL post-rev\n");
+
+    Log("Rev: now %d from %s\n", train->distSinceLastNode, train->currentEdge->src->name);
+
+    updateNextSensor(train);
+
+    Log("Updated sensor to %s\n", (train->nextSensor ? train->nextSensor->name : "NULL"));
+
+    if (DispatchReserveTrack(train->id, &(train->currentEdge->src), 1) == 1) {
+        freeHeadResv(train);
+        push_back_Resv(&(train->resv), train->currentEdge->src);
+    } else {
+        /* TODO: Handle this in caller */
+        error("Train %u: Reverse reservation failed for %s", train->id, train->currentEdge->src->name);
+        return -2;
+    }
+
+    Log("rev success\n");
+
+    char command[2];
+    command[0] = TRAIN_AUX_REVERSE;
+    command[1] = train->id;
+    trnputs(command, 2);
+
+    if (train->pickupOffset == PICKUP_FRONT) {
+        train->pickupOffset = PICKUP_BACK;
+    } else if (train->pickupOffset == PICKUP_BACK) {
+        train->pickupOffset = PICKUP_FRONT;
+    } else {
+        Panic("Pickup offset is %d, which is neither PICKUP_FRONT (%d) or PICKUP_BACK (%d) WHAT THE FUCK DID YOU DO?",
+                train->pickupOffset, PICKUP_FRONT, PICKUP_BACK);
+    }
+
+    return 0;
+}
+
 
 static void initTrain(Train_t *train, TrainMessage_t *request) {
     /* initialize the train structure */
@@ -1003,15 +1054,19 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     while (train->distSinceLastNode > train->currentEdge->dist) {
         train->distSinceLastNode -= train->currentEdge->dist;
         edge = getNextEdge(train->currentEdge->dest);
-        if (edge == NULL) {
+
+        if ((edge = getNextEdge(train->currentEdge->dest)) == NULL) {
             break;
         }
+
         train->currentEdge = edge;
 
         if (sanity -- < 0) {
             Panic("Failed to finish traversal after 8 tries, dist %d remaining", train->distSinceLastNode);
         }
     }
+
+    ASSERT(train->currentEdge != NULL, "Train current edge is NULL WAT\n");
 
     updateNextSensor(train);
 
@@ -1100,7 +1155,7 @@ static void TrainTask() {
             if (callee == timeoutCourier) {
                 Log("Train %u: Timeout on sensor %s\r\n", train.id,
                     (train.nextSensor != NULL ? d(train.nextSensor).name : "NULL"));
-                if (++numSensorMissed > SENSOR_MISS_THRESHOLD) {
+                if (train.nextSensor != NULL && ++numSensorMissed > SENSOR_MISS_THRESHOLD) {
                     Log("<<<<Too many timeouts, stopping>>>>\n");
                     setTrainSpeed(&train, 0);
                     train.gotoResult = GOTO_LOST;
@@ -1113,15 +1168,15 @@ static void TrainTask() {
             if (train.nextSensor != NULL) {
                 Log("Before Sensor trip - Next sensor: %s\n", d(train.nextSensor).name);
                 sensorTrip(&train, train.nextSensor);
-                if (train.nextSensor != NULL) {
-                    Log("After Sensor trip - Next sensor: %s\n", d(train.nextSensor).name);
+                if (train.nextSensor) {
+                    Log("Sensor trip - Next sensor: %s\n", d(train.nextSensor).name);
+                    waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
+                    train.gotoResult = GOTO_COMPLETE;
+                } else {
+                    Log("Sensor trip - next sensor NULL, should reverse on stop\n");
                 }
-                waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
-                train.gotoResult = GOTO_COMPLETE;
-            } else if (train.speed != 0) {
-                debug("Null next sensor detected on train %d, stopping", train.id);
-                setTrainSpeed(&train, 0);
-                train.gotoResult = GOTO_LOST;
+            } else {
+                ASSERT(false, "This should never actually happen WAT\n");
             }
             CalibrationSnapshot(&train);
             Log("Sensor trip - done\n\n");
@@ -1297,51 +1352,7 @@ static void TrainTask() {
                 Reply(callee, &status, sizeof(status));
                 break;
             case TRM_DIR:
-                if (train.speed != 0 || train.transition.valid) {
-                    error("Train %u: Cannot reverse while moving, ticks: %u, called by: %u",
-                          train.id, Time(), callee);
-                    status = -1;
-                    Reply(callee, &status, sizeof(status));
-                    break;
-                }
-
-                debug("Rev: initial %d from %s\n", train.distSinceLastNode, train.currentEdge->src->name);
-
-                /* recompute distances from sensors and nodes */
-                train.currentEdge = train.currentEdge->reverse;
-                train.distSinceLastNode = train.currentEdge->dist - train.distSinceLastNode;
-
-                debug("Rev: now %d from %s\n", train.distSinceLastNode, train.currentEdge->src->name);
-
-                updateNextSensor(&train);
-
-                if (DispatchReserveTrack(train.id, &(train.currentEdge->src), 1) == 1) {
-                    freeHeadResv(&train);
-                    push_back_Resv(&(train.resv), train.currentEdge->src);
-                    status = 0;
-                } else {
-                    /* TODO: Handle this in caller */
-                    error("Train %u: Reverse reservation failed for %s", train.id, train.currentEdge->src->name);
-                    status = -2;
-                    Reply(callee, &status, sizeof(status));
-                    break;
-                }
-
-                Log("rev success\n");
-
-                command[0] = TRAIN_AUX_REVERSE;
-                command[1] = train.id;
-                trnputs(command, 2);
-
-                if (train.pickupOffset == PICKUP_FRONT) {
-                    train.pickupOffset = PICKUP_BACK;
-                } else if (train.pickupOffset == PICKUP_BACK) {
-                    train.pickupOffset = PICKUP_FRONT;
-                } else {
-                    Panic("Pickup offset is %d, which is neither PICKUP_FRONT (%d) or PICKUP_BACK (%d) WHAT THE FUCK DID YOU DO?",
-                        train.pickupOffset, PICKUP_FRONT, PICKUP_BACK);
-                }
-
+                status = trainDir(&train);
                 Reply(callee, &status, sizeof(status));
                 break;
             case TRM_RV:
