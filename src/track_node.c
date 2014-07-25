@@ -21,8 +21,12 @@ int validNextNode(track_node *current, track_node *next) {
                 return REVERSE_DIST;
             }
             return INVALID_NEXT_NODE;
-        case NODE_NONE:
         case NODE_EXIT:
+            if (current->reverse == next) {
+                return REVERSE_DIST;
+            }
+            return INVALID_NEXT_NODE;
+        case NODE_NONE:
         default:
             return INVALID_NEXT_NODE;
     }
