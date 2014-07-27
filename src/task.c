@@ -272,15 +272,6 @@ static void findHighestTaskPriority() {
 }
 
 
-void zombify() {
-    unsigned int i;
-    for (i = 0; i < TASK_BANK_SIZE; ++i) {
-        __taskBank[i].state = ZOMBIE;
-    }
-    highestTaskPriority = -1;
-}
-
-
 Task_t *schedule() {
     // only when current task exists and is ACTIVE (ie. it didn't just get blocked)
     if (currentTask && currentTask->state == ACTIVE) {
@@ -337,17 +328,18 @@ void setResult(Task_t *task, int result) {
 
 
 void dumpTaskState() {
-    int prio = highestTaskPriority;
-    while (prio --> 0) {
-        Task_t *task = taskQueue[prio].head;
-        if (!task) {
-            break;
-        }
-
-        kprintf("Priority %d:\n", prio);
-        while (task) {
-            kprintf("Tid: {%d} Parent: {%d} State: {%s} SP: {%d}", task->tid, task->parentTid, STATES[task->state], task->sp);
-            task = task->next;
+    int i;
+    kputstr("\nPress ENTER (probably a bunch of times) to see task states\n");
+    bwgetc(IO);
+    kprintf(RESET_TERMINAL MOVE_CURSOR, 0, 0);
+    kprintf("\nTID" MOVE_TO_COL "PARENT" MOVE_TO_COL "PRIO" MOVE_TO_COL "STATE" MOVE_TO_COL "SP\n",
+                    8,                   16,                24,                 40);
+    for (i = 0; i < TASK_BANK_SIZE; ++i) {
+        Task_t *task = &(__taskBank[i]);
+        kprintf("%d"        MOVE_TO_COL  "%d"             MOVE_TO_COL   "%d"            MOVE_TO_COL "%s"                 MOVE_TO_COL "0x%x\n",
+                task->tid,  8,           task->parentTid, 16,           task->priority, 24,         STATES[task->state], 40,          task->sp);
+        if (i % 16 == 0) {
+            bwgetc(IO);
         }
     }
 }

@@ -4,17 +4,9 @@
 #include <term.h>
 #include <syscall.h>
 
-static volatile int SHELL_EXITED = 0;
-
-
-void setExit(int term) {
-    SHELL_EXITED = term;
-}
-
-
 void NullTask() {
     /* sits on the kernel passing */
     notice("NullTask: Entering.");
-    while (SHELL_EXITED == 0);
+    while (1);
     Exit();
 }

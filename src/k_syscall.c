@@ -282,19 +282,10 @@ void sys_idle(uint32_t *retval) {
     *retval = getIdleTime();
 }
 
-
-void sys_sigterm() {
-    setExit(1);
-}
-
-
 void sys_panic(char *msg, va_list va) {
     char fmt[256] = {0};
     char buffer[512] = {0};
 
-    sys_sigterm();
-    dumpTaskState();
-    zombify();
     strcpy(fmt, RESTORE_CURSOR NEW_LINE ERASE_LINE "\033[");
     uitoa(RED, 10, &fmt[strlen(fmt)]);
     strcat(fmt, "m");

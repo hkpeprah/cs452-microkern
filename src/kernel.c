@@ -102,7 +102,6 @@ static int handleRequest(Args_t *args) {
             sys_idle(&result);
             break;
         case SYS_SIGTERM:
-            sys_sigterm();
             break;
         case SYS_PANIC:
             sys_panic((char*)args->a0, (va_list)args->a1);
@@ -147,7 +146,6 @@ void boot () {
 
 
 void kernel_disable() {
-    zombify();
     disableInterrupts();
     disableIdleTimer();
     *((uint32_t*)TIMER_CONTROL) = 0;
@@ -177,7 +175,6 @@ void kernel_main() {
 
     status = sys_create(0, NullTask, &nullTaskTid);
     KASSERT(status >= 0 && nullTaskTid >= 0, "Kernel failed to create NullTask");
-    setExit(0);
     cpu_idle(false);
 
     FOREVER {
@@ -201,14 +198,19 @@ void kernel_main() {
         // store user stack pointer
         task->sp = taskSP;
 
-        if (args->code == SYS_SIGTERM) {
+        cpu_idle(false);
+        result = handleRequest(args);
+
+        if (args->code == SYS_SIGTERM || args->code == SYS_PANIC) {
             break;
         }
 
-        cpu_idle(false);
-        result = handleRequest(args);
         if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT && args->code != SYS_PANIC) {
             setResult(task, result);
         }
     }
+
+#if DUMP_TASK_STATE
+    dumpTaskState();
+#endif
 }
