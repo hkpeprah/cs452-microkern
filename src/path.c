@@ -177,6 +177,7 @@ static void addNode(Heap_t *heap, Node_t *nodes, Node_t *currentNode, unsigned i
 
 
 int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **path, int pathlen, unsigned int *length) {
+    ASSERT(start && end && path && length, "One of the parameters (start, end, path, length) is NULL");
     int i;
     Node_t nodes[TRACK_MAX] = {{0}};
     Heap_t heap = {.arr = {0}, .size = 0};
@@ -211,7 +212,6 @@ int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **p
 
     nodes[trackNodeToIndex(end)].trackNode = end;
 
-
     while (heap.size > 0) {
         // get head of heap
         currentNode = heapPop(&heap);
@@ -219,10 +219,6 @@ int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **p
 
         if (currentTrackNode == end) {
             break;
-        }
-
-        if (currentNode->pathLenNodes > pathlen) {
-            return INSUFFICIENT_SUPPLIED_ARRAY_SIZE;
         }
 
         if (currentTrackNode->reservedBy != RESERVED_BY_NOBODY && currentTrackNode->reservedBy != tr) {
@@ -245,12 +241,15 @@ int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **p
     }
 
     currentNode = &nodes[trackNodeToIndex(end)];
+
+    ASSERT(currentNode->trackNode != NULL, "Expected to reach dest %s in path find but did not\n", end->name);
+
     *length = currentNode->dist;
     finalPathLen = currentNode->pathLenNodes;
 
     if (finalPathLen > pathlen) {
-        error("PATH: Supplied array not long enough");
-        return finalPathLen;
+        error("PATH: Supplied array %d not long enough for path %d: ", pathlen, finalPathLen);
+        return INSUFFICIENT_SUPPLIED_ARRAY_SIZE;
     }
 
     i = finalPathLen;
@@ -259,8 +258,7 @@ int findPath(unsigned int tr, track_edge *start, track_node *end, track_node **p
     while (i --> 0) {
         path[i] = currentNode->trackNode;
 
-        if (currentNode->trackNode == start->src || currentNode->trackNode == start->dest
-            || currentNode->pred == NULL) {
+        if (currentNode->pred == NULL) {
             break;
         }
 

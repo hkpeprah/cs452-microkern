@@ -2,7 +2,8 @@
 #define __PATH_H__
 #include <track_node.h>
 
-#define INSUFFICIENT_SUPPLIED_ARRAY_SIZE -1
+#define INSUFFICIENT_SUPPLIED_ARRAY_SIZE    -1
+#define DEST_CURRENTLY_RESERVED             -2
 
 /*
  * start    - starting node
