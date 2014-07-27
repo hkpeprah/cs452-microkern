@@ -31,8 +31,8 @@ void firstTask() {
     int id;
     id = Create(15, NameServer);
     id = Create(15, ClockServer);
-    id = Create(12, InputServer);
-    id = Create(12, OutputServer);
+    id = Create(14, InputServer);
+    id = Create(14, OutputServer);
     id = Create(13, TimerTask);
     id = Create(12, SensorServer);
     id = Create(10, Dispatcher);
@@ -49,8 +49,7 @@ void TimerTask() {
     unsigned int cpuUsage;
 
     while (true) {
-        Delay(10);
-        count = Time();
+        count = Delay(10);
         cpuUsage = CpuIdle();
         updateTime(count, cpuUsage);
     }

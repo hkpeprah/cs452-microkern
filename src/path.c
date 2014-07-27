@@ -36,7 +36,7 @@ static inline int trackNodeToIndex(track_node *node) {
         case NODE_EXIT:
             return node->num;
         default:
-            kprintf("PATH: FATAL: trackNodeToIndex hit default");
+            kerror("PATH: FATAL: trackNodeToIndex hit default");
             return -1;
     }
 }

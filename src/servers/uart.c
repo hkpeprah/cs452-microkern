@@ -8,12 +8,14 @@
 #include <util.h>
 #include <ts7200.h>
 
-#define FIFO_SIZE 8
+#define FIFO_SIZE       8
+#define UART_PRIORITY   15
 
 DECLARE_CIRCULAR_BUFFER(char);
 
 static int is_tid = -1;
 static int os_tid = -1;
+
 
 int Getcn(int channel, volatile char *buf, int n) {
     UartRequest_t req;
@@ -238,8 +240,8 @@ void OutputServer() {
         return;
     }
 
-    uart1xmt = Create(15, Uart1XMTHandler);
-    uart2xmt = Create(15, Uart2XMTHandler);
+    uart1xmt = Create(UART_PRIORITY, Uart1XMTHandler);
+    uart2xmt = Create(UART_PRIORITY, Uart2XMTHandler);
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));
@@ -308,8 +310,8 @@ void InputServer() {
         return;
     }
 
-    uart1rcv = Create(15, Uart1RCVHandler);
-    uart2rcv = Create(15, Uart2RCVHandler);
+    uart1rcv = Create(UART_PRIORITY, Uart1RCVHandler);
+    uart2rcv = Create(UART_PRIORITY, Uart2RCVHandler);
 
     for (;;) {
         result = Receive(&sender, &req, sizeof(req));

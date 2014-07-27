@@ -11,6 +11,8 @@
 #include <random.h>
 #include <clock.h>
 
+#define OVERSHOOT_DISTANCE  300
+
 typedef struct {
     int type;
     int arg0;
@@ -61,20 +63,26 @@ void Conductor() {
             Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
-
             if (source == NULL) {
                 Log("Train %d reported NULL edge, readding...\n", train);
                 goto lost;
+            } else if (source && (source->src == dest || source->reverse->src == dest)) {
+                /* we're already on our destination, so lets just stop */
+                goto done;
             }
 
-            Log("Routing from train edge %s -> %s to %s\n", (source ? source->src->name : "NULL"), (source ? source->dest->name : "NULL"), dest->name);
+            Log("Routing from train edge %s -> %s to %s\n", (source ? source->src->name : "NULL"),
+                (source ? source->dest->name : "NULL"), dest->name);
+
+            debug("Conductor (Tid %u): Routing train %u from train edge %s -> %s to %s\n", myTid, tr_number,
+                  (source && source->src ? source->src->name : "NULL"), (source && source->dest ? source->dest->name : "NULL"),
+                  dest->name);
 
             if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) < 0) {
                 error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
-                Delay(random_range(10, 500));
+                Delay(random_range(100, 500));
                 continue;
             }
-
             Log("Found path of length %d\n", node_count);
 
             if (path[0] != source->dest) {
@@ -90,15 +98,13 @@ void Conductor() {
             }
 
             Log("Conductor starting loop\n");
-
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
                 Log("path node: %s\n", d(path[i]).name);
                 if (path[i] && path[i]->reverse == path[i + 1]) {
                     Log("\n<><><><><>Exec PARTIAL route %s -> %s with result %d\n",
                             path[base]->name, path[i]->name, result);
-                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 300);
-
+                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), OVERSHOOT_DISTANCE);
                     switch (result) {
                         case GOTO_COMPLETE:
                             break;
@@ -134,7 +140,6 @@ void Conductor() {
                         d(path[base]).name, d(path[node_count - 1]).name);
 
                 result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
-
                 switch (result) {
                     case GOTO_COMPLETE:
                         Log("result = GOTO_COMPLETE\n");
@@ -172,11 +177,10 @@ void Conductor() {
                         Log("result = GOTO_REROUTE\n");
                         break;
                     case GOTO_NONE:
-                        // wat
                         ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
                                 tr_number, train, path[base]->name, (i - base + 1));
+                        break;
                     default:
-                        // waaaaaat
                         ASSERT(false, "This should never happen...");
                 }
             } else {
@@ -189,6 +193,7 @@ lost:
             /* we're lost, so let's re-add the train */
             debug("Conductor: Train %d is lost, re-adding", tr_number);
             train = DispatchReAddTrain(tr_number);
+            debug("Conductor: Train %d has new Tid %d", tr_number, train);
         }
     } else {
         /* making a generic distance move */

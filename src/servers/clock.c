@@ -102,7 +102,7 @@ void ClockServer() {
                     error("ClockServer: Error: No available messages.");
                     break;
                 default:
-                    error("ClockServer: Error: Message length mistmatch", errno, sizeof(msg));
+                    error("ClockServer: Error: Message length mistmatch: %d == %d", errno, sizeof(msg));
             }
             continue;
         }
@@ -115,16 +115,16 @@ void ClockServer() {
             case TICK:
                 if (callee != notifier) {
                     continue;
+                } else {
+                    /* need to immediately reply to the ClockNotification task to unblock */
+                    errno = 0;
+                    Reply(callee, &errno, sizeof(errno));
                 }
                 ++ticks;
-                /* need to immediately reply to the ClockNotification task to unblock */
-                errno = 0;
-                Reply(callee, &errno, sizeof(errno));
-                errno = ticks;
                 tmp = queue;
                 last = NULL;
                 while (queue != NULL && queue->delay <= ticks) {
-                    Reply(queue->tid, &errno, sizeof(errno));
+                    Reply(queue->tid, &ticks, sizeof(ticks));
                     last = queue;
                     queue = queue->next;
                 }
@@ -137,8 +137,7 @@ void ClockServer() {
                 msg.ticks += ticks;
             case DELAY_UNTIL:
                 if (msg.ticks <= ticks) {
-                    errno = 0;
-                    Reply(callee, &errno, sizeof(errno));
+                    Reply(callee, &ticks, sizeof(ticks));
                 } else if (free == NULL) {
                     errno = OUT_OF_SPACE;
                     Reply(callee, &errno, sizeof(errno));
@@ -222,13 +221,18 @@ int Delay(int ticks) {
 
     msg.type = DELAY;
     msg.ticks = ticks;
-    errno = Send(clockserver_tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    errno = Send(clockserver_tid, &msg, sizeof(msg), &ticks, sizeof(ticks));
     if (errno < 0) {
-        error("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
+        error("Delay: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
         return -2;
     }
 
-    return 0;
+    if (ticks < 0) {
+        error("Delay: No more slots for delaying, returning to %d\r\n", MyTid());
+        return -3;
+    }
+
+    return ticks;
 }
 
 
@@ -246,13 +250,18 @@ int DelayUntil(int ticks) {
 
     msg.type = DELAY_UNTIL;
     msg.ticks = ticks;
-    errno = Send(clockserver_tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    errno = Send(clockserver_tid, &msg, sizeof(msg), &ticks, sizeof(ticks));
     if (errno < 0) {
-        error("Time: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
+        error("DelayUntil: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, clockserver_tid);
         return -2;
     }
 
-    return 0;
+    if (ticks < 0) {
+        error("DelayUntil: No more slots for delaying, returning to %d\r\n", MyTid());
+        return -3;
+    }
+
+    return ticks;
 }
 
 
