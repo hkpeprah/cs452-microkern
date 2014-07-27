@@ -5,6 +5,10 @@
 // INVALID_NEXT_NODE on invalid
 // edge distance on valid
 int validNextNode(track_node *current, track_node *next) {
+    if (!current || !next) {
+        return NULL_NODES;
+    }
+
     track_edge *straight = &(current->edge[DIR_AHEAD]);
 
     switch(current->type) {
