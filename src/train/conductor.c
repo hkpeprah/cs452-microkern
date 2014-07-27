@@ -26,7 +26,6 @@ typedef enum {
     DIST_UP
 } ConductorMessageTypes;
 
-
 void Conductor() {
     ConductorMessage_t req;
     track_edge *source;
@@ -62,6 +61,14 @@ void Conductor() {
             Log("Routing attempts left: %d\n", attemptsLeft);
 
             source = TrGetEdge(train);
+
+            if (source == NULL) {
+                Log("Train %d reported NULL edge, readding...\n", train);
+                goto lost;
+            }
+
+            Log("Routing from train edge %s -> %s to %s\n", (source ? source->src->name : "NULL"), (source ? source->dest->name : "NULL"), dest->name);
+
             if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) < 0) {
                 error("Conductor: Error: No path to destination %s found, sleeping...", dest->name);
                 Delay(random_range(10, 500));
@@ -86,10 +93,12 @@ void Conductor() {
 
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
+                Log("path node: %s\n", d(path[i]).name);
                 if (path[i] && path[i]->reverse == path[i + 1]) {
-                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 150);
-                    Log("\n<><><><><>Finished PARTIAL route %s -> %s with result %d\n",
-                        path[base]->name, path[i]->name, result);
+                    Log("\n<><><><><>Exec PARTIAL route %s -> %s with result %d\n",
+                            path[base]->name, path[i]->name, result);
+                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), 300);
+
                     switch (result) {
                         case GOTO_COMPLETE:
                             break;
@@ -115,19 +124,20 @@ void Conductor() {
                         }
                     }
                     Log("Conductor: reversed train %d\n", tr_number);
-                    base = ++i;
+                    base = i + 1;
                 }
             }
 
             Log("Conductor finished partial path loop, starting final loop. base: %d, i: %d\n", base, i);
             if (base != node_count) {
+                Log("\n<><><><><>Exec FINAL route %s -> %s ",
+                        d(path[base]).name, d(path[node_count - 1]).name);
+
                 result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
+
                 switch (result) {
-                    case GOTO_LOST:
-                        goto lost;
                     case GOTO_COMPLETE:
-                        Log("\n<><><><><>Finished FINAL route %s -> %s with result %d\n",
-                            d(path[base]).name, d(path[node_count - 1]).name, result);
+                        Log("result = GOTO_COMPLETE\n");
                         source = TrGetEdge(train);
                         Log("Train edge: %s\n", d(d(source).src).name);
                         if (source->src == dest || source->src->reverse == dest) {
@@ -149,10 +159,17 @@ void Conductor() {
                                     goto done;
                                 }
                                 Log("Nudging failed :'(\n");
+                                // 5 tries failed to get to dest OR not on edge to dest -> reroute
+                                goto reroute;
+                            } else {
+                                goto lost;
                             }
-                            // 5 tries failed to get to dest OR not on edge to dest, fall-through to reroute
                         }
+                    case GOTO_LOST:
+                        Log("result = GOTO_LOST\n");
+                        goto lost;
                     case GOTO_REROUTE:
+                        Log("result = GOTO_REROUTE\n");
                         break;
                     case GOTO_NONE:
                         // wat
@@ -182,12 +199,6 @@ lost:
     /* either the GOTO has been completed here, or we have failed in the Goto, either
        way, we're not exiting */
 done:
-    if (result == GOTO_COMPLETE) {
-        Log("goto complete successfully\n");
-    } else {
-        Log("goto failed as %d\n", result);
-    }
-
     /* remove self from parent, so that train can be used again */
     status = DispatchStopRoute(tr_number);
     if (status < 0) {

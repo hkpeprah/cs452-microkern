@@ -55,7 +55,8 @@ void TrainDemo() {
                 sensor = random() % (SENSOR_COUNT);
             } while (sensors[sensor] == 1);
             sensors[sensor] = 1;
-            distance = random() % 40;
+            //distance = random() % 40;
+            distance = 0;
             train = train_numbers[i];
             printf("Dispatching train %u to %u mm past sensor %c%u\r\n", train, distance,
                    sensor / TRAIN_SENSOR_COUNT + 'A', sensor % TRAIN_SENSOR_COUNT + 1);
