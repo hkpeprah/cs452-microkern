@@ -19,6 +19,8 @@
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
 
+#define MAX_IS_AWESOME
+
 
 extern int swi_handler();
 extern int swi_exit(int sp, void** tf);
@@ -215,6 +217,8 @@ void kernel_main() {
         }
     }
 
+#ifdef MAX_IS_AWESOME
     dumpTaskState();
     dumpLog();
+#endif
 }

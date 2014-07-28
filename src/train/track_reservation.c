@@ -19,7 +19,7 @@ static bool cmpAndSwapResvBy(track_node *node, int oldValue, int newValue) {
 
 // runs cmpAndSwapResvBy on each track, provided they are contineous
 static int swapTrackResvBy(int oldValue, int newValue, track_node **track, int n, int *dist) {
-    ASSERT(track && n > 0, "Expected non-empty array");
+    ASSERT(track && n > 0, "Expected non-empty array, instead got %s, %d", (track ? track[0]->name : "NULL"), n);
 
     track_node *currentNode = *track++;
     track_node *nextNode;

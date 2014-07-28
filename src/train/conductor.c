@@ -155,6 +155,7 @@ void Conductor() {
                                 // "nudge" it with a series of short moves
                                 int tries;
                                 for (tries = 5; tries > 0 && (source->src != dest && source->src->reverse != dest); --tries) {
+                                    // TODO: this needs to be a raw distance goto, not path based
                                     result = TrGotoAfter(train, &(dest), 1, 10 * tries);
                                     source = TrGetEdge(train);
                                 }
@@ -189,6 +190,7 @@ lost:
             debug("Train %d is lost, re-adding", tr_number);
             train = DispatchReAddTrain(tr_number);
             debug("Conductor: Train %d has new Tid %d", tr_number, train);
+            Delay(200);
         }
     } else {
         /* making a generic distance move */
