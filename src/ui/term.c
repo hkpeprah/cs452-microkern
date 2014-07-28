@@ -164,7 +164,7 @@ void updateTime(unsigned int count, unsigned int cpu) {
     minutes = count / 6000;
     seconds = (count / 100) % 60;
     t_seconds = count % 100;
-    printf(SAVE_CURSOR "\033[%d;7H" "%d%d:%d%d:%d%d \033[11C%d%% " RESTORE_CURSOR,
+    printf(SAVE_CURSOR "\033[%d;7H" "%d%d:%d%d:%d%d" "\033[12C%d%% " RESTORE_CURSOR,
            TERM_OFFSET - 2, minutes / 10, minutes % 10, seconds / 10, seconds % 10, t_seconds / 10, t_seconds % 10, cpu);
 }
 

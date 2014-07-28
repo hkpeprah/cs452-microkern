@@ -16,13 +16,10 @@
 #define TIMER_ENABLE   0x00000080
 #define TIMER_MODE     0x00000040
 #define TIMER_508KHZ   0x00000008
-
 #define CLOCK_SERVER   "ClockServer"
 
 static int clockserver_tid = -1;
-
 struct DelayQueue_t;
-
 
 typedef enum {
     DELAY = 0,
@@ -31,12 +28,10 @@ typedef enum {
     TICK
 } ClockRequestType;
 
-
 typedef struct {
     short type;
     unsigned int ticks;
 } ClockRequest;
-
 
 typedef struct DelayQueue_t {
     uint32_t tid;

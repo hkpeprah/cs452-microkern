@@ -3,14 +3,14 @@
 #include <clock.h>
 #include <term.h>
 
-static volatile int idle = 0;
-static volatile int count = 0;
+static volatile unsigned int idle = 0;
+static volatile unsigned int count = 0;
 static volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
 static volatile uint32_t *timerLow = (uint32_t*)0x80810060;
 
 
 void cpu_idle(bool isIdle) {
-    static int t = 0;
+    static unsigned int t = 0;
 
     if ((*timerLow / CYCLES_PER_TICK) - count >= 1) {
         count = (*timerLow / CYCLES_PER_TICK);
@@ -38,13 +38,15 @@ void enableIdleTimer() {
     *timerHigh = 0x100;
     idle = 0;
     count = 1;
+
     /* clear the lower of the 40 bit timer */
     (void)*timerLow;
+    (void)*timerHigh;
 
     /* force clear of an overflow */
     do {
         timerValue = (int32_t)(*timerLow);
-    } while (timerValue < 0);
+    } while (timerValue <= 0);
 }
 
 

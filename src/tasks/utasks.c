@@ -31,8 +31,8 @@ void firstTask() {
     int id;
     id = Create(15, NameServer);
     id = Create(15, ClockServer);
-    id = Create(14, InputServer);
-    id = Create(14, OutputServer);
+    id = Create(13, InputServer);
+    id = Create(13, OutputServer);
     id = Create(13, TimerTask);
     id = Create(12, SensorServer);
     id = Create(10, Dispatcher);

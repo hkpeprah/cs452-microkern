@@ -9,7 +9,7 @@
 #include <ts7200.h>
 
 #define FIFO_SIZE       8
-#define UART_PRIORITY   15
+#define UART_PRIORITY   14
 
 DECLARE_CIRCULAR_BUFFER(char);
 

@@ -486,9 +486,13 @@ static int reserveTrack(Train_t *train, int resvDist) {
     track_node *resvArr[RESV_MOD] = {0};
     track_node **toResv = resvArr;
 
+    ASSERT(train != NULL, "Passed train variable was NULL");
+
+    Log("train->currentEdge = %x, train->currentEdge->dest = %x, train->path = %x\n",
+        train->currentEdge, train->currentEdge->dest, train->path);
+
     if (train->path != NULL) {
         /* train has a path, need to reserve along it */
-
         if (train->currentEdge->dest != train->path[0] && find_Resv(&(train->resv), train->path[0]) == -1) {
             // oh no! we're a bit lost! do a short path find to train->path[0]
             // if it still fails, give up and ask to be rerouted
@@ -523,10 +527,9 @@ static int reserveTrack(Train_t *train, int resvDist) {
                 return 1;
             }
         }
-
         toResv = train->path;
         numResv = train->pathNodeRem;
-
+        Log("reserveTrack: Path exists for train %u, toResv = %x, numResv = %d\n", train->id, toResv, numResv);
     } else {
 #if 0
         /* train does not have a path, find nodes to reserve */
@@ -557,9 +560,15 @@ static int reserveTrack(Train_t *train, int resvDist) {
 
         ASSERT(numResv < RESV_MOD, "reserveTrack: Train %u: Overshot number of nodes to reserve", train->id);
 #endif
-        toResv = &(train->currentEdge->dest);
+        if (train->currentEdge->dest != NULL) {
+            toResv = &(train->currentEdge->dest);
+        } else {
+            toResv = &(train->currentEdge->src);
+        }
         numResv = 1;
+        Log("reserveTrack: No path exists for train %u, toResv = %x, numResv = %d\n", train->id, toResv, numResv);
     }
+    Log("Train %u calling DispatchReserveTrackDist with toResv = %x, numResv = %d", toResv, numResv);
     numSuccessResv = DispatchReserveTrackDist(train->id, toResv, numResv, &resvDist);
 
     track_edge *lastResvEdge = NULL;
@@ -1412,8 +1421,10 @@ static void TrainTask() {
 
                     trainSpeed(train.id, GOTO_SPEED);
                     train.transition.stopping_distance = train.pathRemain;
-                    ASSERT((shortMvStop = CourierDelay(delayTime, DELAY_PRIORITY)) >= 0, "shortMvStop CourierDelay returned negative value %d!", shortMvStop);
-                    ASSERT((shortMvDone = CourierDelay(delayTime << 1, DELAY_PRIORITY)) >= 0, "shortMvDone CourierDelay returned negative value %d!", shortMvStop);
+                    ASSERT((shortMvStop = CourierDelay(delayTime, DELAY_PRIORITY)) >= 0,
+                           "shortMvStop CourierDelay returned negative value %d!", shortMvStop);
+                    ASSERT((shortMvDone = CourierDelay(delayTime << 1, DELAY_PRIORITY)) >= 0,
+                           "shortMvDone CourierDelay returned negative value %d!", shortMvStop);
                     //train.path = NULL;
                 } else {
                     Log(">>>>>>>>>>Exec NORMAL move at %d after %s", train.distSinceLastNode, train.currentEdge->src->name);
