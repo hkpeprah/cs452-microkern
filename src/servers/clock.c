@@ -9,6 +9,7 @@
 #include <server.h>
 #include <syscall_types.h>
 #include <util.h>
+#include <stdlib.h>
 
 #define TIMER_LOAD     0x80810080
 #define TIMER_VALUE    0x80810084
@@ -277,9 +278,8 @@ static void DelayCourier() {
         error ("DelayCourier: error recv from %d with status %d", callee, status); 
     }
 
-    Delay(ticks);
+    ASSERT((status = Delay(ticks)) >= 0, "Delay returned %d", status);
     Send(parent, NULL, 0, NULL, 0);
-    Exit();
 }
 
 

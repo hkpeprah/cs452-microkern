@@ -2,6 +2,7 @@
 #define __TRAIN_TASK_H__
 #include <track_node.h>
 
+
 // shared with conductor
 typedef enum {
     GOTO_COMPLETE = 28599,      // completed route

@@ -20,11 +20,14 @@ void initLogger() {
 
 void printLog(uint32_t start, uint32_t end) {
     char c;
+    int line = 0;
     while(start < MIN(end, *tail)) {
         c = logp[start++];
         bwputc(COM2, c);
         if (c == '\n') {
-            bwgetc(COM2);
+            if (++line % 10 == 0) {
+                bwgetc(COM2);
+            }
         }
     }
 }

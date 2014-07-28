@@ -31,7 +31,7 @@
     }
 #endif
 
-#define Log(msg, ...) Log("<%s:%d> - " msg, __FUNCTION__, __LINE__, ## __VA_ARGS__)
+#define Log(msg, ...) Log("<%s:%d> - " msg "\n", __FUNCTION__, __LINE__, ## __VA_ARGS__)
 
 #if DEBUG
     #define d(p) ( *((typeof(p)) pointer_check(p, __LINE__, __FILE__, __FUNCTION__)) )

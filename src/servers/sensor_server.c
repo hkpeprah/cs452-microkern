@@ -141,6 +141,7 @@ void SensorServer() {
                         bool tripped = false;
                         tid = -1;
                         if (sensors[i] && !lastPoll[i]) {
+                            Log("TRUE TRIP - %c%d", (i / TRAIN_SENSOR_COUNT) + 'A', (i % TRAIN_SENSOR_COUNT) + 1);
                             printSensor((i / TRAIN_SENSOR_COUNT) + 'A',     // sensor module index
                                         (i % TRAIN_SENSOR_COUNT) + 1);      // index in module
                             tid = sensorQueue[i].tid;

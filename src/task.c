@@ -21,7 +21,7 @@ static void findHighestTaskPriority();
 static void queueState(int priority);
 #endif
 
-static const char *STATES[] = {"READY", "ACTIVE", "ZOMBIE", "FREE", "SEND_BL", "RECV_BL", "REPLY_BL"
+static const char *STATES[] = {"READY", "ACTIVE", "ZOMBIE", "FREE", "SEND_BL", "RECV_BL", "REPLY_BL",
                                "EVENT_BL", "WAITTID_BL"};
 
 void initTasks() {
@@ -326,18 +326,31 @@ void setResult(Task_t *task, int result) {
     sp[2] = result;
 }
 
+static int getQueueSize(Task_t *task) {
+    int count = 0;
+    Envelope_t *env = task->inboxHead;
+
+    while (env) {
+        ++count;
+        if (env == task->inboxTail) {
+            break;
+        }
+        env = env->next;
+    }
+    return count;
+}
 
 void dumpTaskState() {
     int i;
     kputstr("\nPress ENTER (probably a bunch of times) to see task states\n");
     bwgetc(IO);
     kprintf(RESET_TERMINAL MOVE_CURSOR, 0, 0);
-    kprintf("\nTID" MOVE_TO_COL "PARENT" MOVE_TO_COL "PRIO" MOVE_TO_COL "STATE" MOVE_TO_COL "SP\n",
-                    8,                   16,                24,                 40);
+    kprintf("\nTID" MOVE_TO_COL "PARENT" MOVE_TO_COL "PRIO" MOVE_TO_COL "STATE" MOVE_TO_COL "SP" MOVE_TO_COL "Q-Size\n",
+                    8,                   16,                24,                 40,              50);
     for (i = 0; i < TASK_BANK_SIZE; ++i) {
         Task_t *task = &(__taskBank[i]);
-        kprintf("%d"        MOVE_TO_COL  "%d"             MOVE_TO_COL   "%d"            MOVE_TO_COL "%s"                 MOVE_TO_COL "0x%x\n",
-                task->tid,  8,           task->parentTid, 16,           task->priority, 24,         STATES[task->state], 40,          task->sp);
+        kprintf("%d"        MOVE_TO_COL  "%d"             MOVE_TO_COL   "%d"            MOVE_TO_COL "%s"                 MOVE_TO_COL "0x%x"     MOVE_TO_COL "%d\n",
+                task->tid,  8,           task->parentTid, 16,           task->priority, 24,         STATES[task->state], 40,          task->sp, 50,         getQueueSize(task));
         if (i % 16 == 0) {
             bwgetc(IO);
         }

@@ -205,12 +205,16 @@ void kernel_main() {
             break;
         }
 
+        // fatal error from our interrupt handler
+        if (args->code == SYS_INTERRUPT && result == -1) {
+            break;
+        }
+
         if (args->code != SYS_INTERRUPT && args->code != SYS_EXIT && args->code != SYS_PANIC) {
             setResult(task, result);
         }
     }
 
-#if DUMP_TASK_STATE
     dumpTaskState();
-#endif
+    dumpLog();
 }

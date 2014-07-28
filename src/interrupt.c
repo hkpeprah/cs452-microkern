@@ -110,7 +110,8 @@ int handleInterrupt() {
         type = CLOCK_INTERRUPT;
         task = interruptTable[CLOCK_INTERRUPT].blockedTask;
         if (!task) {
-            error("FATAL: missed clock tick");
+            kerror("FATAL: missed clock tick");
+            return -1;
         }
         *((uint32_t*)TIMER_CLEAR) = 0;
         result = 1;
