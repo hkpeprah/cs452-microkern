@@ -61,18 +61,18 @@ void Conductor() {
 
         int attemptsLeft;
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
-            Log("Routing attempts left: %d", attemptsLeft);
+            debug("Routing attempts left: %d", attemptsLeft);
 
             source = TrGetEdge(train);
             if (source == NULL) {
-                Log("Train %d reported NULL edge, readding...", train);
+                debug("Train %d reported NULL edge, readding...", train);
                 goto lost;
             } else if (source && (source->src == dest || source->reverse->src == dest)) {
                 /* we're already on our destination, so lets just stop */
                 goto done;
             }
 
-            Log("Routing from train edge %s -> %s to %s\n", (source ? source->src->name : "NULL"),
+            debug("Routing from train edge %s -> %s to %s\n", (source ? source->src->name : "NULL"),
                 (source ? source->dest->name : "NULL"), dest->name);
 
             node_count = 0;
@@ -82,10 +82,10 @@ void Conductor() {
                 continue;
             }
 
-            Log("Found path of length %d", node_count);
+            debug("Found path of length %d", node_count);
 
             if (path[0] != source->dest) {
-                Log("Conductor %d: initial path reversal for train %d", myTid, train);
+                debug("Conductor %d: initial path reversal for train %d", myTid, train);
                 while (TrDirection(train) < 0) {
                     TrSpeed(train, 0);
                     Delay(600); /* maximum possible time to wait for a train to finish moving */
@@ -98,9 +98,8 @@ void Conductor() {
 
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
-                Log("path node: %s", d(path[i]).name);
                 if (path[i] && path[i]->reverse == path[i + 1]) {
-                    Log("<><><><><>Exec PARTIAL route %s -> %s with result %d",
+                    debug("<><><><><>Exec PARTIAL route %s -> %s with result %d",
                             path[base]->name, path[i]->name, result);
                     result = TrGotoAfter(train, &(path[base]), (i - base + 1), RV_OFFSET);
 
@@ -128,49 +127,48 @@ void Conductor() {
                             goto reroute;
                         }
                     }
-                    Log("reversed train %d", tr_number);
+                    debug("reversed train %d", tr_number);
                     base = i + 1;
                 }
             }
 
-            Log("partial path loop, starting final loop. base: %d, i: %d", base, i);
             if (base != node_count) {
-                Log("<><><><><>Exec FINAL route %s -> %s ",
+                debug("<><><><><>Exec FINAL route %s -> %s ",
                         d(path[base]).name, d(path[node_count - 1]).name);
 
                 result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
                 switch (result) {
                     case GOTO_COMPLETE:
-                        Log("result = GOTO_COMPLETE");
                         source = TrGetEdge(train);
-                        Log("Train edge: %s", d(d(source).src).name);
+                        debug("GOTO_COMPLETE, Train edge: %s", d(d(source).src).name);
                         if (source->src == dest || source->src->reverse == dest) {
                             // success!
-                            Log("Success route!");
+                            debug("Success route!");
                             goto done;
                         } else {
                             // reroute
                             if (source->dest == dest || source->dest->reverse == dest) {
                                 // case 1: we are on right edge but just need to go a little bit more.
                                 // "nudge" it with a series of short moves
+                                debug("nudging...");
                                 int tries;
                                 for (tries = 5; tries > 0 && (source->src != dest && source->src->reverse != dest); --tries) {
                                     // TODO: this needs to be a raw distance goto, not path based
-                                    result = TrGotoAfter(train, &(dest), 1, 10 * tries);
+                                    result = TrGotoAfter(train, NULL, 0, 10 * tries);
                                     source = TrGetEdge(train);
                                 }
                                 if (source->src == dest || source->src->reverse == dest) {
-                                    Log("Success after nudging!");
+                                    debug("Success after nudging!");
                                     goto done;
                                 }
-                                Log("Nudging failed :'(");
+                                debug("Nudging failed :'(");
                             }
                         }
                     case GOTO_LOST:
-                        Log("result = GOTO_LOST");
+                        debug("result = GOTO_LOST");
                         goto lost;
                     case GOTO_REROUTE:
-                        Log("result = GOTO_REROUTE");
+                        debug("result = GOTO_REROUTE");
                         break;
                     case GOTO_NONE:
                         ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
