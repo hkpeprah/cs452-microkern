@@ -31,9 +31,17 @@
 #define RESV_DIST(req_dist)    ((req_dist * 9) >> 3)
 #define SENSOR_MISS_THRESHOLD  2
 
+typedef enum {
+    STOP = 9483,
+    CONST_SP,
+    ACCEL,
+    DECEL,
+    SHORT_MV
+} TrainState_t;
+
 
 typedef struct {
-    bool valid;
+    TrainState_t state;
     unsigned int start_speed : 8;
     unsigned int dest_speed : 8;
     unsigned int time_issued;
@@ -413,10 +421,10 @@ static void updateNextSensor(Train_t *train) {
         } else {
             edge = getNextEdge(node);
             if (edge == NULL) {
-                if ((train->transition.valid == true && train->transition.dest_speed != 0) ||
-                    (train->transition.valid == false && train->speed != 0)) {
+                if (train->transition.state == CONST_SP || train->transition.state == ACCEL) {
                     /* instead of reversing, just stop moving if we're reaching an end */
                     Log("Train %u: Reached exit node %s", train->id, d(node).name);
+                    setTrainSpeed(train, 0);
                 }
                 node = NULL;
             } else {
@@ -710,7 +718,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
     int tick = Time();
     track_edge *edge;
 
-    if (train->lastSensorTick >= 0 && !train->transition.valid && train->speed != 0) {
+    if (train->lastSensorTick >= 0 && train->transition.state == CONST_SP) {
         /* 80% of original speed, 20% of new */
         Log("current micro/tick: %d, distToNextSensor: %d, tick: %d, lastSensorTick: %d",
             train->microPerTick, train->distToNextSensor, tick, train->lastSensorTick);
@@ -766,7 +774,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
     // reserve additional track if necessary
     int toResvDist = -1;
 
-    if (train->speed != 0 || (train->transition.valid && (train->transition.dest_speed != 0))) {
+    if (train->transition.state == CONST_SP || train->transition.state == ACCEL) {
         // still moving (or will be moving)
         // Technically this should subtract distance between train and end of its edge..
         toResvDist = RESV_DIST(MAX(train->stoppingDist, train->distToNextSensor));
@@ -774,7 +782,7 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
         Log("\n\nComputing resv dist: stopping dist %d, edge dist %d, distToNextSensor %d, toResvDist %d",
                 train->stoppingDist, train->currentEdge->dist, train->distToNextSensor, toResvDist);
 
-    } else if (train->transition.valid && train->transition.stopping_distance > d(train->currentEdge).dist) {
+    } else if (train->transition.state == DECEL && train->transition.stopping_distance > d(train->currentEdge).dist) {
         // stopping but has enough stop distance to move over current edge
         // toResvDist = train->transition.stopping_distance - train->currentEdge->dist;
         toResvDist = train->transition.stopping_distance;
@@ -854,7 +862,7 @@ static void updateLocation(Train_t *train) {
     numTraverse = 0;
     ticks = Time();
 
-    if (train->transition.valid) {
+    if (train->transition.state == ACCEL || train->transition.state == DECEL) {
         uint32_t start_speed = train->transition.start_speed;
         uint32_t stop_speed = train->transition.dest_speed;
         /* compute the time spent transition so far */
@@ -868,13 +876,14 @@ static void updateLocation(Train_t *train) {
         }
         /* detect if we've stopped our transition acceleration/deceleration state */
         if (timeTransition >= getTransitionTicks(train->id, start_speed, stop_speed)) {
-            train->transition.valid = false;
             train->microPerTick = getTrainVelocity(train->id, stop_speed);
             train->speed = stop_speed;
             traveledDist = train->transition.stopping_distance;
             if (stop_speed == 0) {
                 fullStop = true;
             }
+
+            train->transition.state = (train->speed > 0 ? CONST_SP : STOP);
         }
     } else {
         traveledDist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
@@ -899,7 +908,7 @@ static void updateLocation(Train_t *train) {
 
     // out of resv distance and still moving
     if (train->resv.extraResvDist < 0
-         && (train->speed != 0 || (train->transition.valid && train->transition.dest_speed != 0))) {
+         && (train->transition.state == CONST_SP || train->transition.state == ACCEL)) {
 
         track_node *lastResv = peek_back_resv(&(train->resv));
 
@@ -1030,12 +1039,18 @@ static void setTrainSpeed(Train_t *train, int speed) {
     char buf[2];
     notice("Train speed %d -> %d, train at %d past %s", train->speed, speed, train->distSinceLastNode, d(d(train->currentEdge).src).name);
 
-    updateNextSensor(train);
+    //updateNextSensor(train);
 
     if (speed != train->speed) {
         int tick = Time();
         train->stoppingDist = getStoppingDistance(train->id, train->speed, speed);
-        train->transition.valid = true;
+
+        if (train->speed > speed) {
+            train->transition.state = DECEL;
+        } else if (train->speed < speed) {
+            train->transition.state = ACCEL;
+        }
+
         train->transition.start_speed = train->speed;
         train->transition.dest_speed = speed;
         train->transition.time_issued = tick;
@@ -1058,7 +1073,7 @@ static void setTrainSpeed(Train_t *train, int speed) {
 }
 
 static int trainDir(Train_t *train) {
-    if (train->speed != 0 || train->transition.valid) {
+    if (train->speed != 0 || train->transition.state != STOP) {
         error("Train %u: Cannot reverse while moving, ticks: %u, called by: %u",
                 train->id, Time());
         return -1;
@@ -1158,7 +1173,7 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     train->resv.extraResvDist = 0;
 
     /* initialize transition */
-    train->transition.valid = false;
+    train->transition.state = STOP;
     train->transition.start_speed = 0;
     train->transition.dest_speed = 0;
     train->transition.time_issued = 0;
@@ -1316,6 +1331,7 @@ static void TrainTask() {
             Destroy(callee);
             debug("===shortMvStop tid {%d} at %d=== stopping %d", callee, train.lastUpdateTick, train.id);
             trainSpeed(train.id, 0);
+            //setTrainSpeed(&train, 0);
             continue;
         } else if (callee == shortMvDone) {
             shortMvDone = -1;
@@ -1372,7 +1388,7 @@ static void TrainTask() {
                 }
             }
 
-            if (train.speed == 0 && gotoBlocked != -1 && !train.transition.valid && shortMvDone == -1) {
+            if (train.speed == 0 && gotoBlocked != -1 && train.transition.state == STOP && shortMvDone == -1) {
                 // Done pathing
                 if (train.distSinceLastNode > train.currentEdge->dist) {
                     train.gotoResult = GOTO_LOST;
@@ -1496,6 +1512,7 @@ static void TrainTask() {
                            time, train.id, delayTime, train.pathNodeRem, train.pathRemain);
 
                     trainSpeed(train.id, GOTO_SPEED);
+                    //setTrainSpeed(&train, GOTO_SPEED);
                     train.transition.stopping_distance = train.pathRemain;
 
                     ASSERT((shortMvStop = CourierDelay(delayTime, DELAY_PRIORITY)) >= 0,
@@ -1519,6 +1536,8 @@ static void TrainTask() {
                     status = 1;
                     Reply(callee, &status, sizeof(status));
                 }
+
+                updateNextSensor(&train);
 
                 if (speed == 0) {
                     setTrainSpeed(&train, speed);
@@ -1573,7 +1592,7 @@ static void TrainTask() {
                     gotoBlocked = -1;
                 }
 
-                if (train.speed == 0 && gotoBlocked != -1 && (train.transition.valid == false) && shortMvDone == -1) {
+                if (train.speed == 0 && gotoBlocked != -1 && train.transition.state == STOP && shortMvDone == -1) {
                     if (train.distSinceLastNode > train.currentEdge->dist) {
                         train.gotoResult = GOTO_LOST;
                     }
