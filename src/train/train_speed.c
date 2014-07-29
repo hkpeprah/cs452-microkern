@@ -131,7 +131,7 @@ int shortmoves(unsigned int tr, unsigned int speed, int dist) {
         case 49:
             return compute_shortmove(dist, 31, -7, 654, 58);
         case 45:
-            return compute_shortmove(dist, 34, -8, 734, 49);
+            return compute_shortmove(dist, 18, -5, 583, 84);
         case 47:
             return compute_shortmove(dist, 35, -8, 760, 60);
         case 53:
