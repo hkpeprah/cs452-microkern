@@ -135,7 +135,7 @@ void Shell() {
             }
 
             newline();
-            if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0 || sscanf(buf, "q %d", &exit_status)) {
+            if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0 || sscanf(buf, "q %d", &exit_status) != -1) {
                 /* quit the terminal and stop the kernel */
                 newline();
                 break;

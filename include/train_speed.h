@@ -2,7 +2,7 @@
 #define __TRAIN_SPEED_H__
 #include <types.h>
 
-#define TRAIN_COUNT         9
+#define TRAIN_COUNT         11
 
 void initTrainSpeeds();
 void getTrainIds(int *train_ids);

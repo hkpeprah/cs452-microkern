@@ -45,7 +45,7 @@ void TrainDemo() {
     int sensor, distance;
     while (true) {
         char ch;
-        puts("Press q to quit, or any other key to continue:");
+        puts("Press q to quit, or any other key to continue: ");
         printf("%c\r\n", ((ch = getchar()) == 'q' ? 'q' : ' '));
         if (ch == 'q') {
             break;

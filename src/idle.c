@@ -41,6 +41,10 @@ void enableIdleTimer() {
     int timerValue;
     timerHigh = (uint32_t*)TIMER4VALUEHIGH;
     timerLow = (uint32_t*)TIMER4VALUELOW;
+    /* this attacks the situation where the exiting user doesn't
+       clear the enable bit, and instead forces a clear and read
+       of the previous values */
+    disableIdleTimer();
     *((int32_t*)TIMER4ENABLE) = 0x100; /* set the enable bit (8th bit) to 1 */
     do {
         /* force clear of an overflow, this is a hacky solution
@@ -53,8 +57,8 @@ void enableIdleTimer() {
     } while (timerValue <= 0);
 
     /* set initial values for the global counters */
-    idle = *timerLow;
-    count = *timerLow;
+    idle = 0;
+    count = 1;
 }
 
 

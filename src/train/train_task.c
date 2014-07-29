@@ -15,21 +15,17 @@
 #include <dispatcher.h>
 #include <logger.h>
 
-#define GOTO_SPEED             10
-#define STOP_BUFFER_MM         15
-#define RESV_BUF_BITS          4
-/*
-#define PICKUP_FRONT           170
-#define PICKUP_BACK            50
-*/
-#define DEAD_SENSOR_BUFFER     150  // 150 mm before we skip over a sensor without tripping it
-#define PICKUP_FRONT           0
-#define PICKUP_BACK            0
-#define DELAY_PRIORITY         8
-
-#define RESV_MOD               ((1 << RESV_BUF_BITS) - 1)
-#define RESV_DIST(req_dist)    ((req_dist * 9) >> 3)
-#define SENSOR_MISS_THRESHOLD  2
+#define GOTO_SPEED              10
+#define STOP_BUFFER_MM          15
+#define RESV_BUF_BITS           4
+#define PICKUP_FRONT            50
+#define PICKUP_BACK             70
+#define DEAD_SENSOR_BUFFER      150  // 150 mm before we skip over a sensor without tripping it
+#define DELAY_PRIORITY          8
+#define RESV_MOD                ((1 << RESV_BUF_BITS) - 1)
+#define RESV_BUFFER             200
+#define RESV_DIST(req_dist)     ((req_dist * 9) >> 3)
+#define SENSOR_MISS_THRESHOLD   2
 
 typedef enum {
     STOP = 9483,
@@ -240,8 +236,12 @@ track_node *TrGetLocation(unsigned int tid, unsigned int *distance) {
 
 track_edge *TrGetEdge(unsigned int tid) {
     TrainMessage_t msg = {.type = TRM_GET_EDGE};
+    int status;
 
-    Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    status = Send(tid, &msg, sizeof(msg), &msg, sizeof(msg));
+    if (status < 0) {
+        error("TrGetEdge: Got %d in send to train with tid %d", status, tid);
+    }
     return (track_edge*)msg.arg0;
 }
 
@@ -1026,7 +1026,8 @@ static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSen
             train->distSinceLastNode, (train->currentEdge && train->currentEdge->src ? train->currentEdge->src->name : "NULL"),
             train->nextSensor->name, train->distToNextSensor, train->microPerTick, timeout, *timeoutCourier);
     } else {
-        Log("train %d failed to wait on %s (resv by %d)", train->id, (train->nextSensor ? train->nextSensor->name : "NULL"), (train->nextSensor ? train->nextSensor->reservedBy : -1));
+        Log("train %d failed to wait on %s (resv by %d)", train->id,
+            (train->nextSensor ? train->nextSensor->name : "NULL"), (train->nextSensor ? train->nextSensor->reservedBy : -1));
     }
 
     if (train->nextSensor && train->nextSensor->reservedBy != train->id) {
@@ -1209,7 +1210,7 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
     ASSERT(numSuccessResv, "Train initial sensor reservation failed");
     push_back_resv(&(train->resv), train->currentEdge->src);
 
-    if (train->currentEdge->dist < 200 + train->distSinceLastNode) {
+    if (train->currentEdge->dist < RESV_BUFFER + train->distSinceLastNode) {
         numSuccessResv = DispatchReserveTrack(train->id, &(train->currentEdge->dest), 1);
         ASSERT(numSuccessResv, "Train initial sensor reservation failed");
         push_back_resv(&(train->resv), train->currentEdge->dest);
@@ -1224,18 +1225,15 @@ static void TrainReverseCourier() {
     Receive(&callee, &request, sizeof(request));
     status = 0;
     if (callee == MyParentTid()) {
-        //debug("ReverseCourier: Stopping train tid %u with starting speed %u", callee, request.arg0);
         Reply(callee, &status, sizeof(status));
         message.type = TRM_SPEED;
         message.arg0 = 0;
         Send(callee, &message, sizeof(message), &status, sizeof(status));
         /* adjust by five(5) to compensate for the clock edge */
         Delay(getTransitionTicks(request.tr, request.arg0, 0) + STOP_BUFFER_MM);
-        //debug("ReverseCourier: Reversing train tid %u, called at time %u", callee, Time());
         message.type = TRM_DIR;
         Send(callee, &message, sizeof(message), &status, sizeof(status));
         Delay(20);
-        //debug("ReverseCourier: Sending to speed up train tid %u to %u", callee, request.arg0);
         message.type = TRM_SPEED;
         message.arg0 = request.arg0;
         Send(callee, &message, sizeof(message), &status, sizeof(status));
@@ -1378,14 +1376,16 @@ static void TrainTask() {
                 }
             }
 
-            if (train.gotoResult == GOTO_LOST) {
+            if (train.gotoResult == GOTO_LOST && gotoBlocked != -1) {
                 // Totally lost
                 Log("Train %u: Lost!!!!!! shit shit shit", train.id);
-                setTrainSpeed(&train, 0);
-                if (gotoBlocked != -1) {
-                    Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
-                    gotoBlocked = -1;
-                }
+                //setTrainSpeed(&train, 0);
+                //if (gotoBlocked != -1) {
+                //Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
+                // gotoBlocked = -1;
+                //}
+                Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
+                gotoBlocked = -1;
             }
 
             if (train.speed == 0 && gotoBlocked != -1 && train.transition.state == STOP && shortMvDone == -1) {
@@ -1562,6 +1562,8 @@ static void TrainTask() {
             case TRM_AUX:
                 if (request.arg0 == TRAIN_LIGHT_OFFSET && train.aux == TRAIN_LIGHT_OFFSET) {
                     train.aux = 0;
+                } else if (request.arg0 == TRAIN_HORN_OFFSET && train.aux == TRAIN_HORN_OFFSET) {
+                    train.aux = TRAIN_HORN_OFF;
                 } else {
                     train.aux = request.arg0;
                 }
@@ -1585,23 +1587,6 @@ static void TrainTask() {
                 break;
             case TRM_GET_LOCATION:
                 updateLocation(&train);
-                if (gotoBlocked != -1 && train.gotoResult == GOTO_LOST) {
-                    // totally lost? ask for help!
-                    Log("Train %u: Lost!!!!!! shit shit shit", train.id);
-                    Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
-                    gotoBlocked = -1;
-                }
-
-                if (train.speed == 0 && gotoBlocked != -1 && train.transition.state == STOP && shortMvDone == -1) {
-                    if (train.distSinceLastNode > train.currentEdge->dist) {
-                        train.gotoResult = GOTO_LOST;
-                    }
-                    Log("Train %u: Finished pathing, replying to conductor (%d) with result %d",
-                        train.id, gotoBlocked, train.gotoResult);
-                    Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
-                    gotoBlocked = -1;
-                }
-
                 request.arg0 = (int)train.currentEdge->src;
                 request.arg1 = train.distSinceLastNode;
                 Reply(callee, &request, sizeof(request));

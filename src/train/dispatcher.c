@@ -13,6 +13,7 @@
 #include <random.h>
 #include <util.h>
 
+#define TRAIN_PRIORITY       6
 #define MAX_NUM_OF_TRAINS    NUM_OF_TRAINS
 
 DECLARE_CIRCULAR_BUFFER(int);
@@ -31,7 +32,6 @@ typedef enum {
     TRM_CREATE_TRAIN,
     TRM_REMOVE_TRAIN,
     TRM_MOVE,
-    TRM_REMOVE,
     TRM_GET
 } DispatcherMessageType;
 
@@ -160,7 +160,7 @@ static void TrainCreateCourier() {
         sensor = findSensorForTrain(req.tr);
     }
 
-    if ((tid = TrCreate(6, req.tr, DispatchGetTrackNode(sensor))) >= 0) {
+    if ((tid = TrCreate(TRAIN_PRIORITY, req.tr, DispatchGetTrackNode(sensor))) >= 0) {
         debug("TrainCreateCourier: Creating Train %u with Tid %d", req.tr, tid);
         req.type = TRM_CREATE_TRAIN;
         req.arg0 = tid;
@@ -172,7 +172,8 @@ static void TrainCreateCourier() {
             TrAuxiliary(tid, 16);
             if ((waiting = req.arg1) >= 0) {
                 /* respond to the waiter with the Tid */
-                debug("Reply returned: %d", Reply(waiting, &tid, sizeof(tid)));
+                debug("TrainCreateCourier: Replying to wait train with Tid %d", waiting);
+                Reply(waiting, &tid, sizeof(tid));
             }
         }
     } else {
@@ -230,11 +231,10 @@ static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *nod
         if (trains[i].train == node->train) {
             /* create the message to send to deletion courier */
             tid = Create(10, TrainDeleteCourier);
-            req.type = TRM_REMOVE;
+            req.type = TRM_REMOVE_TRAIN;
             req.tr = trains[i].tr_number;
             req.arg0 = trains[i].train;
-            req.arg1 = i;
-            req.arg2 = (int)keepConductor;
+            req.arg1 = (int)keepConductor;
             /* send off the message */
             Send(tid, &req, sizeof(req), NULL, 0);
             break;
@@ -348,9 +348,12 @@ void Dispatcher() {
                     error("Dispatcher: Called to re-add a train that was never added: Callee Tid %d", callee);
                     break;
                 }
-                removeDispatcherNode(trains, node, true);
                 nextTrain = request.tr;
         readd:
+                node->train = -1;
+                node->conductor = -1;
+                node->tr_number = -1;
+                num_of_trains--;
                 if (CreateCourier != -1 && nextTrain == waitingTrain) {
                     Destroy(CreateCourier);
                     CreateCourier = -1;
@@ -373,7 +376,7 @@ void Dispatcher() {
             case TRM_REMOVE_TRAIN:
                 status = 0;
                 notice("Dispatcher: Removing train %d with Tid %d", node->tr_number, node->train);
-                if (request.arg2 == false && node->conductor != -1) {
+                if (request.arg1 == false && node->conductor != -1) {
                     /* specifies whether or not to remove the conductor */
                     Destroy(node->conductor);
                 }
@@ -404,6 +407,7 @@ void Dispatcher() {
                     Reply(callee, &status, sizeof(status));
                     read_int(&addQueue, &nextTrain, 1);
                     read_int(&addQueue, &callee, 1);
+                    node = getDispatcherNode(trains, nextTrain);
                     goto readd;
                 } else {
                     debug("Dispatcher: Nothing waiting, replying to callee %d", callee);

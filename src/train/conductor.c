@@ -1,4 +1,3 @@
-
 #include <conductor.h>
 #include <syscall.h>
 #include <train.h>
@@ -12,9 +11,7 @@
 #include <random.h>
 #include <clock.h>
 
-//#define RV_OFFSET 300       // how many MM to go past a target for the purpose of reversing
 #define RV_OFFSET 200       // how many MM to go past a target for the purpose of reversing
-
 
 typedef struct {
     int type;
@@ -65,7 +62,7 @@ void Conductor() {
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
             source = TrGetEdge(train);
             if (source == NULL) {
-                debug("Train %d reported NULL edge, readding...", train);
+                debug("Train %d (Tid %d) reported NULL edge, readding...", tr_number, train);
                 goto lost;
             } else if (source && (source->src == dest || source->reverse->src == dest)) {
                 /* we're already on our destination, so lets just stop */
@@ -83,7 +80,7 @@ void Conductor() {
             }
 
             if (path[0] != source->dest) {
-                debug("Conductor %d: initial path reversal for train %d", myTid, train);
+                debug("Conductor (Tid %d): initial path reversal for train %d", myTid, train);
                 while (TrDirection(train) < 0) {
                     TrSpeed(train, 0);
                     Delay(600); /* maximum possible time to wait for a train to finish moving */
@@ -161,9 +158,10 @@ reroute:
             continue;
 lost:
             /* we're lost, so let's re-add the train */
-            debug("Train %d is lost, re-adding", tr_number);
+            debug("Conductor (Tid %d): Train %d is lost, re-adding", myTid, tr_number);
+            TrDelete(train);
             train = DispatchReAddTrain(tr_number);
-            debug("Conductor: Train %d has new Tid %d", tr_number, train);
+            debug("Conductor (Tid %d): Train %d has new Tid %d", myTid, tr_number, train);
             Delay(200);
         }
     } else {
