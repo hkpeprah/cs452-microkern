@@ -86,7 +86,7 @@ void NorthKorea() {
     Destroy(child3);
     Destroy(child4);
     while (getchar() != 'q');
-    SigTerm();
+    SigTerm(0);
 }
 
 void Jesus() {

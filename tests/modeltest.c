@@ -57,7 +57,7 @@ void go() {
             case 'q':
                 turnOffTrainSet();
                 Delay(10);
-                SigTerm();
+                SigTerm(0);
                 Exit();
                 break;
             default:

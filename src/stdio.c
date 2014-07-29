@@ -370,7 +370,7 @@ int format(const char *fmt, va_list va, char *buffer) {
 
 
 void printformatted(int channel, char *fmt, va_list va) {
-    char buffer[256];
+    char buffer[VARG_BUF_LEN];
     unsigned int len;
 
     len = format(fmt, va, buffer);
@@ -380,7 +380,7 @@ void printformatted(int channel, char *fmt, va_list va) {
 
 void bufprintf(int channel, char *fmt, ...) {
     int len;
-    char buffer[256];
+    char buffer[VARG_BUF_LEN];
     va_list va;
 
     va_start(va, fmt);

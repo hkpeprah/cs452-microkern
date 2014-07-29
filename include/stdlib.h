@@ -14,6 +14,8 @@
 #define MIN(x, y)                ((x) < (y) ? (x) : (y))
 #define MAX(x, y)                ((x) > (y) ? (x) : (y))
 #define EXTRACT_BIT(n, k)        (((n) & (1 << (k))) >> (k))
+#define NOOP                     ((void)0)
+#define NOOP_PTR(ptr)            ((void)*ptr)
 #ifdef NOASSERTS
 #define ASSERT(...)
 #define KASSERT(...)

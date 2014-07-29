@@ -2,11 +2,16 @@
 #include <types.h>
 #include <clock.h>
 #include <term.h>
+#include <stdlib.h>
 
-static volatile unsigned int idle = 0;
-static volatile unsigned int count = 0;
-static volatile uint32_t *timerHigh = (uint32_t*)0x80810064;
-static volatile uint32_t *timerLow = (uint32_t*)0x80810060;
+#define TIMER4VALUELOW    0x80810060
+#define TIMER4VALUEHIGH   0x80810064
+#define TIMER4ENABLE      TIMER4VALUEHIGH
+
+static volatile unsigned int idle;
+static volatile unsigned int count;
+static volatile uint32_t *timerHigh;
+static volatile uint32_t *timerLow;
 
 
 void cpu_idle(bool isIdle) {
@@ -34,19 +39,22 @@ int getIdleTime() {
 
 void enableIdleTimer() {
     int timerValue;
-
-    *timerHigh = 0x100;
-    idle = 0;
-    count = 1;
-
-    /* clear the lower of the 40 bit timer */
-    (void)*timerLow;
-    (void)*timerHigh;
-
-    /* force clear of an overflow */
+    timerHigh = (uint32_t*)TIMER4VALUEHIGH;
+    timerLow = (uint32_t*)TIMER4VALUELOW;
+    *((int32_t*)TIMER4ENABLE) = 0x100; /* set the enable bit (8th bit) to 1 */
     do {
+        /* force clear of an overflow, this is a hacky solution
+           to the situation where users are not leaving Timer4
+           in a reset state when they exit, but instead are
+           overflowing it */
+        NOOP_PTR(timerLow);
+        NOOP_PTR(timerHigh);
         timerValue = (int32_t)(*timerLow);
     } while (timerValue <= 0);
+
+    /* set initial values for the global counters */
+    idle = *timerLow;
+    count = *timerLow;
 }
 
 

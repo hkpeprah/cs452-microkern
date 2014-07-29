@@ -40,7 +40,7 @@ void initDebug() {
 
 #if DEBUG
 static void debugformatted(char *fmt, va_list va) {
-    char buffer[256] = {0};
+    char buffer[VARG_BUF_LEN] = {0};
     strcpy(buffer, SAVE_CURSOR "\033[0;");
     uitoa(BOTTOM_HALF - 1, 10, &buffer[strlen(buffer)]);
     strcat(buffer, "r" "\033[");
@@ -70,7 +70,7 @@ void debug(char *fmt, ...) {
 
 void debugc(char *fmt, unsigned int color, ...) {
     #if DEBUG
-        char buffer[100] = {0};
+        char buffer[VARG_BUF_LEN] = {0};
         va_list va;
         va_start(va, color);
 

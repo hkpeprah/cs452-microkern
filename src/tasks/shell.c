@@ -78,11 +78,11 @@ static void whoami() {
 void Shell() {
     int args[6];
     char ch, buf[80];
-    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
     HashTable commands;
-    int command, status, i, tid, cmd;
-    unsigned int TrainController, totalCommands;
     ControllerMessage_t tr;
+    unsigned int TrainController, totalCommands;
+    int command, status, i, tid, cmd, exit_status;
+    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
 
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors + NUM_TRAIN_CMD_COMMANDS);
@@ -110,6 +110,7 @@ void Shell() {
     i = 0;
     totalCommands = 1;
     tr.args = args;
+    exit_status = 0;
     TrainController = WhoIs(USER_TRAIN_DISPATCH);
     notice("Shell: Tid %d, User's Controller: %u", MyTid(), TrainController);
     printf(PROMPT, totalCommands, getUsername());
@@ -134,7 +135,7 @@ void Shell() {
             }
 
             newline();
-            if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
+            if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0 || sscanf(buf, "q %d", &exit_status)) {
                 /* quit the terminal and stop the kernel */
                 newline();
                 break;
@@ -224,6 +225,6 @@ void Shell() {
         }
         save_cursor();
     }
-    SigTerm();
+    SigTerm(exit_status);
     Exit();
 }

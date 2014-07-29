@@ -138,9 +138,10 @@ int CpuIdle() {
 }
 
 
-void SigTerm() {
+void SigTerm(int status) {
     Args_t args;
     args.code = SYS_SIGTERM;
+    args.a0 = status;
     swi_call(0, &args);
 }
 

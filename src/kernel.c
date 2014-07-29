@@ -19,9 +19,6 @@
 #define SWI_HANDLER_ADDR   0x28
 #define FOREVER            while(1)
 
-#define MAX_IS_AWESOME
-
-
 extern int swi_handler();
 extern int swi_exit(int sp, void** tf);
 
@@ -178,6 +175,7 @@ void kernel_main() {
     status = sys_create(0, NullTask, &nullTaskTid);
     KASSERT(status >= 0 && nullTaskTid >= 0, "Kernel failed to create NullTask");
     cpu_idle(false);
+    status = 0;
 
     FOREVER {
         task = schedule();
@@ -203,7 +201,11 @@ void kernel_main() {
         cpu_idle(false);
         result = handleRequest(args);
 
-        if (args->code == SYS_SIGTERM || args->code == SYS_PANIC) {
+        if (args->code == SYS_SIGTERM) {
+            status = args->a0;
+            break;
+        } else if (args->code == SYS_PANIC) {
+            status = 1;
             break;
         }
 
@@ -217,8 +219,9 @@ void kernel_main() {
         }
     }
 
-#ifdef MAX_IS_AWESOME
-    dumpTaskState();
-    dumpLog();
-#endif
+    if (status > 0) {
+        /* exited with an error state */
+        dumpTaskState();
+        dumpLog();
+    }
 }

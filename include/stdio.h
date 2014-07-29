@@ -3,13 +3,13 @@
 #include <types.h>
 #include <ts7200.h>
 #include <vargs.h>
-#define BUF_LEN      80
-#define IO           COM2
-#define BS           9
-#define LF           10
-#define CR           13
-#define EOF          -1  /* EOF is commonly -1 */
-
+#define BUF_LEN         80
+#define VARG_BUF_LEN    256
+#define IO              COM2
+#define BS              9
+#define LF              10
+#define CR              13
+#define EOF             -1  /* EOF is commonly -1 */
 
 typedef struct {
     uint32_t oFlags;

@@ -16,7 +16,7 @@ int WaitTid(unsigned int);
 int Logn(const char *str, int n);
 int Log(const char *fmt, ...);
 int CpuIdle();
-void SigTerm();
+void SigTerm(int status);
 void Panic(char *, ...);
 void Assert(char *assert_msg, uint32_t line, char *file, const char *func, char *msg, ...);
 

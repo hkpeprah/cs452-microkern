@@ -97,7 +97,7 @@ void SpeedTest() {
  exit:
     turnOffTrainSet();
     Delay(10);
-    SigTerm();
+    SigTerm(0);
     Exit();
 }
 
