@@ -12,7 +12,9 @@
 #include <random.h>
 #include <clock.h>
 
-#define RV_OFFSET 300       // how many MM to go past a target for the purpose of reversing
+//#define RV_OFFSET 300       // how many MM to go past a target for the purpose of reversing
+#define RV_OFFSET 200       // how many MM to go past a target for the purpose of reversing
+
 
 typedef struct {
     int type;
@@ -145,24 +147,6 @@ void Conductor() {
                             // success!
                             debug("Success route!");
                             goto done;
-                        } else {
-                            // reroute
-                            if (source->dest == dest || source->dest->reverse == dest) {
-                                // case 1: we are on right edge but just need to go a little bit more.
-                                // "nudge" it with a series of short moves
-                                debug("nudging...");
-                                int tries;
-                                for (tries = 5; tries > 0 && (source->src != dest && source->src->reverse != dest); --tries) {
-                                    // TODO: this needs to be a raw distance goto, not path based
-                                    result = TrGotoAfter(train, NULL, 0, 10 * tries);
-                                    source = TrGetEdge(train);
-                                }
-                                if (source->src == dest || source->src->reverse == dest) {
-                                    debug("Success after nudging!");
-                                    goto done;
-                                }
-                                debug("Nudging failed :'(");
-                            }
                         }
                     case GOTO_LOST:
                         debug("result = GOTO_LOST");
