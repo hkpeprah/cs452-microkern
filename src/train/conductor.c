@@ -63,8 +63,6 @@ void Conductor() {
 
         int attemptsLeft;
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
-            debug("Routing attempts left: %d", attemptsLeft);
-
             source = TrGetEdge(train);
             if (source == NULL) {
                 debug("Train %d reported NULL edge, readding...", train);
@@ -74,8 +72,8 @@ void Conductor() {
                 goto done;
             }
 
-            debug("Routing from train edge %s -> %s to %s\n", (source ? source->src->name : "NULL"),
-                (source ? source->dest->name : "NULL"), dest->name);
+            debug("%d attempts left, routing from train edge %s -> %s to %s\n", attemptsLeft,
+                (source ? source->src->name : "NULL"), (source ? source->dest->name : "NULL"), dest->name);
 
             node_count = 0;
             if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) < 0) {
@@ -83,8 +81,6 @@ void Conductor() {
                 Delay(random_range(100, 500));
                 continue;
             }
-
-            debug("Found path of length %d", node_count);
 
             if (path[0] != source->dest) {
                 debug("Conductor %d: initial path reversal for train %d", myTid, train);
@@ -101,8 +97,7 @@ void Conductor() {
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
                 if (path[i] && path[i]->reverse == path[i + 1]) {
-                    debug("<><><><><>Exec PARTIAL route %s -> %s with result %d",
-                            path[base]->name, path[i]->name, result);
+                    notice("%d Exec PARTIAL route %s -> %s", tr_number, path[base]->name, path[i]->name);
                     result = TrGotoAfter(train, &(path[base]), (i - base + 1), RV_OFFSET);
 
                     switch (result) {
@@ -135,8 +130,7 @@ void Conductor() {
             }
 
             if (base != node_count) {
-                debug("<><><><><>Exec FINAL route %s -> %s ",
-                        d(path[base]).name, d(path[node_count - 1]).name);
+                notice("Exec FINAL route %s -> %s", d(path[base]).name, d(path[node_count - 1]).name);
 
                 result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
                 switch (result) {
@@ -149,10 +143,8 @@ void Conductor() {
                             goto done;
                         }
                     case GOTO_LOST:
-                        debug("result = GOTO_LOST");
                         goto lost;
                     case GOTO_REROUTE:
-                        debug("result = GOTO_REROUTE");
                         break;
                     case GOTO_NONE:
                         ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",

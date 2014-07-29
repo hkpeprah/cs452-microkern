@@ -302,8 +302,6 @@ void Dispatcher() {
             continue;
         }
 
-        debug("dispatcher recv msg from %d with type %d with tr %d", callee, request.type, request.tr);
-
         if ((node = getDispatcherNode(trains, request.tr)) && node->conductor != -1) {
             status = TRAIN_BUSY;
         }

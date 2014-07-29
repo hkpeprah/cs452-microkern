@@ -862,13 +862,12 @@ static void updateLocation(Train_t *train) {
         int32_t srtmove = shortmoves_dist(train->id, stop_speed, timeTransition);
         /* adjust the traveled distance based on the previously travelled distance */
         if (timeTransition >= 20) {
-            // traveledDist = MAX(0, srtmove - train->transition.shortmove);
+            traveledDist = MAX(0, srtmove - train->transition.shortmove);
             train->microPerTick = (srtmove * 1000) / timeTransition;
             train->transition.shortmove = srtmove + traveledDist;
         }
         /* detect if we've stopped our transition acceleration/deceleration state */
         if (timeTransition >= getTransitionTicks(train->id, start_speed, stop_speed)) {
-            debug("Train %u: Transition finished at time %u", train->id, ticks);
             train->transition.valid = false;
             train->microPerTick = getTrainVelocity(train->id, stop_speed);
             train->speed = stop_speed;
@@ -890,7 +889,7 @@ static void updateLocation(Train_t *train) {
         distTraverse(train, false);
         if (train->path && train->pathNodeRem > 0) {
             train->pathRemain -= traveledDist;
-            debug("path dist: %d, resvDist: %d", train->pathRemain, train->resv.extraResvDist);
+            //debug("path dist: %d, resvDist: %d", train->pathRemain, train->resv.extraResvDist);
         }
     }
 
@@ -1066,14 +1065,20 @@ static int trainDir(Train_t *train) {
     }
 
     ASSERT(train->currentEdge, "Current edge is NULL pre-rev");
+    /*
     ASSERT(train->currentEdge->dist >= train->distSinceLastNode,
            "currentEdge->dist %d less than distSinceLastNode %d", train->currentEdge->dist, train->distSinceLastNode);
+    */
+
+    if (train->currentEdge->dist < train->distSinceLastNode) {
+        error("WARNING: currentEdge->dist %d less than distSinceLastNode %d", train->currentEdge->dist, train->distSinceLastNode);
+    }
 
     Log("Rev: initial %d from %s", train->distSinceLastNode, train->currentEdge->src->name);
 
     /* recompute distances from sensors and nodes */
     train->currentEdge = train->currentEdge->reverse;
-    train->distSinceLastNode = train->currentEdge->dist - train->distSinceLastNode;
+    train->distSinceLastNode = MAX(0, train->currentEdge->dist - train->distSinceLastNode);
 
     ASSERT(train->currentEdge, "Current edge is NULL post-rev");
 
@@ -1204,18 +1209,18 @@ static void TrainReverseCourier() {
     Receive(&callee, &request, sizeof(request));
     status = 0;
     if (callee == MyParentTid()) {
-        debug("ReverseCourier: Stopping train tid %u with starting speed %u", callee, request.arg0);
+        //debug("ReverseCourier: Stopping train tid %u with starting speed %u", callee, request.arg0);
         Reply(callee, &status, sizeof(status));
         message.type = TRM_SPEED;
         message.arg0 = 0;
         Send(callee, &message, sizeof(message), &status, sizeof(status));
         /* adjust by five(5) to compensate for the clock edge */
         Delay(getTransitionTicks(request.tr, request.arg0, 0) + STOP_BUFFER_MM);
-        debug("ReverseCourier: Reversing train tid %u, called at time %u", callee, Time());
+        //debug("ReverseCourier: Reversing train tid %u, called at time %u", callee, Time());
         message.type = TRM_DIR;
         Send(callee, &message, sizeof(message), &status, sizeof(status));
         Delay(20);
-        debug("ReverseCourier: Sending to speed up train tid %u to %u", callee, request.arg0);
+        //debug("ReverseCourier: Sending to speed up train tid %u to %u", callee, request.arg0);
         message.type = TRM_SPEED;
         message.arg0 = request.arg0;
         Send(callee, &message, sizeof(message), &status, sizeof(status));
@@ -1337,11 +1342,11 @@ static void TrainTask() {
                     && train.distSinceLastNode > train.currentEdge->dist + DEAD_SENSOR_BUFFER
                     && train.currentEdge->dest == train.nextSensor) {
 
-                debug("Sensor trip timeout on: %s", d(train.nextSensor).name);
+                notice("Sensor trip timeout on: %s", d(train.nextSensor).name);
 
                 // moving train, on edge with sensor being dest and overshot the edge length
                 if (++numSensorMissed > SENSOR_MISS_THRESHOLD) {
-                    debug("<<<<Too many sensor miss, stopping>>>>");
+                    error("<<<<Too many sensor miss, stopping>>>>");
                     train.gotoResult = GOTO_LOST;
                     setTrainSpeed(&train, 0);
                 } else {
@@ -1424,8 +1429,6 @@ static void TrainTask() {
             case TRM_GOTO_AFTER:
                 /* blocks the calling task until we arrive at our destination */
                 gotoBlocked = callee;
-                debug("Train %u: Received request from Conductor (Tid %u) at %d after %s",
-                      train.id, gotoBlocked, train.distSinceLastNode, train.currentEdge->src->name);
                 callee = -1;
 
                 const int stoppingDist = getStoppingDistance(train.id, GOTO_SPEED, 0);
@@ -1439,7 +1442,6 @@ static void TrainTask() {
                     train.pathNodeRem = request.arg1;
                     train.distOffset = request.arg2;
                     train.pathRemain = pathRemaining(&train);
-                    debug(">>>>>>>>>>>Exec move setup for train %u with dist %d", train.id, train.pathRemain);
                 }
 
                 updateNextSensor(&train);
@@ -1477,7 +1479,6 @@ static void TrainTask() {
                 // 2x stopping dist using short moves will probably break shit
                 // TODO: use piece-wise function
                 if (train.pathRemain < (stoppingDist + (stoppingDist >> 1))) {
-                    debug(">>>>>>>>>>Exec SHORT move at %d after %s", train.distSinceLastNode, train.currentEdge->src->name);
                     /*
                     int delayTime;
                     if (train.pathRemain < stoppingDist) {
@@ -1503,14 +1504,11 @@ static void TrainTask() {
                             "shortMvDone CourierDelay returned negative value %d!", shortMvStop);
 
                     debug("created shortMvStop {%d} and shortMvDone {%d}", shortMvStop, shortMvDone);
-                    //train.path = NULL;
                 } else {
-                    debug(">>>>>>>>>>Exec NORMAL move at %d after %s", train.distSinceLastNode, train.currentEdge->src->name);
                     // normal move
                     setTrainSpeed(&train, GOTO_SPEED);
                 }
                 waitOnNextTarget(&train, &sensorCourier, &waitingSensor, &timeoutCourier);
-                debug("=================TRM_GOTO DONE");
                 break;
             case TRM_SPEED:
                 speed = request.arg0;
