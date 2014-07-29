@@ -2,12 +2,10 @@
 #define __UTIL_H__
 #include <types.h>
 #include <stdlib.h>
-#define BUFFER_BITS   11
-#define CBUFFER_SIZE  (1 << BUFFER_BITS)
 
-#define DECLARE_CIRCULAR_BUFFER(Type)                                                       \
+#define DECLARE_CIRCULAR_BUFFER_L(Type, BUFFER_BITS)                                        \
     typedef struct {                                                                        \
-        Type data[CBUFFER_SIZE];                                                            \
+        Type data[(1 << BUFFER_BITS)];                                                      \
         uint32_t head : BUFFER_BITS;                                                        \
         uint32_t tail : BUFFER_BITS;                                                        \
         uint32_t remaining : (BUFFER_BITS + 1);                                             \
@@ -16,7 +14,7 @@
     static inline void initcb_##Type(CircularBuffer_##Type *cbuf) {                         \
         cbuf->head = 0;                                                                     \
         cbuf->tail = 0;                                                                     \
-        cbuf->remaining = CBUFFER_SIZE;                                                     \
+        cbuf->remaining = (1 << BUFFER_BITS);                                               \
     }                                                                                       \
                                                                                             \
     static inline int write_##Type(CircularBuffer_##Type *cbuf, const volatile Type *buf, uint32_t len) { \
@@ -35,7 +33,7 @@
                                                                                             \
     static inline int read_##Type(CircularBuffer_##Type *cbuf, volatile Type *buf, uint32_t len) { \
         int iremaining = cbuf->remaining;                                                   \
-        while (len-- > 0 && cbuf->remaining < CBUFFER_SIZE) {                               \
+        while (len-- > 0 && cbuf->remaining < (1 << BUFFER_BITS)) {                         \
             *buf++ = cbuf->data[cbuf->head++];                                              \
             ++cbuf->remaining;                                                              \
         }                                                                                   \
@@ -43,10 +41,11 @@
     }                                                                                       \
                                                                                             \
     static inline int length_##Type(CircularBuffer_##Type *cbuf) {                          \
-        return CBUFFER_SIZE - cbuf->remaining;                                              \
+        return (1 << BUFFER_BITS) - cbuf->remaining;                                        \
     }                                                                                       \
 
 
+#define DECLARE_CIRCULAR_BUFFER(Type) DECLARE_CIRCULAR_BUFFER_L(Type, 11)
 
 inline uint32_t min3(uint32_t a, uint32_t b, uint32_t c);
 
