@@ -12,6 +12,7 @@
 #include <clock.h>
 
 #define RV_OFFSET 200       // how many MM to go past a target for the purpose of reversing
+#define MAX_NODE_OFFSET 100
 
 typedef struct {
     int type;
@@ -27,6 +28,25 @@ typedef enum {
     TIME_UP,
     DIST_UP
 } ConductorMessageTypes;
+
+static bool isTrainAtDest(int train, track_node *dest, int expectOffset) {
+    uint32_t offset = 0;
+    track_node *node;
+    track_edge *edge;
+    ASSERT((node = TrGetLocation(train, &offset)), "Null node?!");
+    ASSERT((edge = getNextEdge(node)), "Null edge?!");
+
+    debug("Train at %d past %s, expected %d past %d", offset, d(node).name, expectOffset, d(dest).name);
+
+    if (expectOffset != 0) {
+        return (edge->src == dest && ABS(expectOffset - offset) < MAX_NODE_OFFSET);
+               // || (edge->dest == dest && ABS(edge->dist - offset - expectOffset) < MAX_NODE_OFFSET);
+               // advanced case, maybe support later?
+    }
+
+    return ( ((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET) ||
+             ((edge->dest == dest || edge->dest->reverse == dest) && (edge->dist - offset) < MAX_NODE_OFFSET) );
+}
 
 void Conductor() {
     ConductorMessage_t req;
@@ -46,6 +66,7 @@ void Conductor() {
     Reply(callee, &status, sizeof(status));
 
     train = req.arg0;
+    destDist = req.arg2;
     tr_number = req.arg3;
     myTid = MyTid();
 
@@ -56,7 +77,10 @@ void Conductor() {
     GotoResult_t result = GOTO_NONE;
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
-        destDist = req.arg2;
+
+        if (isTrainAtDest(train, dest, destDist)) {
+            goto done;
+        }
 
         int attemptsLeft;
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
@@ -64,9 +88,6 @@ void Conductor() {
             if (source == NULL) {
                 debug("Train %d (Tid %d) reported NULL edge, readding...", tr_number, train);
                 goto lost;
-            } else if (source && (source->src == dest || source->reverse->src == dest)) {
-                /* we're already on our destination, so lets just stop */
-                goto done;
             }
 
             debug("%d attempts left, routing from train edge %s -> %s to %s\n", attemptsLeft,
@@ -89,6 +110,8 @@ void Conductor() {
 
             if (node_count >= 2 && path[node_count - 2]->reverse == path[node_count - 1]) {
                 --node_count;
+                // TODO: this doesn't correctly handle the "GOTO-AFTER" case. should reduce the
+                // final node 1 before and use a dist offset of edgeDist - requested offset
             }
 
             int i, base = 0;
@@ -132,17 +155,17 @@ void Conductor() {
                 result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
                 switch (result) {
                     case GOTO_COMPLETE:
-                        source = TrGetEdge(train);
-                        debug("GOTO_COMPLETE, Train edge: %s", d(d(source).src).name);
-                        if (source->src == dest || source->src->reverse == dest) {
+                        // check that the train is within 5 cm of dest
+                        if (isTrainAtDest(train, dest, destDist)) {
                             // success!
                             debug("Success route!");
                             goto done;
                         }
-                    case GOTO_LOST:
-                        goto lost;
+                        // fallthrough to reroute
                     case GOTO_REROUTE:
                         break;
+                    case GOTO_LOST:
+                        goto lost;
                     case GOTO_NONE:
                         ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
                                 tr_number, train, path[base]->name, (i - base + 1));
@@ -166,7 +189,6 @@ lost:
         }
     } else {
         /* making a generic distance move */
-        destDist = req.arg2;
         result = TrGotoAfter(train, NULL, 0, destDist);
     }
 
