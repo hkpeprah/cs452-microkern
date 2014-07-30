@@ -189,6 +189,10 @@ lost:
             debug("Conductor (Tid %d): Train %d has new Tid %d", myTid, tr_number, train);
             Delay(200);
         }
+        /* when the conductor gives up, we have to clean up the mess we made */
+        notice("Conductor (Tid %d): Giving up on routing train %d (Tid %d)", myTid, tr_number, train);
+        TrDelete(train);
+        train = DispatchReAddTrain(tr_number);
     } else {
         /* making a generic distance move */
         result = TrGotoAfter(train, NULL, 0, destDist);

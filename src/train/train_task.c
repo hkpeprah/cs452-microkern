@@ -94,7 +94,8 @@ typedef enum {
     TRM_GET_LOCATION,
     TRM_GET_EDGE,
     TRM_GET_SPEED,
-    TRM_DELETE
+    TRM_DELETE,
+    TRM_ROUTE_COMPLETE
 } TrainMessageType;
 
 typedef struct TrainMessage {
@@ -136,6 +137,23 @@ int TrCreate(int priority, int tr, track_node *start) {
     }
 
     return trainTask;
+}
+
+
+bool TrRouteComplete(unsigned int tid) {
+    TrainMessage_t msg = {.type = TRM_ROUTE_COMPLETE};
+    int status, errno;
+
+    errno = Send(tid, &msg, sizeof(msg), &status, sizeof(status));
+    if (errno < 0) {
+        error("TrRouteComplete: Got %d sending to %d from %d", errno, tid, MyTid());
+        return false;
+    }
+
+    if (status) {
+        return true;
+    }
+    return false;
 }
 
 
@@ -1574,10 +1592,19 @@ static void TrainTask() {
                 request.arg1 = train.distSinceLastNode;
                 Reply(callee, &request, sizeof(request));
                 break;
+            case TRM_ROUTE_COMPLETE:
+                if (train.gotoResult == GOTO_COMPLETE || train.gotoResult == GOTO_NONE) {
+                    status = 1;
+                } else {
+                    status = 0;
+                }
+                Reply(callee, &status, sizeof(status));
+                break;
             case TRM_GET_EDGE:
                 updateLocation(&train);
                 request.arg0 = (int)train.currentEdge;
                 Reply(callee, &request, sizeof(request));
+
             case TRM_GET_SPEED:
                 status = train.speed;
                 Reply(callee, &status, sizeof(status));

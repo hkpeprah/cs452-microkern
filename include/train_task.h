@@ -1,7 +1,7 @@
 #ifndef __TRAIN_TASK_H__
 #define __TRAIN_TASK_H__
 #include <track_node.h>
-
+#include <types.h>
 
 // shared with conductor
 typedef enum {
@@ -20,6 +20,7 @@ int TrReverse(unsigned int tid);
 int TrDirection(unsigned int tid);
 int TrAuxiliary(unsigned int tid, unsigned int aux);
 int TrGetSpeed(unsigned int tid);
+bool TrRouteComplete(unsigned int tid);
 GotoResult_t TrGotoAfter(unsigned int tid, track_node **path, unsigned int pathLen, unsigned int dist);
 track_node *TrGetLocation(unsigned int tid, unsigned int *dist);
 track_edge *TrGetEdge(unsigned int tid);

@@ -14,9 +14,10 @@
 #include <uart.h>
 #include <dispatcher.h>
 #include <demo.h>
+#include <sl.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      23
+#define HELP_MESSAGES      24
 #define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
 
 
@@ -41,6 +42,7 @@ static void print_help() {
         "rls TRAIN SNSR1 SNSR2       -   Release sensors from SNSR1 to SNSR2 if they are assigned to TRAIN",
         "raw BYTE1 BYTE2             -   Sends two raw bytes to the train controller",
         "whoami                      -   Prints the current user",
+        "sl                          -   Display animations",
         "clear                       -   Clears the screen",
         "sudo                        -   Run with elevated privileges",
         "help                        -   Display this help dialog",
@@ -72,11 +74,9 @@ static char *getUsername() {
 
 
 static void clear() {
-    int i;
-    for (i = 0; i < TERMINAL_HEIGHT; i++) {
-        printf("\r\n");
-    }
-    printf(MOVE_CURSOR SAVE_CURSOR, getTermBottom(), 0);
+    static char NEWLINE_BUFFER[TERMINAL_HEIGHT + 1] = { [0 ... TERMINAL_HEIGHT] = '\n'};
+    NEWLINE_BUFFER[TERMINAL_HEIGHT] = '\0';
+    printf("%s" MOVE_CURSOR SAVE_CURSOR, NEWLINE_BUFFER, getTermBottom(), 0);
 }
 
 
@@ -106,6 +106,7 @@ void Shell() {
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "demo", (int)TrainDemo + NUM_TRAIN_CMD_COMMANDS);
+    insert_ht(&commands, "sl", (int)SteamLocomotive + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "go", TRAIN_CMD_GO);
     insert_ht(&commands, "stop", TRAIN_CMD_STOP);
     insert_ht(&commands, "tr", TRAIN_CMD_SPEED);
