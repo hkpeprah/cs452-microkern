@@ -9,7 +9,7 @@
 #include <syscall.h>
 
 #define SL_ARRAY_SIZE   15
-#define SL_TERM_WIDTH   143
+#define SL_TERM_WIDTH   158
 
 static char *TRAIN1[] = {
     "                         (@@) (  ) (@)  ( )  @@    ()    @     O     @     O      @      ",

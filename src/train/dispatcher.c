@@ -384,6 +384,7 @@ void Dispatcher() {
                 notice("Dispatcher: Removing train %d with Tid %d", node->tr_number, node->train);
                 if (request.arg1 == false && node->conductor != -1) {
                     /* specifies whether or not to remove the conductor */
+                    notice("Dispathcer: Responding to conductor with Tid %d", node->train);
                     Destroy(node->conductor);
                 }
                 trains[request.arg1].conductor = -1;
@@ -430,6 +431,7 @@ void Dispatcher() {
                         error("Dispatcher: Error: Train %u does not have a conductor", node->tr_number);
                     } else {
                         debug("Dispatcher: Removing Conductor for Train %u", node->tr_number);
+                        notice("Dispathcer: Responding to conductor with Tid %d", node->train);
                         Destroy(node->conductor);
                         node->conductor = -1;
                         status = 0;
