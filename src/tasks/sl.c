@@ -9,7 +9,7 @@
 #include <syscall.h>
 
 #define SL_ARRAY_SIZE   15
-#define SL_TERM_WIDTH   132
+#define SL_TERM_WIDTH   143
 
 static char *TRAIN1[] = {
     "                         (@@) (  ) (@)  ( )  @@    ()    @     O     @     O      @      ",
@@ -80,17 +80,20 @@ void SteamLocomotive() {
             buffer[bufIndex++] = '\033';
             buffer[bufIndex++] = '[';
             if (i > 0) {
-                if (i >= 10) {
-                    buffer[bufIndex++] = (MAX(i, 0) / 10) + '0';
+                if (i >= 100) {
+                    buffer[bufIndex++] = (i / 100) + '0';
+                    buffer[bufIndex++] = ((i - 100) / 10) + '0';
+                } else if (i >= 10) {
+                    buffer[bufIndex++] = (i / 10) + '0';
                 }
-                buffer[bufIndex++] = (MAX(i, 0) % 10) + '0';
+                buffer[bufIndex++] = (i % 10) + '0';
             } else {
                 buffer[bufIndex++] = '0';
             }
             buffer[bufIndex++] = 'C';
             int k;
             k = (i > 0 ? 0 : start);
-            for (; k < MIN(end, maxlen); ++k) {
+            for (; k < MIN(end, strlen(line)); ++k) {
                 buffer[bufIndex++] = line[k];
             }
             buffer[bufIndex++] = '\033';
@@ -104,7 +107,7 @@ void SteamLocomotive() {
         buffer[bufIndex++] = 'F';
         buffer[bufIndex++] = '\0';
         puts(buffer);
-        Delay(20);
+        Delay(12);
         bufIndex = 0;
     }
 

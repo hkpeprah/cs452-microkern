@@ -21,8 +21,8 @@ static bool isBrokenSensor(int sensor) {
     int broken_sensors[] = {54};
     int broken_sensor_count = 1;
     #else
-    int broken_sensors[] = {8, 9, 10, 11, 22, 23};
-    int broken_sensor_count = 6;
+    int broken_sensors[] = {8, 9, 10, 11, 22, 23, 25};
+    int broken_sensor_count = 7;
     #endif
     int i;
     for (i = 0; i < broken_sensor_count; ++i) {

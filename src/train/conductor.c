@@ -11,8 +11,8 @@
 #include <random.h>
 #include <clock.h>
 
-#define RV_OFFSET 200       // how many MM to go past a target for the purpose of reversing
-#define MAX_NODE_OFFSET 100
+#define RV_OFFSET         225       // how many MM to go past a target for the purpose of reversing
+#define MAX_NODE_OFFSET   100
 
 typedef struct {
     int type;

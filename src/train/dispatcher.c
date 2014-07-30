@@ -455,6 +455,8 @@ void Dispatcher() {
             case TRM_GOTO_AFTER:
                 if (node != NULL) {
                     if (node->conductor != -1) {
+                        notice("Dispatcher; Removing conductor tid %d for train %d", node->conductor,
+                               node->tr_number);
                         Destroy(node->conductor);
                     }
                     debug("Dispatcher: Creating new conductor for train %u", node->tr_number);
