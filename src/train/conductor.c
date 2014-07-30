@@ -204,7 +204,7 @@ done:
     /* remove self from parent, so that train can be used again */
     status = DispatchStopRoute(tr_number);
     if (status < 0) {
-        error("Error: Got %d in send to parent %u", status, MyParentTid());
+        error("Conductor (Tid %d): Error: Got %d in send to parent %u", myTid, status, MyParentTid());
     }
     debug("Tid %u, removing self from parent %u", myTid, MyParentTid());
     Exit();
