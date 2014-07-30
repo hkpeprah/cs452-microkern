@@ -11,7 +11,7 @@
 #include <random.h>
 #include <clock.h>
 
-#define RV_OFFSET         225       // how many MM to go past a target for the purpose of reversing
+#define RV_OFFSET         290       // how many MM to go past a target for the purpose of reversing
 #define MAX_NODE_OFFSET   100
 
 typedef struct {
@@ -96,7 +96,7 @@ void Conductor() {
                 (source ? source->src->name : "NULL"), (source ? source->dest->name : "NULL"), dest->name);
 
             node_count = 0;
-            if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) < 0) {
+            if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) <= 0) {
                 error("Error: No path to destination %s found, sleeping...", dest->name);
                 Delay(random_range(100, 500));
                 continue;
