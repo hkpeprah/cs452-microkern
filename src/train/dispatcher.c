@@ -32,7 +32,8 @@ typedef enum {
     TRM_CREATE_TRAIN,
     TRM_REMOVE_TRAIN,
     TRM_MOVE,
-    TRM_GET
+    TRM_GET,
+    TRM_TRACK_FREE
 } DispatcherMessageType;
 
 typedef struct DispatcherMessage {
@@ -74,6 +75,11 @@ static int SendDispatcherMessage(DispatcherMessageType type, uint32_t tr, int ar
         return -1;
     }
     return status;
+}
+
+
+int DispatchTrackFree(uint32_t tr, int sensor) {
+    return SendDispatcherMessage(TRM_TRACK_FREE, tr, sensor, 0, 0);
 }
 
 
@@ -481,6 +487,17 @@ void Dispatcher() {
                 break;
             case TRM_RELEASE_TRACK:
                 status = releaseTrack(node->tr_number, (track_node**)request.arg0, request.arg1);
+                break;
+            case TRM_TRACK_FREE:
+                status = 0;
+                if (request.arg0 < TRACK_MAX) {
+                    track_node *src;
+                    src = &(track[request.arg0]);
+                    if (src->reservedBy == RESERVED_BY_NOBODY || src->reverse->reservedBy == RESERVED_BY_NOBODY ||
+                        src->reservedBy == request.tr || src->reverse->reservedBy == request.tr) {
+                        status = 1;
+                    }
+                }
                 break;
             default:
                 error("Dispatcher: Unknown request of type %d from %u", request.type, callee);
