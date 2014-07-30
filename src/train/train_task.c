@@ -867,13 +867,9 @@ static void updateLocation(Train_t *train) {
         uint32_t stop_speed = train->transition.dest_speed;
         /* compute the time spent transition so far */
         int32_t timeTransition = ticks - train->transition.time_issued;
-        int32_t srtmove = shortmoves_dist(train->id, stop_speed, timeTransition);
+        int32_t srtmove = srtmove = shortmoves_dist(train->id, stop_speed, timeTransition);
+
         /* adjust the traveled distance based on the previously travelled distance */
-        if (timeTransition >= 20) {
-            traveledDist = MAX(0, srtmove - train->transition.shortmove);
-            train->microPerTick = (srtmove * 1000) / timeTransition;
-            train->transition.shortmove = srtmove + traveledDist;
-        }
         /* detect if we've stopped our transition acceleration/deceleration state */
         if (timeTransition >= getTransitionTicks(train->id, start_speed, stop_speed)) {
             train->microPerTick = getTrainVelocity(train->id, stop_speed);
@@ -882,8 +878,15 @@ static void updateLocation(Train_t *train) {
             if (stop_speed == 0) {
                 fullStop = true;
             }
-
             train->transition.state = (train->speed > 0 ? CONST_SP : STOP);
+        } else if (timeTransition >= PICKUP_FRONT) {
+            traveledDist = MAX(0, srtmove - train->transition.shortmove);
+            train->transition.shortmove = srtmove + traveledDist;
+            if (stop_speed > start_speed) {
+                train->microPerTick = (srtmove * 1000) / timeTransition;
+            } else {
+                train->microPerTick -= ((srtmove * 1000) / timeTransition);
+            }
         }
     } else {
         traveledDist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
@@ -898,7 +901,6 @@ static void updateLocation(Train_t *train) {
         distTraverse(train, false);
         if (train->path && train->pathNodeRem > 0) {
             train->pathRemain -= traveledDist;
-            //debug("path dist: %d, resvDist: %d", train->pathRemain, train->resv.extraResvDist);
         }
     }
 
@@ -1379,11 +1381,6 @@ static void TrainTask() {
             if (train.gotoResult == GOTO_LOST && gotoBlocked != -1) {
                 // Totally lost
                 Log("Train %u: Lost!!!!!! shit shit shit", train.id);
-                //setTrainSpeed(&train, 0);
-                //if (gotoBlocked != -1) {
-                //Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
-                // gotoBlocked = -1;
-                //}
                 Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
                 gotoBlocked = -1;
             }

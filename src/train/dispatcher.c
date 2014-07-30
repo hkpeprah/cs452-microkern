@@ -312,6 +312,7 @@ void Dispatcher() {
                     removeDispatcherNode(trains, node, false);
                 }
                 sensor = -1;
+                nextTrain = request.tr;
                 goto addnode;
                 break;
             case TRM_ADD_AT:
@@ -323,8 +324,8 @@ void Dispatcher() {
                     status = INVALID_SENSOR_ID;
                     break;
                 }
-        addnode:
                 nextTrain = request.tr;
+        addnode:
                 if (CreateCourier != -1 && nextTrain == waitingTrain) {
                     Destroy(CreateCourier);
                     CreateCourier = -1;
@@ -337,7 +338,7 @@ void Dispatcher() {
                     break;
                 }
                 waitingTrain = nextTrain;
-                if ((CreateCourier = addDispatcherTrain(request.tr, sensor, -1)) == -1) {
+                if ((CreateCourier = addDispatcherTrain(nextTrain, sensor, -1)) == -1) {
                     status = OUT_OF_DISPATCHER_NODES;
                 } else {
                     status = 0;
@@ -408,6 +409,10 @@ void Dispatcher() {
                     read_int(&addQueue, &nextTrain, 1);
                     read_int(&addQueue, &callee, 1);
                     node = getDispatcherNode(trains, nextTrain);
+                    sensor = -1;
+                    if (node == NULL || callee == -1) {
+                        goto addnode;
+                    }
                     goto readd;
                 } else {
                     debug("Dispatcher: Nothing waiting, replying to callee %d", callee);

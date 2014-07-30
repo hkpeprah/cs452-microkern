@@ -28,6 +28,7 @@ typedef enum {
     DIST_UP
 } ConductorMessageTypes;
 
+
 void Conductor() {
     ConductorMessage_t req;
     track_edge *source;
@@ -139,10 +140,10 @@ void Conductor() {
                             debug("Success route!");
                             goto done;
                         }
-                    case GOTO_LOST:
-                        goto lost;
                     case GOTO_REROUTE:
                         break;
+                    case GOTO_LOST:
+                        goto lost;
                     case GOTO_NONE:
                         ASSERT(false, "GOTO result of GOTO_NONE from train %d (tid %d) on path %s with len %d",
                                 tr_number, train, path[base]->name, (i - base + 1));

@@ -38,14 +38,12 @@ int getIdleTime() {
 
 
 void enableIdleTimer() {
-    int timerValue;
     timerHigh = (uint32_t*)TIMER4VALUEHIGH;
     timerLow = (uint32_t*)TIMER4VALUELOW;
-    /* this attacks the situation where the exiting user doesn't
-       clear the enable bit, and instead forces a clear and read
-       of the previous values */
-    disableIdleTimer();
-    *((int32_t*)TIMER4ENABLE) = 0x100; /* set the enable bit (8th bit) to 1 */
+    *((uint16_t*)TIMER4ENABLE) = 0;
+    NOOP_PTR(timerLow);
+    NOOP_PTR(timerHigh);
+    *((uint16_t*)TIMER4ENABLE) = 0x100;
     do {
         /* force clear of an overflow, this is a hacky solution
            to the situation where users are not leaving Timer4
@@ -53,8 +51,7 @@ void enableIdleTimer() {
            overflowing it */
         NOOP_PTR(timerLow);
         NOOP_PTR(timerHigh);
-        timerValue = (int32_t)(*timerLow);
-    } while (timerValue <= 0);
+    } while ((int32_t)(*timerLow) <= 0);
 
     /* set initial values for the global counters */
     idle = 0;

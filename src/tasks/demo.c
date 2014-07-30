@@ -9,8 +9,30 @@
 #include <train.h>
 #include <train_speed.h>
 #include <random.h>
+#include <stdlib.h>
+#include <track_data.h>
+#include <types.h>
 
 #define SENSOR_COUNT   TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT
+
+
+static bool isBrokenSensor(int sensor) {
+    #if TRACK_NAME == 'B'
+    int broken_sensors[] = {54};
+    int broken_sensor_count = 1;
+    #else
+    int broken_sensors[] = {8, 9, 10, 11, 22, 23};
+    int broken_sensor_count = 6;
+    #endif
+    int i;
+    for (i = 0; i < broken_sensor_count; ++i) {
+        if (sensor == broken_sensors[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 void TrainDemo() {
     char buffer[50];
@@ -24,6 +46,8 @@ void TrainDemo() {
         gets(IO, buffer, 50);
         if (strcmp(buffer, "c") == 0) {
             break;
+        } else if (strcmp(buffer, "q") == 0) {
+            Exit();
         } else {
             train = atoin(buffer, &status);
             if (status == 0) {
@@ -53,9 +77,9 @@ void TrainDemo() {
         for (i = 0; i < train_count; ++i) {
             do {
                 sensor = random() % (SENSOR_COUNT);
-            } while (sensors[sensor] == 1);
+            } while (isBrokenSensor(sensor) || (sensors[MAX(sensor - 1, 0)] == 1 ||
+                                                sensors[MIN(SENSOR_COUNT - 1, sensor + 1)] || sensors[sensor] == 1));
             sensors[sensor] = 1;
-            //distance = random() % 40;
             distance = 0;
             train = train_numbers[i];
             printf("Dispatching train %u to %u mm past sensor %c%u\r\n", train, distance,

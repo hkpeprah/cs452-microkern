@@ -55,7 +55,7 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
         return 0;
     }
 
-    if ((id = getTrainId(tr)) > 0) {
+    if ((id = getTrainId(tr)) >= 0) {
         return train_states[id].speed[sp];
     }
     return 0;
