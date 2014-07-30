@@ -19,7 +19,7 @@
 #define STOP_BUFFER_MM          15
 #define RESV_BUF_BITS           4
 #define PICKUP_FRONT            50
-#define PICKUP_BACK             70
+#define PICKUP_BACK             90
 #define DEAD_SENSOR_BUFFER      150  // 150 mm before we skip over a sensor without tripping it
 #define DELAY_PRIORITY          8
 #define RESV_MOD                ((1 << RESV_BUF_BITS) - 1)
@@ -38,11 +38,10 @@ typedef enum {
 
 typedef struct {
     TrainState_t state;
-    unsigned int start_speed : 8;
-    unsigned int dest_speed : 8;
+    unsigned int num_ticks : 16;
+    unsigned int end_velo : 16;
     unsigned int time_issued;
     unsigned int stopping_distance;
-    int shortmove;
 } TransitionState_t;
 
 typedef struct __TrainResvBuf {
@@ -819,7 +818,6 @@ static void distTraverse(Train_t *train, bool traverseSensor) {
     while (train->distSinceLastNode > train->currentEdge->dist) {
         if (train->nextSensor == NULL || (train->currentEdge->dest == train->nextSensor && !traverseSensor)) {
             // TODO: this is kind of concerning...
-            // error("updateLocation: Error: Model beat train to %s", train->nextSensor->name);
             break;
         }
 
@@ -856,40 +854,28 @@ static void distTraverse(Train_t *train, bool traverseSensor) {
 
 static void updateLocation(Train_t *train) {
     int ticks, numTraverse, traveledDist;
-    bool fullStop = false;
+    bool firstStop = false;
 
     traveledDist = 0;
     numTraverse = 0;
     ticks = Time();
 
     if (train->transition.state == ACCEL || train->transition.state == DECEL) {
-        uint32_t start_speed = train->transition.start_speed;
-        uint32_t stop_speed = train->transition.dest_speed;
-        /* compute the time spent transition so far */
+        // compute the time spent transition so far
         int32_t timeTransition = ticks - train->transition.time_issued;
-        int32_t srtmove = srtmove = shortmoves_dist(train->id, stop_speed, timeTransition);
 
-        /* adjust the traveled distance based on the previously travelled distance */
-        /* detect if we've stopped our transition acceleration/deceleration state */
-        if (timeTransition >= getTransitionTicks(train->id, start_speed, stop_speed)) {
-            train->microPerTick = getTrainVelocity(train->id, stop_speed);
-            train->speed = stop_speed;
+        // detect if we've stopped our transition acceleration/deceleration state
+        if (timeTransition >= train->transition.num_ticks) {
+            train->microPerTick = train->transition.end_velo;;
             traveledDist = train->transition.stopping_distance;
-            if (stop_speed == 0) {
-                fullStop = true;
-            }
             train->transition.state = (train->speed > 0 ? CONST_SP : STOP);
-        } else if (timeTransition >= PICKUP_FRONT) {
-            traveledDist = MAX(0, srtmove - train->transition.shortmove);
-            train->transition.shortmove = srtmove + traveledDist;
-            if (stop_speed > start_speed) {
-                train->microPerTick = (srtmove * 1000) / timeTransition;
-            } else {
-                train->microPerTick -= ((srtmove * 1000) / timeTransition);
-            }
+            firstStop = (train->transition.state == STOP);
+
+        } else if (train->transition.state == ACCEL) {
+            train->microPerTick = train->transition.end_velo * timeTransition / train->transition.num_ticks;
         }
     } else {
-        traveledDist += (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
+        traveledDist = (ticks - train->lastUpdateTick) * train->microPerTick / 1000;
     }
 
     train->distSinceLastSensor += traveledDist;
@@ -904,7 +890,7 @@ static void updateLocation(Train_t *train) {
         }
     }
 
-    if (fullStop == true) {
+    if (firstStop == true) {
         freeResvOnStop(train);
     }
 
@@ -1054,10 +1040,10 @@ static void setTrainSpeed(Train_t *train, int speed) {
             train->transition.state = ACCEL;
         }
 
-        train->transition.start_speed = train->speed;
-        train->transition.dest_speed = speed;
+        train->transition.num_ticks = getTransitionTicks(train->id, train->speed, speed);
+        train->transition.end_velo = getTrainVelocity(train->id, speed);
+
         train->transition.time_issued = tick;
-        train->transition.shortmove = 0;
         train->lastUpdateTick = tick;
         train->lastSensorTick = -1;
         // debug("Stopping Distance for %d -> %d: %d", train->speed, speed, train->stoppingDist);
@@ -1177,11 +1163,10 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
 
     /* initialize transition */
     train->transition.state = STOP;
-    train->transition.start_speed = 0;
-    train->transition.dest_speed = 0;
+    train->transition.num_ticks = 0;
+    train->transition.end_velo = 0;
     train->transition.time_issued = 0;
     train->transition.stopping_distance = 0;
-    train->transition.shortmove = 0;
 
     // if train moved far enough past sensor, update it here
     // similar to updateLocation's update but this lets us get our initial reservation
@@ -1303,6 +1288,7 @@ static void TrainTask() {
                     (train.nextSensor != NULL ? d(train.nextSensor).name : "NULL"));
                 if (train.nextSensor != NULL && ++numSensorMissed > SENSOR_MISS_THRESHOLD) {
                     Log("<<<<Too many timeouts, stopping>>>>");
+                    numSensorMissed = 0;
                     setTrainSpeed(&train, 0);
                     train.gotoResult = GOTO_LOST;
                     continue;

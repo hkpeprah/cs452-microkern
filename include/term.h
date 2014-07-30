@@ -134,6 +134,7 @@ void debug(char*, ...);
 void debugc(char*, unsigned int, ...);
 void displayInfo();
 unsigned int getTermOffset();
+unsigned int getTermBottom();
 void printSwitch(unsigned int, char);
 void printSensor(char, unsigned int);
 void updateTime(unsigned int, unsigned int);

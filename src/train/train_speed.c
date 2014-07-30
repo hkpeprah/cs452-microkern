@@ -51,65 +51,40 @@ unsigned int getTrainVelocity(unsigned int tr, unsigned int sp) {
     int id;
 
     if (sp > 14) {
-        error("getTrainVelocity: Speed out of range.");
-        return 0;
+        ASSERT(false, "Failed to get train %d", tr);
     }
 
     if ((id = getTrainId(tr)) >= 0) {
         return train_states[id].speed[sp];
     }
+    ASSERT(false, "Failed to get train %d", tr);
     return 0;
 }
 
 
 unsigned int getStoppingDistance(unsigned int tr, int startsp, int destsp) {
-    int id;
+    int id = -1;
 
     if (!isValidTrainId(tr) || (id = getTrainId(tr)) < 0) {
-        return 0;
+        ASSERT(false, "Failed to get train %d", tr);
     }
 
     /* stopping distance is measured in millimeters */
     return train_states[id].stoppingDistances[MAX(startsp, destsp)];
 }
 
-
-unsigned int getTransitionDistance(unsigned int tr, int startsp, int destsp, int ticks) {
-    /* returns the distance in millimeters */
-    int id;
-    unsigned int totalTime, distance;
-
-    if (!isValidTrainId(tr) || (id = getTrainId(tr)) < 0) {
-        return 0;
-    }
-
-    /* get the total time it takes to transition between speeds */
-    totalTime = getTransitionTicks(tr, startsp, destsp);
-    /* determint the stopping distance, which is equivalent to acceleration distance */
-    distance = train_states[id].stoppingDistances[MAX(startsp, destsp)] * 1000;
-    /* distance travelled accelerating/decelerating is product of distance multiplied by the time spent
-     * travelling, divided by the total time it takes to travel */
-    distance = (distance * ticks) / totalTime;
-    distance /= 1000;
-    /* adjust for triangle */
-    distance /= 2;
-    return distance;
-}
-
-
 unsigned int getTransitionTicks(unsigned int tr, int startsp, int destsp) {
-    int id, totalTicks;
+    int id;
 
     if (!isValidTrainId(tr)) {
-        return 0;
+        ASSERT(false, "Failed to get train %d", tr);
     }
 
     if ((id = getTrainId(tr)) < 0) {
-        return 0;
+        ASSERT(false, "Failed to get train %d", tr);
     }
 
-    totalTicks = train_states[id].stoppingTicks[MAX(startsp, destsp)];
-    return totalTicks;
+    return train_states[id].stoppingTicks[MAX(startsp, destsp)];
 }
 
 
@@ -134,6 +109,7 @@ int shortmoves(unsigned int tr, unsigned int speed, int dist) {
             return compute_shortmove(dist, 18, -5, 583, 84);
         case 47:
             return compute_shortmove(dist, 35, -8, 760, 60);
+        case 59:
         case 53:
             return compute_shortmove(dist, 48, -10, 848, 46);
         case 54:
@@ -141,7 +117,8 @@ int shortmoves(unsigned int tr, unsigned int speed, int dist) {
         case 56:
             return compute_shortmove(dist, 59, -12, 937, 47);
     }
-    return dist;
+    ASSERT(false, "Missing train %d", tr);
+    return -1;
 }
 
 
@@ -169,6 +146,7 @@ int shortmoves_dist(uint32_t tr, uint32_t speed, uint32_t ticks) {
         case 47:
             dist = compute_shortmove_dist(ticks, 70, -275, 50600, -79);
             break;
+        case 59:
         case 53:
             dist = compute_shortmove_dist(ticks, 30, -28, 8200, 23);
             break;

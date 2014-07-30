@@ -172,3 +172,8 @@ void updateTime(unsigned int count, unsigned int cpu) {
 unsigned int getTermOffset() {
     return TERM_OFFSET;
 }
+
+
+unsigned int getTermBottom() {
+    return TERM_BOTTOM;
+}

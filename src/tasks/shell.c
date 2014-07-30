@@ -16,7 +16,7 @@
 #include <demo.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      22
+#define HELP_MESSAGES      23
 #define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
 
 
@@ -31,7 +31,6 @@ static void print_help() {
         "rv TRAIN                    -   Reverse the specified train",
         "li TRAIN                    -   Turn on/off the lights on the specified train",
         "ho TRAIN                    -   Signal the horn on the specified train",
-        "time                        -   Get the current formatted time",
         "add TRAIN                   -   Add a train to the track",
         "add-at TRAIN SNSR           -   Add a train to the track at the specified sensor",
         "goto TRAIN SNSR             -   Tell train to go to specified sensor",
@@ -42,6 +41,8 @@ static void print_help() {
         "rls TRAIN SNSR1 SNSR2       -   Release sensors from SNSR1 to SNSR2 if they are assigned to TRAIN",
         "raw BYTE1 BYTE2             -   Sends two raw bytes to the train controller",
         "whoami                      -   Prints the current user",
+        "clear                       -   Clears the screen",
+        "sudo                        -   Run with elevated privileges",
         "help                        -   Display this help dialog",
         "?                           -   Display this help dialog"
     };
@@ -67,6 +68,24 @@ static char *getUsername() {
         id = random() % 4;
     }
     return names[id];
+}
+
+
+static void clear() {
+    int i;
+    for (i = 0; i < TERMINAL_HEIGHT; i++) {
+        printf("\r\n");
+    }
+    printf(MOVE_CURSOR SAVE_CURSOR, getTermBottom(), 0);
+}
+
+
+static void sudo() {
+    if (strcmp(getUsername(), "root") != 0) {
+        printf("sudo: check your privilege\r\n");
+        return;
+    }
+    printf("sudo: running as root.\r\n");
 }
 
 
@@ -141,9 +160,10 @@ void Shell() {
                 break;
             } else if (strcmp(buf, "?") == 0 || strcmp(buf, "help") == 0) {
                 print_help();
-            } else if (strcmp(buf, "time") == 0) {
-                i = Time();
-                printf("%d:%d:%d\r\n", i / 6000, (i / 100) % 60, i % 100);
+            } else if (strcmp(buf, "clear") == 0) {
+                clear();
+            } else if (strcmp(buf, "sudo") == 0) {
+                sudo();
             } else if (strcmp(buf, "whoami") == 0) {
                 whoami();
             } else {

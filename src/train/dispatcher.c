@@ -352,7 +352,6 @@ void Dispatcher() {
                 nextTrain = request.tr;
         readd:
                 node->train = -1;
-                node->conductor = -1;
                 node->tr_number = -1;
                 num_of_trains--;
                 if (CreateCourier != -1 && nextTrain == waitingTrain) {
@@ -412,11 +411,11 @@ void Dispatcher() {
                     sensor = -1;
                     if (node == NULL || callee == -1) {
                         goto addnode;
+                    } else {
+                        goto readd;
                     }
-                    goto readd;
-                } else {
-                    debug("Dispatcher: Nothing waiting, replying to callee %d", callee);
                 }
+                debug("Dispatcher: Nothing waiting in the add queue.");
                 break;
             case TRM_GOTO_STOP:
                 if ((node = getDispatcherNode(trains, request.tr))) {
