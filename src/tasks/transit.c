@@ -281,7 +281,7 @@ void MrBonesWildRide() {
                     station = &train_stations[request.arg1];
                     if (train->tr > 0 && train->tr != trainId) {
                         error("MrBonesWildRide: Collision adding train %d to spot filled by train %d",
-                              train, reservation->tr);
+                              train, train->tr);
                         response = TRAIN_STATION_INVALID;
                     } else {
                         /* check which passengers are getting off at this stop */

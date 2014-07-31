@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <types.h>
 
-#define H_LEN  128
+#define H_LEN  256
 
 typedef struct {
     char key[32];

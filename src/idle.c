@@ -7,18 +7,25 @@
 #define TIMER4VALUELOW    0x80810060
 #define TIMER4VALUEHIGH   0x80810064
 #define TIMER4ENABLE      TIMER4VALUEHIGH
+#define TIMER4INTERVAL    50
 
-static volatile unsigned int idle;
-static volatile unsigned int count;
+static volatile int count;
+static volatile int lastCount;
+static volatile int lastIdle;
+static volatile int totalIdle;
 static volatile uint32_t *timerHigh;
 static volatile uint32_t *timerLow;
 
 
 void cpu_idle(bool isIdle) {
-    static unsigned int t = 0;
+    static int t = 0;
 
     if ((*timerLow / CYCLES_PER_TICK) - count >= 1) {
         count = (*timerLow / CYCLES_PER_TICK);
+        if ((count - lastCount) / TIMER4INTERVAL > 0) {
+            lastCount = count - lastCount;
+            lastIdle = totalIdle - lastIdle;
+        }
     }
 
     if (isIdle == true) {
@@ -26,14 +33,16 @@ void cpu_idle(bool isIdle) {
         t = count;
     } else if (t > 0 && isIdle == false) {
         /* when state is no longer idle, add the difference */
-        idle += (count - t);
+        if (lastCount != count) {
+            totalIdle += (count - t);
+        }
         t = 0;
     }
 }
 
 
 int getIdleTime() {
-    return (idle * 100) / count;
+    return (lastIdle * 100) / lastCount;
 }
 
 
@@ -54,7 +63,9 @@ void enableIdleTimer() {
     } while ((int32_t)(*timerLow) <= 0);
 
     /* set initial values for the global counters */
-    idle = 0;
+    totalIdle = 1;
+    lastIdle = 1;
+    lastCount = 1;
     count = 1;
 }
 
