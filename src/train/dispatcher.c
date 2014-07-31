@@ -144,7 +144,6 @@ static int findSensorForTrain(uint32_t tr) {
     Delay(random_range(150, 200));
     trainSpeed(tr, 3);
     sensorNum = WaitAnySensor();
-    debug("findSensorForTrain: Sensor %d triggered", sensorNum);
     trainSpeed(tr, 0);
     return sensorNum;
 }
@@ -167,7 +166,6 @@ static void TrainCreateCourier() {
     }
 
     if ((tid = TrCreate(TRAIN_PRIORITY, req.tr, DispatchGetTrackNode(sensor))) >= 0) {
-        debug("TrainCreateCourier: Creating Train %u with Tid %d", req.tr, tid);
         req.type = TRM_CREATE_TRAIN;
         req.arg0 = tid;
         Send(parent, &req, sizeof(req), &status, sizeof(status));
@@ -178,7 +176,6 @@ static void TrainCreateCourier() {
             TrAuxiliary(tid, 16);
             if ((waiting = req.arg1) >= 0) {
                 /* respond to the waiter with the Tid */
-                debug("TrainCreateCourier: Replying to wait train with Tid %d", waiting);
                 Reply(waiting, &tid, sizeof(tid));
             }
         }
@@ -202,7 +199,6 @@ static void TrainDeleteCourier() {
     }
     Reply(callee, NULL, 0);
     tid = req.arg0;
-    debug("TrainDeleteCourier: Deleting train %u with tid %u", req.tr, tid);
     TrDelete(tid);
     req.type = TRM_REMOVE_TRAIN;
     Send(parent, &req, sizeof(req), &status, sizeof(status));
@@ -336,7 +332,6 @@ void Dispatcher() {
                     Destroy(CreateCourier);
                     CreateCourier = -1;
                 } else if (nextTrain != waitingTrain && waitingTrain >= 0) {
-                    debug("Dispatcher: Queueing add of train %d", nextTrain);
                     status = -1;
                     write_int(&addQueue, &nextTrain, 1);
                     write_int(&addQueue, &status, 1);
@@ -364,14 +359,12 @@ void Dispatcher() {
                     Destroy(CreateCourier);
                     CreateCourier = -1;
                 } else if (nextTrain != waitingTrain && waitingTrain >= 0) {
-                    debug("Dispatcher: Queueing add of train %d", nextTrain);
                     write_int(&addQueue, &nextTrain, 1);
                     write_int(&addQueue, &callee, 1);
                     continue;
                 }
                 waitingTrain = nextTrain;
                 sensor = -1;
-                debug("Dispatcher: Re-adding train %u for callee %d", nextTrain, callee);
                 if ((CreateCourier = addDispatcherTrain(nextTrain, sensor, callee)) == -1) {
                     error("Dispatcher: Error: Out of dispatcher nodes in re-add.");
                     status = OUT_OF_DISPATCHER_NODES;
@@ -409,7 +402,6 @@ void Dispatcher() {
                 }
 
                 if (length_int(&addQueue) > 0) {
-                    debug("Dispatcher: %d waiting to be added", length_int(&addQueue));
                     Reply(callee, &status, sizeof(status));
                     read_int(&addQueue, &nextTrain, 1);
                     read_int(&addQueue, &callee, 1);
@@ -421,7 +413,6 @@ void Dispatcher() {
                         goto readd;
                     }
                 }
-                debug("Dispatcher: Nothing waiting in the add queue.");
                 break;
             case TRM_GOTO_STOP:
                 if ((node = getDispatcherNode(trains, request.tr))) {
@@ -444,9 +435,7 @@ void Dispatcher() {
                     if (node->conductor != -1) {
                         Destroy(node->conductor);
                     }
-                    debug("Dispatcher: Creating new conductor for train %u", node->tr_number);
                     node->conductor = Create(7, Conductor);
-                    debug("Dispatcher: Received request to move train %u %u mm", node->tr_number, request.arg0);
                     status = Move(node->conductor, node->train, request.tr, request.arg0);
                 } else {
                     status = INVALID_TRAIN_ID;
@@ -460,9 +449,7 @@ void Dispatcher() {
                                node->tr_number);
                         Destroy(node->conductor);
                     }
-                    debug("Dispatcher: Creating new conductor for train %u", node->tr_number);
                     node->conductor = Create(7, Conductor);
-                    debug("Dispatcher: Received request to route train %u to %s", node->tr_number, (&track[request.arg0])->name);
                     status = GoTo(node->conductor, node->train, request.tr, &track[request.arg0], request.arg1);
                 } else {
                     status = INVALID_TRAIN_ID;

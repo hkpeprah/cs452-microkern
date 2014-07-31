@@ -12,7 +12,7 @@
 #include <clock.h>
 
 #define RV_OFFSET         290       // how many MM to go past a target for the purpose of reversing
-#define MAX_NODE_OFFSET   100
+#define MAX_NODE_OFFSET   125
 
 typedef struct {
     int type;
@@ -37,7 +37,7 @@ static bool isTrainAtDest(int train, track_node *dest, int expectOffset) {
     ASSERT((node = TrGetLocation(train, &offset)), "Null node?!");
     ASSERT((edge = getNextEdge(node)), "Null edge?!");
 
-    debug("Train at %d past %s, expected %d past %d", offset, d(node).name, expectOffset, d(dest).name);
+    debug("Conductor for train %d: Train at %d past %s, expected %d past %s", train, offset, d(node).name, expectOffset, d(dest).name);
 
     if (expectOffset != 0) {
         return (edge->src == dest && ABS(expectOffset - offset) < MAX_NODE_OFFSET);
@@ -80,10 +80,6 @@ void Conductor() {
     if (req.type == GOTO) {
         dest = (track_node*)req.arg1;
 
-        if (isTrainAtDest(train, dest, destDist)) {
-            goto done;
-        }
-
         int attemptsLeft;
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
             source = TrGetEdge(train);
@@ -92,18 +88,17 @@ void Conductor() {
                 goto lost;
             }
 
-            debug("%d attempts left, routing from train edge %s -> %s to %s\n", attemptsLeft,
-                (source ? source->src->name : "NULL"), (source ? source->dest->name : "NULL"), dest->name);
+            if (isTrainAtDest(train, dest, destDist)) {
+                goto done;
+            }
 
             node_count = 0;
             if ((node_count = findPath(tr_number, source, dest, path, 32, &total_distance)) <= 0) {
                 error("Error: No path to destination %s found, sleeping...", dest->name);
-                Delay(random_range(100, 500));
-                continue;
+                goto reroute;
             }
 
             if (path[0] != source->dest) {
-                debug("Conductor (Tid %d): initial path reversal for train %d", myTid, train);
                 while (TrDirection(train) < 0) {
                     TrSpeed(train, 0);
                     Delay(600); /* maximum possible time to wait for a train to finish moving */
@@ -140,13 +135,12 @@ void Conductor() {
 
                     if (i < node_count - 1 && TrDirection(train) < 0) {
                         /* failed to reverse, so wait and see if we can shortly */
-                        Delay(random_range(1, 500));
+                        Delay(random_range(200, 500));
                         if (TrDirection(train) < 0) {
                             /* if we've failed again, assume we can't reserve the reverse node */
                             goto reroute;
                         }
                     }
-                    debug("reversed train %d", tr_number);
                     base = i + 1;
                 }
             }
@@ -160,7 +154,6 @@ void Conductor() {
                         // check that the train is within 5 cm of dest
                         if (isTrainAtDest(train, dest, destDist)) {
                             // success!
-                            debug("Success route!");
                             goto done;
                         }
                         // fallthrough to reroute
@@ -179,14 +172,13 @@ void Conductor() {
                 break;
             }
 reroute:
-            debug("Routed failed for train %d, re-routing", tr_number);
+            debug("Train %d asked to be rerouted, sleeping...", tr_number);
+            Delay(random_range(300, 1000));
             continue;
 lost:
             /* we're lost, so let's re-add the train */
-            debug("Conductor (Tid %d): Train %d is lost, re-adding", myTid, tr_number);
             TrDelete(train);
             train = DispatchReAddTrain(tr_number);
-            debug("Conductor (Tid %d): Train %d has new Tid %d", myTid, tr_number, train);
             Delay(200);
         }
         /* when the conductor gives up, we have to clean up the mess we made */
@@ -206,7 +198,6 @@ done:
     if (status < 0) {
         error("Conductor (Tid %d): Error: Got %d in send to parent %u", myTid, status, MyParentTid());
     }
-    debug("Tid %u, removing self from parent %u", myTid, MyParentTid());
     Exit();
 }
 
