@@ -24,5 +24,6 @@ int lookup_ht(HashTable*, char*);
 void delete_ht(HashTable*, char*);
 unsigned int hash_djb2n(char*, unsigned int);
 unsigned int hash_djb2(char*);
+unsigned int hash_shift(unsigned int);
 
 #endif /* __HASH__ */

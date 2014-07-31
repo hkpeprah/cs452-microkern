@@ -8,19 +8,19 @@
 #define NUM_OF_TRAINS             8
 #define TIMEOUT_BUFFER            20
 
-#define INVALID_TRAIN_ID          -1
-#define INVALID_SPEED             -2
-#define INVALID_AUXILIARY         -3
-#define INVALID_SWITCH_ID         -4
-#define INVALID_SWITCH_STATE      -5
-#define INVALID_SENSOR_ID         -6
-#define TRAIN_HAS_NO_CONDUCTOR    -7
-#define OUT_OF_DISPATCHER_NODES   -8
-#define INVALID_DESTINATION       -9
-#define NO_PATH_EXISTS            -10
-#define INVALID_REQUEST           -11
-#define TRAIN_BUSY                -12
-#define INVALID_AUX               -13
+#define INVALID_TRAIN_ID          -707
+#define INVALID_SPEED             -708
+#define INVALID_AUXILIARY         -709
+#define INVALID_SWITCH_ID         -710
+#define INVALID_SWITCH_STATE      -711
+#define INVALID_SENSOR_ID         -712
+#define TRAIN_HAS_NO_CONDUCTOR    -713
+#define OUT_OF_DISPATCHER_NODES   -714
+#define INVALID_DESTINATION       -715
+#define NO_PATH_EXISTS            -716
+#define INVALID_REQUEST           -717
+#define TRAIN_BUSY                -718
+#define INVALID_AUX               -719
 
 
 void Dispatcher();

@@ -1,6 +1,8 @@
 /*
  * hash.c - Hash functions
- * source: http://stackoverflow.com/questions/7666509/
+ * sources:
+ *     http://stackoverflow.com/questions/7666509/
+ *     http://stackoverflow.com/questions/664014/
  */
 #include <hash.h>
 #include <syscall.h>
@@ -29,6 +31,14 @@ unsigned int hash_djb2(char *str) {
     }
 
     return hash;
+}
+
+
+unsigned int hash_shift(unsigned int n) {
+    n = ((n >> 16) ^ 16) * 0x45D9F3B;
+    n = ((n >> 16) ^ 16) * 0x45D9F3B;
+    n = ((n >> 16) ^ n);
+    return n;
 }
 
 

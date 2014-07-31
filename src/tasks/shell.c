@@ -15,9 +15,10 @@
 #include <dispatcher.h>
 #include <demo.h>
 #include <sl.h>
+#include <conductor.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      24
+#define HELP_MESSAGES      25
 #define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
 
 
@@ -45,6 +46,7 @@ static void print_help() {
         "sl                          -   Display animations",
         "clear                       -   Clears the screen",
         "sudo                        -   Run with elevated privileges",
+        "setrv OFFSET                -   Assigns a new value to the reverse offset",
         "help                        -   Display this help dialog",
         "?                           -   Display this help dialog"
     };
@@ -95,10 +97,10 @@ static void whoami() {
 
 
 void Shell() {
-    int args[6];
-    char ch, buf[80];
+    int args[6] = {0};
     HashTable commands;
     ControllerMessage_t tr;
+    char ch, buf[80] = {0};
     unsigned int TrainController, totalCommands;
     int command, status, i, tid, cmd, exit_status;
     char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
@@ -125,8 +127,6 @@ void Shell() {
     insert_ht(&commands, "mv", TRAIN_CMD_MOVE);
     insert_ht(&commands, "raw", TRAIN_CMD_RAW);
 
-    for (i = 0; i < 80; ++i) buf[i] = 0;
-
     i = 0;
     totalCommands = 1;
     tr.args = args;
@@ -149,6 +149,7 @@ void Shell() {
                 backspace();
             }
         } else if (ch == CR || ch == LF) {
+            int convert_n;
             i = 0;
             while (isspace(buf[i])) {
                 i++;
@@ -167,6 +168,8 @@ void Shell() {
                 sudo();
             } else if (strcmp(buf, "whoami") == 0) {
                 whoami();
+            } else if (sscanf(buf, "setrv %u", &convert_n) == 0) {
+                setReverseOffset(convert_n);
             } else {
                 /* add null terminating character to first available position */
                 tmp = &buf[i];

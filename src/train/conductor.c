@@ -10,8 +10,12 @@
 #include <stdlib.h>
 #include <random.h>
 #include <clock.h>
+#include <types.h>
 
 #define RV_OFFSET         290       // how many MM to go past a target for the purpose of reversing
+
+// how many MM to go past a target for the purpose of reversing
+static volatile unsigned int RV_OFFSET = 200;
 
 typedef struct {
     int type;
@@ -27,6 +31,16 @@ typedef enum {
     TIME_UP,
     DIST_UP
 } ConductorMessageTypes;
+
+
+void setReverseOffset(unsigned int offset) {
+    RV_OFFSET = offset;
+}
+
+
+unsigned int getReverseOffset() {
+    return RV_OFFSET;
+}
 
 
 static bool isTrainAtDest(int train, track_node *dest, int expectOffset) {
@@ -55,7 +69,7 @@ void Conductor() {
     track_node *dest, *path[32] = {0};
     int callee, status, myTid, train;
     int node_count, tr_number;
-    unsigned int total_distance, destDist;
+    unsigned int total_distance, destDist, reverse_offset;
 
     status = Receive(&callee, &req, sizeof(req));
     if (status < 0) {
@@ -70,6 +84,7 @@ void Conductor() {
     destDist = req.arg2;
     tr_number = req.arg3;
     myTid = MyTid();
+    reverse_offset = getReverseOffset();
 
     ASSERT((req.type == GOTO || req.type == MOVE),
            "recieved a message not of type GOTO or MOVE: type %d from %d", req.type, callee);
@@ -114,7 +129,7 @@ void Conductor() {
             for (i = 0; i < node_count - 1; ++i) {
                 if (path[i] && path[i]->reverse == path[i + 1]) {
                     notice("%d Exec PARTIAL route %s -> %s", tr_number, path[base]->name, path[i]->name);
-                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), RV_OFFSET);
+                    result = TrGotoAfter(train, &(path[base]), (i - base + 1), reverse_offset);
 
                     switch (result) {
                         case GOTO_COMPLETE:

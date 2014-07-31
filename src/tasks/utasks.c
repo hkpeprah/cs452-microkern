@@ -22,6 +22,7 @@
 #include <sensor_server.h>
 #include <dispatcher.h>
 #include <path.h>
+#include <transit.h>
 
 #define RESERVE   0
 #define RELEASE   1
@@ -193,6 +194,15 @@ void TrainUserTask() {
                     status = INVALID_SENSOR_ID;
                 }
                 break;
+            case TRAIN_CMD_STATION:
+                req.args[3] = -1;
+            case TRAIN_CMD_STATION_PASSENGERS:
+                if ((sensor1 = sensorToInt(req.args[1], req.args[2])) >= 0) {
+                    status = AddTrainStation(sensor1, req.args[3]);
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
+                break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);
                 status = -1;
@@ -202,6 +212,18 @@ void TrainUserTask() {
 
         switch (status) {
             case 0: case 1:
+                break;
+            case TOO_MANY_STATIONS:
+                printf("Error: Too many train stations.\r\n");
+                break;
+            case NO_TRAIN_STATIONS:
+                printf("Error: No train stations exist.\r\n");
+                break;
+            case TRAIN_STATION_INVALID:
+                printf("Error: Invalid train station.\r\n");
+                break;
+            case TASK_DOES_NOT_EXIST:
+                printf("Error: Handler for this call does not exist.\r\n");
                 break;
             case INVALID_AUXILIARY:
                 printf("Error: Invalid auxiliary number.\r\n");
