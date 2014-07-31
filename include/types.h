@@ -19,6 +19,7 @@ typedef unsigned int     uint8_t;
 typedef unsigned int     uint16_t;
 typedef unsigned int     uint32_t;
 typedef unsigned int     size_t;
+typedef char*            string;
 
 typedef enum {
     CLOCK_INTERRUPT = 0,

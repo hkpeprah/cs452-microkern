@@ -203,6 +203,12 @@ void TrainUserTask() {
                     status = INVALID_SENSOR_ID;
                 }
                 break;
+            case TRAIN_CMD_STATION_ADD_PASSENGERS:
+                if ((sensor1 = sensorToInt(req.args[1], req.args[2])) >= 0) {
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
+                break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);
                 status = -1;
@@ -211,7 +217,11 @@ void TrainUserTask() {
         }
 
         switch (status) {
-            case 0: case 1:
+            case 0:
+            case 1:
+                break;
+            case TRANSACTION_INCOMPLETE:
+                /* we should handle this elsewhere */
                 break;
             case TOO_MANY_STATIONS:
                 printf("Error: Too many train stations.\r\n");

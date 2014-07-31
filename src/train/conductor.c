@@ -11,6 +11,7 @@
 #include <random.h>
 #include <clock.h>
 #include <types.h>
+#include <transit.h>
 
 #define RV_OFFSET         290       // how many MM to go past a target for the purpose of reversing
 
@@ -84,6 +85,7 @@ void Conductor() {
     destDist = req.arg2;
     tr_number = req.arg3;
     myTid = MyTid();
+    dest = NULL;
     reverse_offset = getReverseOffset();
 
     ASSERT((req.type == GOTO || req.type == MOVE),
@@ -208,6 +210,11 @@ lost:
        way, we're not exiting */
 done:
     /* remove self from parent, so that train can be used again */
+    if (dest != NULL) {
+        notice("Conductor (Tid %d): Broadcasting arrival of train %d at sensor %s (%d)", myTid, tr_number,
+               dest->name, dest->num);
+    }
+    Broadcast(tr_number, dest->num);
     status = DispatchStopRoute(tr_number);
     if (status < 0) {
         error("Conductor (Tid %d): Error: Got %d in send to parent %u", myTid, status, MyParentTid());

@@ -94,3 +94,16 @@ int isspace(int ch) {
 
     return 0;
 }
+
+
+int indexOf(char ch, char *str) {
+    int len, index;
+
+    len = strlen(str);
+    index = len;
+    while (*str++ != ch) {
+        index--;
+    }
+    index = len - index;
+    return (index == len ? -1 : index);
+}

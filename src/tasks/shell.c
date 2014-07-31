@@ -16,11 +16,11 @@
 #include <demo.h>
 #include <sl.h>
 #include <conductor.h>
+#include <persona.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      25
+#define HELP_MESSAGES      28
 #define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
-
 
 static void print_help() {
     static char *help[] = {
@@ -42,6 +42,9 @@ static void print_help() {
         "rsv TRAIN SNSR1 SNSR2       -   Reserve sensors from SNSR1 to SNSR2 for TRAIN",
         "rls TRAIN SNSR1 SNSR2       -   Release sensors from SNSR1 to SNSR2 if they are assigned to TRAIN",
         "raw BYTE1 BYTE2             -   Sends two raw bytes to the train controller",
+        "intercom                    -   Listen to the intercom on the various trains",
+        "station %d %d               -   Create a train station with specified number of passengers",
+        "passengers STATION          -   Add passengers the specified train station",
         "whoami                      -   Prints the current user",
         "sl                          -   Display animations",
         "clear                       -   Clears the screen",
@@ -103,12 +106,13 @@ void Shell() {
     char ch, buf[80] = {0};
     unsigned int TrainController, totalCommands;
     int command, status, i, tid, cmd, exit_status;
-    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u"};
+    char *tmp, *parser[] = {"", "%u", "%u %u", "%u %c", "%c%u", "%u %c%u", "%u %c%u %u", "%u %c%u %c%u", "%c%u %u"};
 
     init_ht(&commands);
     insert_ht(&commands, "rps", (int)RockPaperScissors + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "demo", (int)TrainDemo + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "sl", (int)SteamLocomotive + NUM_TRAIN_CMD_COMMANDS);
+    insert_ht(&commands, "intercom", (int)Intercom + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "go", TRAIN_CMD_GO);
     insert_ht(&commands, "stop", TRAIN_CMD_STOP);
     insert_ht(&commands, "tr", TRAIN_CMD_SPEED);
@@ -126,6 +130,8 @@ void Shell() {
     insert_ht(&commands, "rls", TRAIN_CMD_RELEASE);
     insert_ht(&commands, "mv", TRAIN_CMD_MOVE);
     insert_ht(&commands, "raw", TRAIN_CMD_RAW);
+    insert_ht(&commands, "station", TRAIN_CMD_STATION_PASSENGERS);
+    insert_ht(&commands, "passengers", TRAIN_CMD_STATION_ADD_PASSENGERS);
 
     i = 0;
     totalCommands = 1;
@@ -212,6 +218,10 @@ void Shell() {
                         case TRAIN_CMD_RELEASE:
                             cmd = 7;
                             break;
+                        case TRAIN_CMD_STATION_ADD_PASSENGERS:
+                        case TRAIN_CMD_STATION_PASSENGERS:
+                            cmd = 8;
+                            break;
                         default:
                             cmd = -1;
                     }
@@ -227,7 +237,7 @@ void Shell() {
                         }
                     } else {
                         /* this command spawns a user task */
-                        tid = Create(random_range(2, 3), (void*)(command - NUM_TRAIN_CMD_COMMANDS));
+                        tid = Create(random_range(4, 5), (void*)(command - NUM_TRAIN_CMD_COMMANDS));
                         WaitTid(tid);
                     }
                 } else if (strlen(&buf[i]) > 0) {
