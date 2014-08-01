@@ -264,10 +264,12 @@ track_edge *TrGetEdge(unsigned int tid) {
 
 #define PTL(train) printTrainLocation(train, __FUNCTION__, __LINE__)
 
+
 static void printTrainLocation(const Train_t *train, const char *function, const int line) {
-    debug("<%s:%d> Train %d at %d/%d after %s",
-            function, line, train->id, train->distSinceLastNode, d(train->currentEdge).dist, train->currentEdge->src->name);
+    Log("<%s:%d> Train %d at %d/%d after %s", function, line, train->id,
+        train->distSinceLastNode, d(train->currentEdge).dist, train->currentEdge->src->name);
 }
+
 
 static void CalibrationSnapshot(Train_t *train) {
     CalibrationSnapshot_t snapshot;
@@ -806,13 +808,10 @@ static bool trainMissSensor(Train_t *train) {
 
 static void distTraverse(Train_t *train, int numSensorTraverse) {
     track_edge *edge;
-    while (train->distSinceLastNode > train->currentEdge->dist) {
-        /*
-        debug("Train %u: edge: %s -> %s, dist trav with %d > %d, head of resv %s",
-            train->id, train->currentEdge->src->name, train->currentEdge->dest->name,
-            train->distSinceLastNode, train->currentEdge->dist, d(peek_head_resv(&(train->resv))).name);
-        */
 
+    ASSERT(train->currentEdge != NULL, "Train current edge was NULL");
+
+    while (train->distSinceLastNode > train->currentEdge->dist) {
         if (train->nextSensor == NULL || (train->currentEdge->dest == train->nextSensor && numSensorTraverse-- <= 0)) {
             // TODO: this is kind of concerning...
             break;
@@ -831,14 +830,13 @@ static void distTraverse(Train_t *train, int numSensorTraverse) {
         if (train->path != NULL && train->pathRemain > 0) {
             if (train->path[0] != train->currentEdge->dest) {
                 error("WARNING: Train %u: Traversed node (%s) != path node %s", train->id,
-                      train->currentEdge->dest->name, train->path[0]->name);
+                      d(d(train->currentEdge).dest).name, d(train->path[0]).name);
+            } else {
+                train->path++;
+                train->pathNodeRem--;
             }
-            train->path++;
-            train->pathNodeRem--;
         }
-
         train->distSinceLastNode -= train->currentEdge->dist;
-
         if ((edge = getNextEdge(train->currentEdge->dest))) {
             train->currentEdge = edge;
         } else {
@@ -1292,17 +1290,17 @@ static void TrainTask() {
             trainSpeed(train.id, 0);
             shortMvStop = -1;
             Destroy(callee);
-            debug("===shortMvStop===");
+            Log("===shortMvStop===");
             PTL(&train);
             continue;
         } else if (callee == shortMvDone) {
             shortMvDone = -1;
             Destroy(callee);
             // set this to true so next updateLocation call will push us to the final location
-            debug("===shortMvDone===");
+            Log("===shortMvDone===");
             PTL(&train);
             train.distSinceLastNode += train.transition.stopping_distance;
-            distTraverse(&train, 1);
+            distTraverse(&train, 0);
             if (trainMissSensor(&train)) {
                 error("Lost after short move?!?!?!?!?!?!?!?!");
                 train.gotoResult = GOTO_LOST;
@@ -1340,23 +1338,19 @@ static void TrainTask() {
             }
 
             if (train.gotoResult == GOTO_LOST && gotoBlocked != -1) {
-                // Totally lost
                 Log("Train %u: Lost!!!!!! shit shit shit", train.id);
                 Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
                 gotoBlocked = -1;
             }
 
             if (train.speed == 0 && gotoBlocked != -1 && train.transition.state == STOP && shortMvDone == -1) {
-                debug("===Train done pathing===");
-
-                // Done pathing
+                Log("===Train done pathing===");
                 if (trainMissSensor(&train)) {
                     debug("Lost after pathing?!?!?!?!!!?!!?!1111111one");
                     train.gotoResult = GOTO_LOST;
                 }
 
-                Log("Train %u: Finished pathing, replying to conductor (%d) with result %d",
-                        train.id, gotoBlocked, train.gotoResult);
+                Log("Train %u: Finished pathing, replying to conductor (%d) with result %d", train.id, gotoBlocked, train.gotoResult);
                 Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
                 gotoBlocked = -1;
             }
@@ -1366,7 +1360,6 @@ static void TrainTask() {
         }
 
         // 2nd block - external task request something of us, message actually matters
-
         switch (request.type) {
             case TRM_DELETE:
                 status = 0;

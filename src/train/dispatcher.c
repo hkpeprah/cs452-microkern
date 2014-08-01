@@ -51,8 +51,8 @@ typedef struct {
 } DispatcherNode_t;
 
 
-static uint32_t train_dispatcher_tid = -1;
-static uint32_t num_of_trains = 0;
+static int train_dispatcher_tid = -1;
+static int num_of_trains = 0;
 static void removeDispatcherNode(DispatcherNode_t*, DispatcherNode_t*);
 static DispatcherNode_t *addDispatcherNode(DispatcherNode_t*, unsigned int, unsigned int);
 static DispatcherNode_t *getDispatcherNode(DispatcherNode_t*, uint32_t);
@@ -232,7 +232,11 @@ static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *nod
     for (i = 0; i < MAX_NUM_OF_TRAINS; ++i) {
         if (trains[i].train == node->train) {
             /* create the message to send to deletion courier */
-            tid = Create(10, TrainDeleteCourier);
+            tid = Create(11, TrainDeleteCourier);
+            if (node->conductor != -1) {
+                Destroy(node->conductor);
+                node->conductor = -1;
+            }
             req.type = TRM_REMOVE_TRAIN;
             req.tr = trains[i].tr_number;
             req.arg0 = trains[i].train;
@@ -332,7 +336,7 @@ void Dispatcher() {
                         Destroy(CreateCourier);
                         CreateCourier = -1;
                     } else {
-                        error("Dispatcher: Train %d is waiting but nothing is creating", nextTrain);
+                        error("Dispatcher: Callee (Tid %d) attempted to add train %d which is waiting, but nothing is creating", callee, nextTrain);
                         break;
                     }
                 } else if (nextTrain != waitingTrain) {

@@ -177,7 +177,7 @@ static int boardTrain(TrainPassengers *train, TrainStation_t *station) {
         passengers = passengers->next;
         tmp->next = train->passengers;
         /* since the pedestrian is boarding the train, they are now a passenger */
-        tmp->tid = Create(3, Passenger);
+        // tmp->tid = Create(3, Passenger);
         train->passengers = tmp;
         boarded++;
     }
@@ -310,7 +310,7 @@ void MrBonesWildRide() {
                     hash = hash_shift(trainId) % (TRAIN_COUNT * 2);
                     train = &train_reservations[hash];
                     station = &train_stations[request.arg1];
-                    Log("Called with sensor = %d, train = %d (hash %d)", station, trainId, hash);
+                    Log("Called with sensor = %d, train = %d (hash %d)", station->sensor, trainId, hash);
                     if (train->tr > 0 && train->tr != trainId) {
                         error("MrBonesWildRide: Collision adding train %d to spot filled by train %d", train, train->tr);
                         response = TRAIN_STATION_INVALID;

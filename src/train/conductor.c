@@ -13,10 +13,8 @@
 #include <types.h>
 #include <transit.h>
 
-#define RV_OFFSET         290       // how many MM to go past a target for the purpose of reversing
-
 // how many MM to go past a target for the purpose of reversing
-static volatile unsigned int RV_OFFSET = 200;
+static volatile unsigned int RV_OFFSET = 290;
 
 typedef struct {
     int type;
@@ -51,7 +49,7 @@ static bool isTrainAtDest(int train, track_node *dest, int expectOffset, int tr_
     ASSERT((node = TrGetLocation(train, &offset)), "Null node?!");
     ASSERT((edge = getNextEdge(node)), "Null edge?!");
 
-    debug("Conductor: Train %d (Tid %d) at %d past %s, expected %d past %s", tr_number, train,
+    debug("Conductor: Train %d (Tid %d) at %d past %s, destination is %d past %s", tr_number, train,
           offset, d(node).name, expectOffset, d(dest).name);
 
     if (expectOffset != 0) {
@@ -102,7 +100,7 @@ void Conductor() {
                 goto lost;
             }
 
-            if (isTrainAtDest(train, dest, destDist)) {
+            if (isTrainAtDest(train, dest, destDist, tr_number)) {
                 goto done;
             }
 
@@ -191,6 +189,10 @@ lost:
             /* we're lost, so let's re-add the train */
             TrDelete(train);
             train = DispatchReAddTrain(tr_number);
+            if (train < 0) {
+                error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
+                break;
+            }
             Delay(200);
         }
         /* when the conductor gives up, we have to clean up the mess we made */
