@@ -55,8 +55,8 @@ static bool isTrainAtDest(int train, track_node *dest, int expectOffset, int tr_
     if (expectOffset != 0) {
         return (edge->src == dest && ABS(expectOffset - offset) < MAX_NODE_OFFSET);
     }
-    return (((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET) ||
-             ((edge->dest == dest || edge->dest->reverse == dest) && (edge->dist - offset) < MAX_NODE_OFFSET));
+
+    return (((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET));
 }
 
 
@@ -92,7 +92,7 @@ void Conductor() {
     if (req.type == GOTO) {
         int attemptsLeft;
         dest = (track_node*)req.arg1;
-        for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
+        for (attemptsLeft = 10; attemptsLeft > 0; --attemptsLeft) {
             source = TrGetEdge(train);
             if (source == NULL) {
                 error("Train %d (Tid %d) reported NULL edge", tr_number, train);
@@ -181,13 +181,14 @@ void Conductor() {
                 break;
             }
 reroute:
-            debug("Train %d asked to be rerouted, sleeping...", tr_number);
+            debug("Conductor (Tid %d): Re-routing train %d after sleep...", MyTid(), tr_number);
             Delay(random_range(100, 500));
             continue;
-lost:
+lost:;
             /* we're lost, so let's re-add the train */
+            int newTrain = DispatchReAddTrain(tr_number);
             TrDelete(train);
-            train = DispatchReAddTrain(tr_number);
+            train = newTrain;
             if (train < 0) {
                 error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
                 break;
@@ -196,8 +197,9 @@ lost:
         }
         /* when the conductor gives up, we have to clean up the mess we made */
         notice("Conductor (Tid %d): Giving up on routing train %d (Tid %d)", myTid, tr_number, train);
+        int newTrain = DispatchReAddTrain(tr_number);
         TrDelete(train);
-        train = DispatchReAddTrain(tr_number);
+        train = newTrain;
     } else {
         /* making a generic distance move */
         result = TrGotoAfter(train, NULL, 0, destDist);

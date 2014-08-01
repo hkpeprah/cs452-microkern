@@ -315,7 +315,6 @@ static uint32_t size_resv(TrainResv_t *resv) {
 
 
 static void dump_resv(TrainResv_t *resv) {
-    // should be debugging only
     int i;
     for (i = 0; i < size_resv(resv); ++i) {
         Log("%s", d(peek_any_resv(resv, i)).name);
@@ -802,13 +801,11 @@ static void sensorTrip(Train_t *train, track_node *sensor) {
 }
 
 static bool trainMissSensor(Train_t *train) {
-    return (train->distSinceLastNode >= d(train->currentEdge).dist + MAX_NODE_OFFSET
-            && d(d(train->currentEdge).dest).type != NODE_EXIT);
+    return (train->distSinceLastNode >= d(train->currentEdge).dist
+            && train->currentEdge->dest->type == NODE_SENSOR);
 }
 
 static void distTraverse(Train_t *train, int numSensorTraverse) {
-    track_edge *edge;
-
     ASSERT(train->currentEdge != NULL, "Train current edge was NULL");
 
     while (train->distSinceLastNode > train->currentEdge->dist) {
@@ -837,11 +834,8 @@ static void distTraverse(Train_t *train, int numSensorTraverse) {
             }
         }
         train->distSinceLastNode -= train->currentEdge->dist;
-        if ((edge = getNextEdge(train->currentEdge->dest))) {
-            train->currentEdge = edge;
-        } else {
-            ASSERT(false, "distTraverse hit null edge");
-        }
+        train->currentEdge = getNextEdge(train->currentEdge->dest);
+        ASSERT(train->currentEdge, "distTraverse hit null edge");
     }
 }
 
@@ -931,36 +925,26 @@ static void updateLocation(Train_t *train) {
 
 
 static void SensorCourierTask() {
-    TrainMessage_t request;
-    int status, callee;
-    unsigned int wait, train;
+    int status, callee, wait;
 
-    wait = 0;
-    train = MyParentTid();
-    status = Receive(&callee, &request, sizeof(request));
-    if (callee != train) {
-        error("SensorCourier: Expected callee to be %d but was %d", train, callee);
-        Reply(callee, &request, sizeof(request));
+    status = Receive(&callee, &wait, sizeof(wait));
+    if (callee != MyParentTid()) {
+        error("SensorCourier: Expected callee to be %d but was %d", MyParentTid(), callee);
+        Reply(callee, NULL, 0);
         return;
     }
 
-    wait = request.arg0;
-    status = Reply(callee, &request, sizeof(request));
-    if (request.type != TRM_SENSOR_WAIT) {
-        error("SensorCourier: Bad message type %d from %d", request.type, train);
-        return;
-    }
+    status = Reply(callee, NULL, 0);
 
     if ((status = WaitOnSensorN(wait)) < 0) {
         error("SensorCourier: Error: WaitOnSensorN returned %d", status);
     }
-    Send(train, NULL, 0, NULL, 0);
+    Send(callee, NULL, 0, NULL, 0);
 }
 
 
 // return: id of time-based courier for when this is expected to hit
 static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSensor, int *timeoutCourier) {
-    TrainMessage_t msg1;
 
     if (*timeoutCourier >= 0) {
         Destroy(*timeoutCourier);
@@ -982,14 +966,11 @@ static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSen
     if (train->nextSensor != NULL && train->nextSensor->reservedBy == train->id) {
         *waitingSensor = train->nextSensor->num;
         *sensorCourier = Create(4, SensorCourierTask);
-        msg1.type = TRM_SENSOR_WAIT;
-        msg1.arg0 = train->nextSensor->num;
         Log("Train %u: waiting on sensor %s with courier tid %d", train->id, train->nextSensor->name, *sensorCourier);
-        Send(*sensorCourier, &msg1, sizeof(msg1), NULL, 0);
+        Send(*sensorCourier, waitingSensor, sizeof(*waitingSensor), NULL, 0);
 
         int timeout = -1;
         if (timeout > 0) {
-            // debug("Train %u: timeout courier with delay %u ticks", train->id, timeout);
             *timeoutCourier = CourierDelay(timeout, DELAY_PRIORITY);
         }
         Log("waiting at %d past %s for sensor %s at %d mm away, going at speed %d, with timeout %d (tid %d)",
@@ -1099,14 +1080,14 @@ static int trainDir(Train_t *train) {
 }
 
 
-static void initTrain(Train_t *train, TrainMessage_t *request) {
+static void initTrain(Train_t *train, int id, track_node *sensor) {
     /* initialize the train structure */
-    train->id = request->tr;
+    train->id = id;
     train->speed = 0;
     train->aux = 0;
     train->microPerTick = 0;
 
-    train->lastSensor = (track_node*)request->arg0;
+    train->lastSensor = sensor;
     train->nextSensor = NULL;
     train->currentEdge = getNextEdge(train->lastSensor);
     train->distSinceLastSensor = getStoppingDistance(train->id, 3, 0);
@@ -1238,7 +1219,7 @@ static void TrainTask() {
 
     Reply(callee, NULL, 0);
 
-    initTrain(&train, &request);
+    initTrain(&train, request.tr, (track_node*) request.arg0);
 
     /* initialize couriers */
     sensorCourier = -1;
@@ -1300,14 +1281,14 @@ static void TrainTask() {
             trainSpeed(train.id, 0);
             shortMvStop = -1;
             Destroy(callee);
-            Log("===shortMvStop===");
+            Log("===shortMvStop %d===", train.id);
             PTL(&train);
             continue;
         } else if (callee == shortMvDone) {
             shortMvDone = -1;
             Destroy(callee);
             // set this to true so next updateLocation call will push us to the final location
-            Log("===shortMvDone===");
+            Log("===shortMvDone %d===", train.id);
             PTL(&train);
             train.distSinceLastNode += train.transition.stopping_distance;
             distTraverse(&train, 0);
@@ -1324,6 +1305,7 @@ static void TrainTask() {
             updateLocation(&train);
 
             if (train.speed != 0
+                    && train.gotoResult != GOTO_LOST
                     && train.distSinceLastNode > train.currentEdge->dist + DEAD_SENSOR_BUFFER
                     && train.currentEdge->dest == train.nextSensor) {
 
@@ -1366,7 +1348,9 @@ static void TrainTask() {
                 gotoBlocked = -1;
             }
 
-            Reply(callee, NULL, 0);
+            if (train.gotoResult != GOTO_LOST) {
+                Reply(callee, NULL, 0);
+            }
             continue;
         }
 
@@ -1406,9 +1390,7 @@ static void TrainTask() {
                 notice("Train %u: Deleted (Tid %u)", train.id, MyTid());
                 PTL(&train);
                 clearTrainSnapshot(train.id);
-                Reply(callee, &status, sizeof(status));
-                Exit();
-                break;
+                return;
             case TRM_GOTO_AFTER:
                 /* blocks the calling task until we arrive at our destination */
                 gotoBlocked = callee;
@@ -1475,8 +1457,6 @@ static void TrainTask() {
                             "shortMvStop CourierDelay returned negative value %d!", shortMvStop);
                     ASSERT((shortMvDone = CourierDelay(delayTime << 1, DELAY_PRIORITY)) >= 0,
                             "shortMvDone CourierDelay returned negative value %d!", shortMvStop);
-
-                    Log("Train %u: created shortMvStop {%d} and shortMvDone {%d}", train.id, shortMvStop, shortMvDone);
                 } else {
                     // normal move
                     setTrainSpeed(&train, GOTO_SPEED);
