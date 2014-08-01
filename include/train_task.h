@@ -3,6 +3,8 @@
 #include <track_node.h>
 #include <types.h>
 
+#define MAX_NODE_OFFSET   125
+
 // shared with conductor
 typedef enum {
     GOTO_COMPLETE = 28599,      // completed route

@@ -126,7 +126,7 @@
 #define LEFT_HALF                0
 #define RIGHT_HALF               TERMINAL_WIDTH / 2
 #define TOP_HALF                 0
-#define BOTTOM_HALF              30
+#define BOTTOM_HALF              35
 
 
 void initDebug();

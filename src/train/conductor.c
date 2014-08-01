@@ -12,7 +12,6 @@
 #include <clock.h>
 
 #define RV_OFFSET         290       // how many MM to go past a target for the purpose of reversing
-#define MAX_NODE_OFFSET   125
 
 typedef struct {
     int type;
@@ -173,7 +172,7 @@ void Conductor() {
             }
 reroute:
             debug("Train %d asked to be rerouted, sleeping...", tr_number);
-            Delay(random_range(300, 1000));
+            Delay(random_range(100, 500));
             continue;
 lost:
             /* we're lost, so let's re-add the train */
