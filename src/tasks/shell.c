@@ -48,6 +48,7 @@ static void print_help() {
         "broadcast TRAIN STATION     -   Broadcast arrival of train at station",
         "setrv OFFSET                -   Assigns a new value to the reverse offset",
         "spawn N                     -   Spawns n train stations with a random number of passengers",
+        "probe                       -   Probe the train and station data",
         "whoami                      -   Prints the current user",
         "sl                          -   Display animations",
         "clear                       -   Clears the screen",
@@ -115,6 +116,7 @@ void Shell() {
     insert_ht(&commands, "demo", (int)TrainDemo + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "sl", (int)SteamLocomotive + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "intercom", (int)Intercom + NUM_TRAIN_CMD_COMMANDS);
+    insert_ht(&commands, "probe", (int)Probe + NUM_TRAIN_CMD_COMMANDS);
     insert_ht(&commands, "go", TRAIN_CMD_GO);
     insert_ht(&commands, "stop", TRAIN_CMD_STOP);
     insert_ht(&commands, "tr", TRAIN_CMD_SPEED);

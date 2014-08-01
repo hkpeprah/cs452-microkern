@@ -369,6 +369,16 @@ int format(const char *fmt, va_list va, char *buffer) {
 }
 
 
+int formatas(const char *fmt, char *buffer, ...) {
+    int len = 0;
+    va_list va;
+    va_start(va, buffer);
+    len = format(fmt, va, buffer);
+    va_end(va);
+    return len;
+}
+
+
 void printformatted(int channel, char *fmt, va_list va) {
     char buffer[VARG_BUF_LEN];
     unsigned int len;

@@ -10,7 +10,9 @@
 #include <term.h>
 #include <clock.h>
 #include <util.h>
+#include <transit.h>
 
+#define STATION_LINES          8
 #define MAX_AGITATION_FACTOR   5
 #define NUM_OF_PERSONALITIES   4
 #define DEFAULT_LINE_COUNT     35
@@ -72,38 +74,11 @@ static int writeMessage(string msg) {
 }
 
 
-void initTransitIntercom() {
-    initcb_string((CircularBuffer_string*)&msgQueue);
-    messages = &msgQueue;
-    notice("Created string message queue for intercom");
+static void Continue() {
+    printf("Press any key to exit: ");
+    getchar();
+    printf("\r\n");
 }
-
-
-void Passenger() {
-    char **personality;
-    int len, index, agitationFactor;
-
-    personality = getPersonality();
-    len = MAX(1, (int)sizeof(personality) - 1);
-    index = 0;
-    agitationFactor = 0;
-    while (true) {
-        if (agitationFactor > 0 && agitationFactor - len > MAX_AGITATION_FACTOR) {
-            agitationFactor = 0;
-            index++;
-        }
-        index = MIN(index, len - 1);
-        if (personality[index] == NULL) {
-            error("Passenger: Tried to write message but was NULL");
-        } else {
-            writeMessage(personality[index]);
-        }
-        agitationFactor++;
-        Delay(350);
-    }
-    Exit();
-}
-
 
 static inline void printMessage(int line, int msgNum, string msg) {
     printf(SAVE_CURSOR MOVE_CUR_UP "\033[0K" "(Message %d) %s" RESTORE_CURSOR, line, msgNum, msg);
@@ -155,24 +130,92 @@ static void IntercomCourier() {
 }
 
 
+static void StationCourier() {
+    char buffer[PRINT_BUFFER_SIZE];
+    int num_lines, i;
+
+    while (true) {
+        for (i = 0; i < PRINT_BUFFER_SIZE; ++i) {
+            /* clear the print buffer */
+            buffer[i] = 0;
+        }
+        num_lines = GetTransitData(buffer);
+        printf(SAVE_CURSOR "%s" RESTORE_CURSOR, buffer, num_lines);
+        Delay(350);
+    }
+    Exit();
+}
+
+
+void initTransitIntercom() {
+    initcb_string((CircularBuffer_string*)&msgQueue);
+    messages = &msgQueue;
+    notice("Created string message queue for intercom");
+}
+
+
+void Passenger() {
+    char **personality;
+    int len, index, agitationFactor;
+
+    personality = getPersonality();
+    len = MAX(1, (int)sizeof(personality) - 1);
+    index = 0;
+    agitationFactor = 0;
+    while (true) {
+        if (agitationFactor > 0 && agitationFactor - len > MAX_AGITATION_FACTOR) {
+            agitationFactor = 0;
+            index++;
+        }
+        index = MIN(index, len - 1);
+        if (personality[index] == NULL) {
+            error("Passenger: Tried to write message but was NULL");
+        } else {
+            writeMessage(personality[index]);
+        }
+        agitationFactor++;
+        Delay(350);
+    }
+    Exit();
+}
+
+
 void Intercom() {
     /* intercom reserves five units of screen space to display messages */
-    char ch;
-    int i, printer, max_line_count;
+    int i, messagePrinter, max_line_count;
 
-    printer = -1;
+    messagePrinter = -1;
     max_line_count = MIN(DEFAULT_LINE_COUNT, TERMINAL_HEIGHT - getTermBottom() - 2) + 1;
-    for (i = 0; i < max_line_count; ++i) {
+    for (i = 0; i < max_line_count - 1; ++i) {
         printf("\r\n");
     }
 
-    if ((printer = Create(4, IntercomCourier)) >= 0) {
-        Send(printer, &max_line_count, sizeof(max_line_count), NULL, 0);
+    if ((messagePrinter = Create(3, IntercomCourier)) >= 0) {
+        /* generate the intercom courier if possible */
+        Send(messagePrinter, &max_line_count, sizeof(max_line_count), NULL, 0);
         notice("Created IntercomCourier with Tid %d", printer);
-        printf("Press any key to exit: ");
-        ch = getchar();
-        printf("\r\n");
-        Destroy(printer);
+        Continue();
+        Destroy(messagePrinter);
+    } else {
+        Continue();
+    }
+
+    Exit();
+}
+
+
+void Probe() {
+    /* probs the locations of trains and stations */
+    int messagePrinter;
+
+    if ((messagePrinter = Create(3, StationCourier)) >= 0) {
+        int i;
+        printf("Enter any key to continue: \r\n");
+        getchar();
+        for (i = 0; i < TERMINAL_HEIGHT / 2; ++i) {
+            printf("\r\n");
+        }
+        Destroy(messagePrinter);
     }
     Exit();
 }

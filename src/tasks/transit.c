@@ -17,6 +17,7 @@
 #include <hash.h>
 #include <persona.h>
 #include <logger.h>
+#include <string.h>
 
 #define TRAIN_MAX_NUM         60
 #define MAX_NUM_STATIONS      20
@@ -33,6 +34,7 @@ typedef enum {
     TRAIN_STATION_REMOVE,
     TRAIN_STATION_ADD_PASSENGERS,
     TRAIN_STATION_SHUTDOWN,
+    TRAIN_STATION_DATA,
     NUM_FUHRER_MESSAGE_TYPES
 } TransitMessageTypes;
 
@@ -77,10 +79,11 @@ int SpawnStations(int num_stations) {
             case TRANSACTION_INCOMPLETE:
             case TASK_DOES_NOT_EXIST:
             case TOO_MANY_STATIONS:
-                break;
+                attempts++;
+                return status;
             case TRAIN_STATION_INVALID:
                 attempts++;
-                continue;
+                break;
             default:
                 attempts = 0;
                 num_stations--;
@@ -94,10 +97,7 @@ int AddTrainStation(int sensor, int passengers) {
     TransitMessage_t msg = {.type = TRAIN_STATION_SPAWN, .arg0 = sensor};
     int status, errno;
 
-    if (transit_system_tid == -1) {
-        return TASK_DOES_NOT_EXIST;
-    }
-
+    ASSERT(transit_system_tid != -1, "Transit System does not exist");
     if (passengers < 0) {
         passengers = random_range(1, 5);
     }
@@ -131,6 +131,21 @@ int AddPassengers(int sensor, int passengers) {
 }
 
 
+int GetTransitData(char *buffer) {
+    TransitMessage_t msg = {.type = TRAIN_STATION_DATA, .arg0 = (int)buffer};
+    int errno, status;
+
+    ASSERT(transit_system_tid != -1, "Transit System does not exist");
+    errno = Send(transit_system_tid, &msg, sizeof(msg), &status, sizeof(status));
+    if (errno < 0) {
+        error("Broadcast: Error in Send: %d got %d sending to %d", MyTid(), errno, transit_system_tid);
+        return TRANSACTION_INCOMPLETE;
+    }
+
+    return status;
+}
+
+
 int Broadcast(int train, int sensor) {
     /* Broadcast the arrival of a train at a sensor (station) to the
        MrBonesWildRide which determines if there is another place the train
@@ -138,10 +153,7 @@ int Broadcast(int train, int sensor) {
     TransitMessage_t msg = {.type = TRAIN_STATION_ARRIVAL, .arg0 = train, .arg1 = sensor};
     int errno, nextStation;
 
-    if (transit_system_tid == -1) {
-        return TASK_DOES_NOT_EXIST;
-    }
-
+    ASSERT(transit_system_tid != -1, "Transit System does not exist");
     errno = Send(transit_system_tid, &msg, sizeof(msg), &nextStation, sizeof(nextStation));
     if (errno < 0) {
         error("Broadcast: Error in Send: %d got %d sending to %d", MyTid(), errno, transit_system_tid);
@@ -153,8 +165,7 @@ int Broadcast(int train, int sensor) {
 
 
 static inline bool isValidTrainStation(TrainStation_t *stations, int sensor) {
-    return (stations[sensor].active == false && !(sensor > 0 && stations[sensor - 1].active == true) &&
-            !(sensor < SENSOR_COUNT - 1 && stations[sensor + 1].active == true));
+    return (stations[sensor].active == false);
 }
 
 
@@ -197,7 +208,7 @@ static TrainStation_t *getRandomTrainStation(TrainStation_t *stations, int num_s
     }
 
     if (count > 0) {
-        nextStation = available[random_range(0, count)];
+        nextStation = available[random() % count];
     }
     return nextStation;
 }
@@ -397,7 +408,7 @@ void MrBonesWildRide() {
                 } else {
                     TrainStation_t *station;
                     station = &train_stations[request.arg0];
-                    if (num_of_stations >= MAX_NUM_STATIONS || num_of_stations >= SENSOR_COUNT || station->active) {
+                    if (num_of_stations >= MAX_NUM_STATIONS || num_of_stations >= SENSOR_COUNT) {
                         /* either we have added too many trains or there is already
                            a station at the given sensor */
                         response = TOO_MANY_STATIONS;
@@ -518,6 +529,48 @@ void MrBonesWildRide() {
                         checkNonBusyTrain(train_reservations, station);
                         debug("MrBonesWildRide: Station at %d has %d passengers", station->sensor, station->passengers);
                         continue;
+                    }
+                }
+                break;
+            case TRAIN_STATION_DATA:
+                if (request.arg0 == 0) {
+                    response = BUFFER_SPACE_INSUFF;
+                } else {
+                    string buffer;
+                    unsigned int len;
+                    char format_buffer[128];
+
+                    buffer = (string)request.arg0;
+                    response = 0;
+                    len = 0;
+                    for (i = 0; i < 127; ++i) {
+                        format_buffer[i] = 0;
+                    }
+
+                    /* copy the station data to print */
+                    for (i = 0; i < SENSOR_COUNT; ++i) {
+                        if (len >= PRINT_BUFFER_SIZE) {
+                            break;
+                        } else  if (train_stations[i].active == true) {
+                            formatas("\033[0K\033[32mSTATION %d\033[0m: %d passengers waiting\r\n", format_buffer,
+                                     train_stations[i].sensor, train_stations[i].passengers);
+                            strcat(buffer, format_buffer);
+                            response++;
+                            len += 128;
+                        }
+                    }
+
+                    /* copy the train data to print */
+                    for (i = 0; i < TRAIN_MAX_NUM; ++i) {
+                        if (len >= PRINT_BUFFER_SIZE) {
+                            break;
+                        } else if (train_reservations[i].tr > 0) {
+                            formatas("\033[0K\033[36mTRAIN %d\033[0m: %d passengers on board, heading to %d\r\n", format_buffer,
+                                     train_reservations[i].tr, train_reservations[i].onBoard, train_reservations[i].destination);
+                            strcat(buffer, format_buffer);
+                            response++;
+                            len += 128;
+                        }
                     }
                 }
                 break;

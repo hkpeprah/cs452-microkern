@@ -31,6 +31,7 @@ char *gets(int, char*, uint32_t);
 int sscanf(const char*, const char*, ...);
 void printformatted(int, char*, va_list);
 int format(const char*, va_list, char*);
+int formatas(const char*, char*, ...);
 void bufputstr(int, char*);
 void bufprintf(int, char*, ...);
 

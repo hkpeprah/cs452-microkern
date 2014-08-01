@@ -7,6 +7,7 @@
 
 
 void MrBonesWildRide();
+int GetTransitData(char *buffer);
 int Broadcast(int train, int sensor);
 int AddTrainStation(int sensor, int passengers);
 int AddPassenger(int sensor, int passengers);
