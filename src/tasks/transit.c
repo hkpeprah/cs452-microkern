@@ -48,6 +48,7 @@ typedef struct {
     bool active;
     int sensor;
     int passengers;
+    int serviced;
     Person waiting;
 } TrainStation_t;
 
@@ -204,7 +205,7 @@ static TrainStation_t *getRandomTrainStation(TrainStation_t *stations, int num_s
         /* figure out which sensors are available to go to */
         if (count == num_stations) {
             break;
-        } else if (stations[i].active == true) {
+        } else if (stations[i].active == true && stations[i].serviced == -1) {
             available[count++] = &stations[i];
         }
     }
@@ -246,9 +247,11 @@ static int findOptimalNextStation(TrainStation_t *currentStation, TrainPassenger
     tmp = train->passengers;
     while (tmp != NULL) {
         ASSERT(tmp->weight > 0, "Tried to board person with %d weight", tmp->weight);
-        pathWeights[tmp->destination] += tmp->weight;
-        if (heaviestPath == -1 || pathWeights[tmp->destination] > pathWeights[heaviestPath]) {
-            heaviestPath = tmp->destination;
+        if (trainStations[tmp->destination].serviced < 0) {
+            pathWeights[tmp->destination] += tmp->weight;
+            if (heaviestPath == -1 || pathWeights[tmp->destination] > pathWeights[heaviestPath]) {
+                heaviestPath = tmp->destination;
+            }
         }
         tmp = tmp->next;
     }
@@ -259,13 +262,16 @@ static int findOptimalNextStation(TrainStation_t *currentStation, TrainPassenger
         weight = 0;
         for (i = 0; i < SENSOR_COUNT; ++i) {
             if (trainStations[i].active != false && trainStations[i].waiting != NULL &&
-                trainStations[i].passengers > weight) {
+                trainStations[i].passengers > weight && trainStations[i].serviced < 0) {
                 weight = trainStations[i].passengers;
                 heaviestPath = trainStations[i].sensor;
             }
         }
     }
 
+    if (heaviestPath >= 0) {
+        trainStations[heaviestPath].serviced = train->tr;
+    }
     return heaviestPath;
 }
 
@@ -301,6 +307,7 @@ void MrBonesWildRide() {
         train_stations[i].waiting = NULL;
         train_stations[i].passengers = 0;
         train_stations[i].sensor = i;
+        train_stations[i].serviced = -1;
     }
 
     for (i = 0; i < TRAIN_MAX_NUM; ++i) {
@@ -385,6 +392,7 @@ void MrBonesWildRide() {
                         printf("MrBonesWildRide: Train %d arrived at %d, %d passengers got off\r\n", train->tr, station->sensor, off);
                     }
                     /* find the next optimal station to go to */
+                    station->serviced = -1;
                     nextStation = findOptimalNextStation(station, train, train_stations);
                     Log("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
                     printf("Train %d next station is %d (%d on board)\r\n", train->tr, nextStation, train->onBoard);
