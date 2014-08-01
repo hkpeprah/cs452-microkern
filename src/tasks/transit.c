@@ -52,6 +52,7 @@ typedef struct {
 typedef struct {
     int tr;
     int destination;
+    int onBoard;
     Person passengers;
 } TrainPassengers;
 
@@ -173,15 +174,15 @@ static int boardTrain(TrainPassengers *train, TrainStation_t *station) {
     passengers = station->waiting;
     station->waiting = NULL;
     boarded = 0;
-    while (passengers != NULL) {
-        tmp = passengers;
+    while ((tmp = passengers) != NULL) {
+        /* since the pedestrian is boarding the train, they are now a passenger */
         passengers = passengers->next;
         tmp->next = train->passengers;
-        /* since the pedestrian is boarding the train, they are now a passenger */
         tmp->tid = Create(3, Passenger);
         train->passengers = tmp;
         boarded++;
     }
+    train->onBoard += boarded;
     return boarded;
 }
 
@@ -277,6 +278,7 @@ void MrBonesWildRide() {
         train_reservations[i].tr = -1;
         train_reservations[i].passengers = NULL;
         train_reservations[i].destination = -1;
+        train_reservations[i].onBoard = 0;
     }
 
     while (is_shutdown == false) {
@@ -312,14 +314,14 @@ void MrBonesWildRide() {
                     hash = trainId % TRAIN_MAX_NUM;
                     train = &train_reservations[hash];
                     station = &train_stations[request.arg1];
-                    Log("Called with sensor = %d, train = %d (hash %d)", station->sensor, trainId, hash);
+                    Log("Called with sensor = %d, train = %d (hash %d)", d(station).sensor, trainId);
                     if (train->tr > 0 && train->tr != trainId) {
                         error("MrBonesWildRide: Collision adding train %d to spot filled by train %d", train, train->tr);
                         response = TRAIN_STATION_INVALID;
                         break;
                     } else {
-                        train->tr = (train->tr <= 0 ? trainId : train->tr);
-                        if (station->active == true) {
+                        d(train).tr = (train->tr <= 0 ? trainId : train->tr);
+                        if (d(station).active == true) {
                             /* check which passengers are getting off at this stop */
                             Person stillWaiting = NULL;
                             int off;
@@ -338,9 +340,11 @@ void MrBonesWildRide() {
                                     tmp->weight = -1;
                                     tmp->next = passengers;
                                     passengers = tmp;
+                                    train->onBoard--;
                                 } else {
                                     /* the ride never ends */
-                                    Log("Train %d: At station %d, for this passenger, the ride goes on", train->tr, station->sensor);
+                                    Log("Train %d: At station %d, passenger wants to go to station %d for this passenger, "
+                                        "the ride goes on", train->tr, station->sensor, tmp->destination);
                                     tmp->next = stillWaiting;
                                     tmp->weight++;
                                     stillWaiting = tmp;
@@ -354,7 +358,7 @@ void MrBonesWildRide() {
                     /* find the next optimal station to go to */
                     Log("Train %d finding next station to go to", train->tr);
                     nextStation = findOptimalNextStation(station, train, train_stations);
-                    Log("Train %d next station is %d", train->tr, nextStation);
+                    Log("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
                     if (nextStation >= 0) {
                         train->destination = nextStation;
                         response = 1;

@@ -208,7 +208,7 @@ lost:
 done:
     /* remove self from parent, so that train can be used again */
     if (dest != NULL) {
-        notice("Conductor (Tid %d): Broadcasting arrival of train %d at sensor %s (%d)", myTid, tr_number, dest->name, dest->num);
+        Log("Conductor (Tid %d): Broadcasting arrival of train %d at sensor %s (%d)", myTid, tr_number, dest->name, dest->num);
         Broadcast(tr_number, dest->num);
     }
     status = DispatchStopRoute(tr_number);

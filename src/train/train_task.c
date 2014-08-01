@@ -1312,7 +1312,7 @@ static void TrainTask() {
             train.distSinceLastNode += train.transition.stopping_distance;
             distTraverse(&train, 0);
             if (trainMissSensor(&train)) {
-                error("Lost after short move?!?!?!?!?!?!?!?!");
+                Log("Lost after short move?!?!?!?!?!?!?!?!");
                 train.gotoResult = GOTO_LOST;
             } else {
                 freeResvOnStop(&train);
