@@ -55,8 +55,10 @@ static bool isTrainAtDest(int train, track_node *dest, int expectOffset, int tr_
     if (expectOffset != 0) {
         return (edge->src == dest && ABS(expectOffset - offset) < MAX_NODE_OFFSET);
     }
-    return (((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET) ||
-             ((edge->dest == dest || edge->dest->reverse == dest) && (edge->dist - offset) < MAX_NODE_OFFSET));
+
+    return ( ((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET) );
+            // || ((edge->dest == dest || edge->dest->reverse == dest) && (edge->dist - offset) < MAX_NODE_OFFSET) );
+            // this actually breaks as we stop before a sensor, and the following short move fails
 }
 
 
@@ -93,7 +95,7 @@ void Conductor() {
         dest = (track_node*)req.arg1;
 
         int attemptsLeft;
-        for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
+        for (attemptsLeft = 10; attemptsLeft > 0; --attemptsLeft) {
             source = TrGetEdge(train);
             if (source == NULL) {
                 Log("Train %d (Tid %d) reported NULL edge, readding...", tr_number, train);
@@ -197,8 +199,9 @@ lost:
         }
         /* when the conductor gives up, we have to clean up the mess we made */
         notice("Conductor (Tid %d): Giving up on routing train %d (Tid %d)", myTid, tr_number, train);
+        int newTrain = DispatchReAddTrain(tr_number);
         TrDelete(train);
-        train = DispatchReAddTrain(tr_number);
+        train = newTrain;
     } else {
         /* making a generic distance move */
         result = TrGotoAfter(train, NULL, 0, destDist);

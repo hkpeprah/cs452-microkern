@@ -181,9 +181,7 @@ int WaitWithTimeout(unsigned int id, unsigned int to) {
     int errno, status;
     SensorRequest_t msg;
 
-    if (sensor_server_tid < 0) {
-        return -1;
-    }
+    ASSERT(sensor_server_tid >= 0, "WaitAnySensor - server TID not available");
 
     msg.type = SENSOR_WAIT_TIMEOUT;
     msg.sensor = id;
@@ -191,10 +189,7 @@ int WaitWithTimeout(unsigned int id, unsigned int to) {
 
     errno = Send(sensor_server_tid, &msg, sizeof(msg), &status, sizeof(status));
 
-    if (errno < 0) {
-        error("WaitWithTimeout: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
-        return -2;
-    }
+    ASSERT(errno >= 0, "WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
 
     return status;
 }
@@ -203,18 +198,13 @@ int WaitOnSensorN(unsigned int id) {
     int errno, status;
     SensorRequest_t wait;
 
-    if (sensor_server_tid < 0) {
-        return -1;
-    }
+    ASSERT(sensor_server_tid >= 0, "WaitAnySensor - server TID not available");
 
     wait.type = SENSOR_WAIT;
     wait.sensor = id;
     errno = Send(sensor_server_tid, &wait, sizeof(wait), &status, sizeof(status));
 
-    if (errno < 0) {
-        error("WaitOnSensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
-        return -2;
-    }
+    ASSERT(errno >= 0, "WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
 
     return status;
 }
@@ -229,16 +219,11 @@ int WaitAnySensor() {
     int errno, status;
     SensorRequest_t wait;
 
-    if (sensor_server_tid < 0) {
-        return -1;
-    }
+    ASSERT(sensor_server_tid >= 0, "WaitAnySensor - server TID not available");
 
     wait.type = SENSOR_WAIT_ANY;
     errno = Send(sensor_server_tid, &wait, sizeof(wait), &status, sizeof(status));
-    if (errno < 0) {
-        error("WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
-        return -2;
-    }
+    ASSERT(errno >= 0, "WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
 
     return status;
 }
@@ -248,18 +233,13 @@ int FreeSensor(unsigned int id) {
     int errno, status;
     SensorRequest_t wait;
 
-    if (sensor_server_tid < 0) {
-        return -1;
-    }
+    ASSERT(sensor_server_tid >= 0, "WaitAnySensor - server TID not available");
 
     wait.type = SENSOR_FREE;
     wait.sensor = id;
     errno = Send(sensor_server_tid, &wait, sizeof(wait), &status, sizeof(status));
 
-    if (errno < 0) {
-        error("FreeSensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
-        return -2;
-    }
+    ASSERT(errno >= 0, "WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
 
     return status;
 }
@@ -269,18 +249,13 @@ int LastSensorPoll(unsigned int *data) {
     int errno, status;
     SensorRequest_t poll;
 
-    if (sensor_server_tid < 0) {
-        return -1;
-    }
+    ASSERT(sensor_server_tid >= 0, "WaitAnySensor - server TID not available");
 
     poll.type = SENSOR_LAST_POLL;
     poll.sensor = (uint32_t)data;
     errno = Send(sensor_server_tid, &poll, sizeof(poll), &status, sizeof(status));
 
-    if (errno < 0) {
-        error("LastSensorPoll: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
-        return -2;
-    }
+    ASSERT(errno >= 0, "WaitAnySensor: Error in send: %d got %d, sending to %d\r\n", MyTid(), errno, sensor_server_tid);
 
     return status;
 }
