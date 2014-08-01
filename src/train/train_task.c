@@ -27,6 +27,8 @@
 #define RESV_DIST(req_dist)     ((req_dist * 5) >> 2)
 #define SENSOR_MISS_THRESHOLD   2
 
+#define debug Log
+
 typedef enum {
     STOP = 9483,
     CONST_SP,
@@ -807,8 +809,6 @@ static bool trainMissSensor(Train_t *train) {
 }
 
 static void distTraverse(Train_t *train, int numSensorTraverse) {
-    track_edge *edge;
-
     ASSERT(train->currentEdge != NULL, "Train current edge was NULL");
 
     while (train->distSinceLastNode > train->currentEdge->dist) {
@@ -837,11 +837,8 @@ static void distTraverse(Train_t *train, int numSensorTraverse) {
             }
         }
         train->distSinceLastNode -= train->currentEdge->dist;
-        if ((edge = getNextEdge(train->currentEdge->dest))) {
-            train->currentEdge = edge;
-        } else {
-            ASSERT(false, "distTraverse hit null edge");
-        }
+        train->currentEdge = getNextEdge(train->currentEdge->dest);
+        ASSERT(train->currentEdge, "distTraverse hit null edge");
     }
 }
 
@@ -1290,14 +1287,14 @@ static void TrainTask() {
             trainSpeed(train.id, 0);
             shortMvStop = -1;
             Destroy(callee);
-            Log("===shortMvStop===");
+            debug("===shortMvStop %d===", train.id);
             PTL(&train);
             continue;
         } else if (callee == shortMvDone) {
             shortMvDone = -1;
             Destroy(callee);
             // set this to true so next updateLocation call will push us to the final location
-            Log("===shortMvDone===");
+            debug("===shortMvDone %d===", train.id);
             PTL(&train);
             train.distSinceLastNode += train.transition.stopping_distance;
             distTraverse(&train, 0);
