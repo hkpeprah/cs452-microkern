@@ -11,7 +11,9 @@
 #include <clock.h>
 #include <util.h>
 
+#define MAX_AGITATION_FACTOR   5
 #define NUM_OF_PERSONALITIES   4
+#define DEFAULT_LINE_COUNT     35
 
 DECLARE_CIRCULAR_BUFFER(string);
 
@@ -74,11 +76,12 @@ void Passenger() {
     int len, index, agitationFactor;
 
     personality = getPersonality();
-    len = sizeof(personality) - 1;
+    len = MAX(1, (int)sizeof(personality) - 1);
     index = 0;
     agitationFactor = 0;
     while (true) {
-        if (agitationFactor > 0 && agitationFactor % len == 0) {
+        if (agitationFactor > 0 && agitationFactor - len > MAX_AGITATION_FACTOR) {
+            agitationFactor = 0;
             index++;
         }
         index = MIN(index, len - 1);
@@ -88,33 +91,45 @@ void Passenger() {
             writeMessage(personality[index]);
         }
         agitationFactor++;
-        Delay(500);
+        Delay(350);
     }
     Exit();
 }
 
 
+static inline void printMessage(int line, int msgNum, string msg) {
+    printf(SAVE_CURSOR MOVE_CUR_UP "\033[0K" "(Message %d) %s" RESTORE_CURSOR, line, msgNum, msg);
+}
+
+
 static void IntercomCourier() {
     string msg;
-    int line;
+    int num_of_messages, callee, max_line_count;
 
-    line = 5;
-    Log("IntercomCourier created with Tid %d", MyTid());
+    Receive(&callee, &max_line_count, sizeof(max_line_count));
+    Reply(callee, NULL, 0);
+
+    string history[max_line_count];
+    int index = 0;
+    num_of_messages = 1;
+    max_line_count -= 1;
     while (true) {
         /* prints out the messages in the queue every five seconds */
         if (length_string((CircularBuffer_string*)messages) > 0) {
             read_string((CircularBuffer_string*)messages, &msg, 1);
-            if (indexOf('\n', msg) != -1) {
-                /* this message prints on two lines */
-                if (line <= 1) {
-                    line = 5;
+            if (index == max_line_count - 1) {
+                int i;
+                for (i = 0; i < max_line_count - 1; ++i) {
+                    history[i] = history[i + 1];
+                    printMessage(max_line_count - i, num_of_messages - (index - i), history[i]);
                 }
-                printf(SAVE_CURSOR MOVE_CUR_UP "\033[0K" "%s" RESTORE_CURSOR, line, msg);
-                line = (line - 2 <= 0 ? 5 : line - 2);
+                history[i] = msg;
+                printMessage(1, num_of_messages, msg);
             } else {
-                printf(SAVE_CURSOR MOVE_CUR_UP "\033[0K" "%s" RESTORE_CURSOR, line, msg);
-                line = (line - 1 <= 0 ? 5 : line - 1);
+                printMessage(max_line_count - index, num_of_messages, msg);
+                history[index++] = msg;
             }
+            num_of_messages++;
         }
         Delay(200);
     }
@@ -124,17 +139,18 @@ static void IntercomCourier() {
 
 void Intercom() {
     /* intercom reserves five units of screen space to display messages */
-    int i;
-    int printer;
     char ch;
+    int i, printer, max_line_count;
 
     printer = -1;
-    for (i = 0; i < 5; ++i) {
+    max_line_count = MIN(DEFAULT_LINE_COUNT, TERMINAL_HEIGHT - getTermBottom() - 2) + 1;
+    for (i = 0; i < max_line_count; ++i) {
         printf("\r\n");
     }
 
     if ((printer = Create(4, IntercomCourier)) >= 0) {
-        Log("Created IntercomCourier with Tid %d", printer);
+        Send(printer, &max_line_count, sizeof(max_line_count), NULL, 0);
+        notice("Created IntercomCourier with Tid %d", printer);
         printf("Press any key to exit: ");
         ch = getchar();
         printf("\r\n");

@@ -1180,7 +1180,7 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
 
 
 static void TrainReverseCourier() {
-    int callee, status;
+    int callee, status, errno;
     TrainMessage_t request, message = {.type = TRM_DIR};
 
     Receive(&callee, &request, sizeof(request));
@@ -1189,15 +1189,24 @@ static void TrainReverseCourier() {
         Reply(callee, &status, sizeof(status));
         message.type = TRM_SPEED;
         message.arg0 = 0;
-        Send(callee, &message, sizeof(message), &status, sizeof(status));
+        if ((errno = Send(callee, &message, sizeof(message), &status, sizeof(status))) < 0) {
+            error("TrainReverseCourier (Tid %d): Error in send, %d sending to %d", MyTid(), errno, callee);
+            Exit();
+        }
         /* adjust by five(5) to compensate for the clock edge */
         Delay(getTransitionTicks(request.tr, request.arg0, 0) + STOP_BUFFER_MM);
         message.type = TRM_DIR;
-        Send(callee, &message, sizeof(message), &status, sizeof(status));
+        if ((errno = Send(callee, &message, sizeof(message), &status, sizeof(status))) < 0) {
+            error("TrainReverseCourier (Tid %d): Error in send, %d sending to %d", MyTid(), errno, callee);
+            Exit();
+        }
         Delay(20);
         message.type = TRM_SPEED;
         message.arg0 = request.arg0;
-        Send(callee, &message, sizeof(message), &status, sizeof(status));
+        errno = Send(callee, &message, sizeof(message), &status, sizeof(status));
+        if (errno < 0) {
+            error("TrainReverseCourier (Tid %d): Error in send, %d sending to %d", MyTid(), errno, callee);
+        }
     } else {
         status = -1;
         Reply(callee, &status, sizeof(status));

@@ -7,7 +7,7 @@
 #define TIMER4VALUELOW    0x80810060
 #define TIMER4VALUEHIGH   0x80810064
 #define TIMER4ENABLE      TIMER4VALUEHIGH
-#define TIMER4INTERVAL    50
+#define TIMER4INTERVAL    100
 
 static volatile int count;
 static volatile int lastCount;

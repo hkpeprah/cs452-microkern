@@ -168,6 +168,7 @@ static void TrainCreateCourier() {
     if ((tid = TrCreate(TRAIN_PRIORITY, req.tr, DispatchGetTrackNode(sensor))) >= 0) {
         req.type = TRM_CREATE_TRAIN;
         req.arg0 = tid;
+        debug("TrainCreateCourier (Tid %d): Sending to parent %d", MyTid(), parent);
         Send(parent, &req, sizeof(req), &status, sizeof(status));
         if (status < 0) {
             error("TrainCreateCourier: Error: Failed to fully create, destroying train with Tid %u", tid);
@@ -176,6 +177,7 @@ static void TrainCreateCourier() {
             TrAuxiliary(tid, 16);
             if ((waiting = req.arg1) >= 0) {
                 /* respond to the waiter with the Tid */
+                debug("TrainCreateCourier (Tid %d): Replying to waiting task %d", MyTid(), waiting);
                 Reply(waiting, &tid, sizeof(tid));
             }
         }
@@ -201,6 +203,7 @@ static void TrainDeleteCourier() {
     tid = req.arg0;
     TrDelete(tid);
     req.type = TRM_REMOVE_TRAIN;
+    debug("TrainDeleteCourier (Tid %d): Sending to parent %d", MyTid(), parent);
     Send(parent, &req, sizeof(req), &status, sizeof(status));
     Exit();
 }
@@ -241,6 +244,7 @@ static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *nod
             req.tr = trains[i].tr_number;
             req.arg0 = trains[i].train;
             /* send off the message */
+            debug("Dispatcher: Spawning TrainDeleteCourier with Tid %d", tid);
             Send(tid, &req, sizeof(req), NULL, 0);
             break;
         }
@@ -269,6 +273,7 @@ static int addDispatcherTrain(unsigned int tr, int sensor, int callee) {
         req.tr = tr;
         req.arg0 = sensor;
         req.arg1 = callee;
+        debug("Dispatcher: Created TrainCreateCourier with Tid %d", tid);
         Send(tid, &req, sizeof(req), NULL, 0);
         return tid;
     }
@@ -336,7 +341,8 @@ void Dispatcher() {
                         Destroy(CreateCourier);
                         CreateCourier = -1;
                     } else {
-                        error("Dispatcher: Callee (Tid %d) attempted to add train %d which is waiting, but nothing is creating", callee, nextTrain);
+                        error("Dispatcher: Callee (Tid %d) attempted to add train %d which is waiting, "
+                              "but nothing is creating", callee, nextTrain);
                         break;
                     }
                 } else if (nextTrain != waitingTrain) {
@@ -349,10 +355,11 @@ void Dispatcher() {
                     }
                 }
                 waitingTrain = nextTrain;
-                if ((CreateCourier = addDispatcherTrain(nextTrain, sensor, -1)) == -1) {
+                if ((CreateCourier = addDispatcherTrain(nextTrain, sensor, callee)) == -1) {
                     status = OUT_OF_DISPATCHER_NODES;
                 } else {
                     status = 0;
+                    continue;
                 }
                 break;
             case TRM_READD:
