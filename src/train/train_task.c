@@ -49,8 +49,6 @@ typedef struct __TrainResvBuf {
     unsigned int head;
     unsigned int tail;
     int extraResvDist;                               // extra distance reserved past our stopping dist
-    // TODO: keep track of resv dist in here so we can just
-    // start counting from end of this buf
 } TrainResv_t;
 
 typedef struct __Train_t {
@@ -815,7 +813,7 @@ static void distTraverse(Train_t *train, int numSensorTraverse) {
         }
 
         if (train->currentEdge->dest != peek_head_resv(&(train->resv))) {
-            error("WARNING: Traversed node(%s) != reserved node(%s)",
+            warning("Train %u: Traversed node(%s) != reserved node(%s)", train->id,
                    d(train->currentEdge->dest).name, d(peek_head_resv(&(train->resv))).name);
         } else {
             if (train->transition.state == ACCEL || train->transition.state == CONST_SP) {
@@ -826,7 +824,7 @@ static void distTraverse(Train_t *train, int numSensorTraverse) {
 
         if (train->path != NULL && train->pathRemain > 0) {
             if (train->path[0] != train->currentEdge->dest) {
-                error("WARNING: Train %u: Traversed node (%s) != path node %s", train->id,
+                warning("Train %u: Traversed node (%s) != path node %s", train->id,
                       d(d(train->currentEdge).dest).name, d(train->path[0]).name);
             } else {
                 train->path++;
@@ -982,7 +980,7 @@ static void waitOnNextTarget(Train_t *train, int *sensorCourier, int *waitingSen
     }
 
     if (train->nextSensor && train->nextSensor->reservedBy != train->id) {
-        error("WARNING: Train %u next sensor %s not reserved by it", train->id, train->nextSensor->name);
+        warning("Train %u: next sensor %s not reserved by it", train->id, train->nextSensor->name);
     }
 }
 
@@ -1033,7 +1031,8 @@ static int trainDir(Train_t *train) {
     ASSERT(train->currentEdge, "Current edge is NULL pre-rev");
 
     if (train->currentEdge->dist < train->distSinceLastNode) {
-        error("WARNING: currentEdge->dist %d less than distSinceLastNode %d", train->currentEdge->dist, train->distSinceLastNode);
+        warning("Train %d: currentEdge->dist %d less than distSinceLastNode %d",
+                train->id, train->currentEdge->dist, train->distSinceLastNode);
     }
     Log("Train %u: Rev: initial %d from %s", train->id, train->distSinceLastNode, train->currentEdge->src->name);
 
@@ -1313,7 +1312,7 @@ static void TrainTask() {
 
                 // moving train, on edge with sensor being dest and overshot the edge length
                 if (++numSensorMissed > SENSOR_MISS_THRESHOLD) {
-                    error("<<<<Too many sensor miss, stopping>>>>");
+                    warning("Train %u: Too many sensor misses, stopping", train.id);
                     train.gotoResult = GOTO_LOST;
                     setTrainSpeed(&train, 0);
                 } else {
@@ -1390,6 +1389,7 @@ static void TrainTask() {
                 notice("Train %u: Deleted (Tid %u)", train.id, MyTid());
                 PTL(&train);
                 clearTrainSnapshot(train.id);
+                Reply(callee, &status, sizeof(status));
                 return;
             case TRM_GOTO_AFTER:
                 /* blocks the calling task until we arrive at our destination */

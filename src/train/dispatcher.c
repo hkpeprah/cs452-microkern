@@ -480,8 +480,12 @@ void Dispatcher() {
                         notice("Dispatcher; Removing conductor tid %d for train %d", node->conductor, node->tr_number);
                         Destroy(node->conductor);
                     }
-                    node->conductor = Create(7, Conductor);
-                    status = GoTo(node->conductor, node->train, request.tr, &track[request.arg0], request.arg1);
+                    if (request.arg0 < 0 || request.arg0 > TRAIN_SENSOR_COUNT * TRAIN_MODULE_COUNT) {
+                        status = INVALID_SENSOR_ID;
+                    } else {
+                        node->conductor = Create(7, Conductor);
+                        status = GoTo(node->conductor, node->train, request.tr, &track[request.arg0], request.arg1);
+                    }
                 } else {
                     status = INVALID_TRAIN_ID;
                 }

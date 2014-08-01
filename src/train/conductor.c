@@ -181,14 +181,14 @@ void Conductor() {
                 break;
             }
 reroute:
-            debug("Conductor (Tid %d): Re-routing train %d after sleep...", MyTid(), tr_number);
+            debug("Conductor (Tid %d): Re-routing train %d after sleep...", myTid, tr_number);
             Delay(random_range(100, 500));
             continue;
-lost:;
+lost:
             /* we're lost, so let's re-add the train */
-            int newTrain = DispatchReAddTrain(tr_number);
+            debug("Conductor (Tid %d): Train %u is lost", myTid, tr_number);
             TrDelete(train);
-            train = newTrain;
+            train = DispatchReAddTrain(tr_number);
             if (train < 0) {
                 error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
                 break;
@@ -197,9 +197,11 @@ lost:;
         }
         /* when the conductor gives up, we have to clean up the mess we made */
         notice("Conductor (Tid %d): Giving up on routing train %d (Tid %d)", myTid, tr_number, train);
-        int newTrain = DispatchReAddTrain(tr_number);
         TrDelete(train);
-        train = newTrain;
+        train = DispatchReAddTrain(tr_number);
+        if (train < 0) {
+            error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
+        }
     } else {
         /* making a generic distance move */
         result = TrGotoAfter(train, NULL, 0, destDist);

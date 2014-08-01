@@ -70,6 +70,7 @@ int SpawnStations(int num_stations) {
 
     status = 0;
     attempts = 0;
+    seed(random());
     while (num_stations > 0 && attempts < 5) {
         status = AddTrainStation(random() % SENSOR_COUNT, -1);
         switch (status) {
@@ -152,18 +153,8 @@ int Broadcast(int train, int sensor) {
 
 
 static inline bool isValidTrainStation(TrainStation_t *stations, int sensor) {
-    int i;
-    bool isValid;
-
-    isValid = true;
-    for (i = 0; i < SENSOR_COUNT; ++i) {
-        isValid &= (stations[i].sensor == false ||
-                    (stations[i].sensor != sensor && stations[i].sensor != sensor + 1 && stations[i].sensor != sensor - 1));
-        if (isValid == false) {
-            return false;
-        }
-    }
-    return isValid;
+    return (stations[sensor].active == false && !(sensor > 0 && stations[sensor - 1].active == true) &&
+            !(sensor < SENSOR_COUNT - 1 && stations[sensor + 1].active == true));
 }
 
 
@@ -173,6 +164,7 @@ static int boardTrain(TrainPassengers *train, TrainStation_t *station) {
 
     passengers = station->waiting;
     station->waiting = NULL;
+    station->passengers = 0;
     boarded = 0;
     while ((tmp = passengers) != NULL) {
         /* since the pedestrian is boarding the train, they are now a passenger */
@@ -184,6 +176,30 @@ static int boardTrain(TrainPassengers *train, TrainStation_t *station) {
     }
     train->onBoard += boarded;
     return boarded;
+}
+
+
+static TrainStation_t *getRandomTrainStation(TrainStation_t *stations, int num_stations) {
+    /* randomly grabs a train station from the set of train stations */
+    int count, i;
+    TrainStation_t *nextStation;
+    TrainStation_t *available[num_stations];
+
+    nextStation = NULL;
+    count = 0;
+    for (i = 0; i < SENSOR_COUNT; ++i) {
+        /* figure out which sensors are available to go to */
+        if (count == num_stations) {
+            break;
+        } else if (stations[i].active == true) {
+            available[count++] = &stations[i];
+        }
+    }
+
+    if (count > 0) {
+        nextStation = available[random_range(0, count)];
+    }
+    return nextStation;
 }
 
 
@@ -272,6 +288,7 @@ void MrBonesWildRide() {
         train_stations[i].waiting = NULL;
         train_stations[i].sensor = -1;
         train_stations[i].passengers = 0;
+        train_stations[i].sensor = i;
     }
 
     for (i = 0; i < TRAIN_MAX_NUM; ++i) {
@@ -314,51 +331,51 @@ void MrBonesWildRide() {
                     hash = trainId % TRAIN_MAX_NUM;
                     train = &train_reservations[hash];
                     station = &train_stations[request.arg1];
-                    Log("Called with sensor = %d, train = %d (hash %d)", d(station).sensor, trainId);
                     if (train->tr > 0 && train->tr != trainId) {
                         error("MrBonesWildRide: Collision adding train %d to spot filled by train %d", train, train->tr);
                         response = TRAIN_STATION_INVALID;
                         break;
-                    } else {
-                        d(train).tr = (train->tr <= 0 ? trainId : train->tr);
-                        if (d(station).active == true) {
-                            /* check which passengers are getting off at this stop */
-                            Person stillWaiting = NULL;
-                            int off;
-                            off = 0;
-                            Log("Train %d: Arrived at station %d with %d passengers at station",
-                                train->tr, station->sensor, station->passengers);
-                            while ((tmp = train->passengers) != NULL) {
-                                train->passengers = train->passengers->next;
-                                if (tmp->destination == station->sensor) {
-                                    /* this person has successfully gotten off Mr. Bone's Wild Ride */
-                                    Log("Train %d: Passenger got off at station %d", train->tr, station->sensor);
-                                    off++;
-                                    Destroy(tmp->tid);
-                                    tmp->tid = -1;
-                                    tmp->destination = -1;
-                                    tmp->weight = -1;
-                                    tmp->next = passengers;
-                                    passengers = tmp;
-                                    train->onBoard--;
-                                } else {
-                                    /* the ride never ends */
-                                    Log("Train %d: At station %d, passenger wants to go to station %d for this passenger, "
-                                        "the ride goes on", train->tr, station->sensor, tmp->destination);
-                                    tmp->next = stillWaiting;
-                                    tmp->weight++;
-                                    stillWaiting = tmp;
-                                }
+                    }
+                    d(train).tr = (train->tr <= 0 ? trainId : train->tr);
+                    Log("Train %d at station %d, station is %s", train->tr, station->sensor,
+                        (station->active ? "active" : "inactive"));
+                    if (d(station).active == true) {
+                        /* check which passengers are getting off at this stop */
+                        Person stillWaiting = NULL;
+                        int off;
+                        off = 0;
+                        Log("Train %d: Arrived at station %d with %d passengers at station",
+                            train->tr, station->sensor, station->passengers);
+                        while ((tmp = train->passengers) != NULL) {
+                            train->passengers = train->passengers->next;
+                            if (tmp->destination == station->sensor) {
+                                /* this person has successfully gotten off Mr. Bone's Wild Ride */
+                                Log("Train %d: Passenger got off at station %d", train->tr, station->sensor);
+                                off++;
+                                Destroy(tmp->tid);
+                                tmp->tid = -1;
+                                tmp->destination = -1;
+                                tmp->weight = -1;
+                                tmp->next = passengers;
+                                passengers = tmp;
+                                train->onBoard--;
+                            } else {
+                                /* the ride never ends */
+                                Log("Train %d: At station %d, passenger wants to go to station %d for this passenger, "
+                                    "the ride goes on", train->tr, station->sensor, tmp->destination);
+                                tmp->next = stillWaiting;
+                                tmp->weight++;
+                                stillWaiting = tmp;
                             }
-                            train->passengers = stillWaiting;
-                            Log("Train %d arrived at %d, %d passengers got off", train->tr, station->sensor, off);
-                            debug("MrBonesWildRide: Train %d arrived at %d, %d passengers got off", train->tr, station->sensor, off);
                         }
+                        train->passengers = stillWaiting;
+                        Log("Train %d arrived at %d, %d passengers got off", train->tr, station->sensor, off);
+                        debug("MrBonesWildRide: Train %d arrived at %d, %d passengers got off", train->tr, station->sensor, off);
                     }
                     /* find the next optimal station to go to */
-                    Log("Train %d finding next station to go to", train->tr);
                     nextStation = findOptimalNextStation(station, train, train_stations);
                     Log("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
+                    debug("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
                     if (nextStation >= 0) {
                         train->destination = nextStation;
                         response = 1;
@@ -369,7 +386,7 @@ void MrBonesWildRide() {
                     } else {
                         /* no stations need servicing now */
                         train->destination = -1;
-                        Log("MrBonesWildRide: No stations need servicing");
+                        Log("No stations need servicing");
                     }
                     response = 1;
                 }
@@ -389,7 +406,6 @@ void MrBonesWildRide() {
                         if (isValidTrainStation(train_stations, request.arg0) == true) {
                             int p_waiting;
                             station->active = true;
-                            station->sensor = request.arg0;
                             p_waiting = 0;
                             /* create the waiting passengers, each pedestrian is their own
                                task that has a certain amount of time until they die unless
@@ -401,7 +417,12 @@ void MrBonesWildRide() {
                                 while (p_waiting --> 0) {
                                     /* generate random stations for the passengers to wait on */
                                     TrainStation_t *dest;
-                                    dest = &train_stations[random() % num_of_stations];
+                                    dest = getRandomTrainStation(train_stations, num_of_stations);
+                                    if (dest == NULL) {
+                                        num_of_pedestrians += p_waiting;
+                                        station->passengers -= p_waiting;
+                                        break;
+                                    }
                                     tmp = passengers;
                                     passengers = passengers->next;
                                     tmp->destination = dest->sensor;
@@ -412,12 +433,14 @@ void MrBonesWildRide() {
                             }
                             tmp = NULL;
                             num_of_stations++;
+                            response = 1;
                             /* need atleast two stations in order to route to stations */
                             if (num_of_stations > 0) {
                                 /* now check if there's any unbusy trains and make them go there */
+                                Reply(callee, &response, sizeof(response));
                                 checkNonBusyTrain(train_reservations, station);
+                                continue;
                             }
-                            response = 1;
                             debug("MrBonesWildRide: Created station at sensor %d with %d passengers",
                                   station->sensor, station->passengers);
                         } else {
@@ -450,7 +473,6 @@ void MrBonesWildRide() {
                         num_of_stations--;
                         response = 1;
                         debug("MrBonesWildRide: Removed station at %d", station->sensor);
-                        station->sensor = -1;
                         station->passengers = 0;
                         station->active = false;
                     }
@@ -477,7 +499,12 @@ void MrBonesWildRide() {
                         while (p_waiting --> 0) {
                             /* generate random stations for the passengers to wait on */
                             TrainStation_t *dest;
-                            dest = &train_stations[random_range(0, num_of_stations)];
+                            dest = getRandomTrainStation(train_stations, num_of_stations);
+                            if (dest == NULL) {
+                                num_of_pedestrians += p_waiting;
+                                station->passengers -= p_waiting;
+                                break;
+                            }
                             passengers->destination = dest->sensor;
                             passengers->weight = 1;
                             tmp = passengers;
@@ -486,9 +513,11 @@ void MrBonesWildRide() {
                             station->waiting = tmp;
                         }
                         tmp = NULL;
-                        checkNonBusyTrain(train_reservations, station);
                         response = 1;
+                        Reply(callee, &response, sizeof(response));
+                        checkNonBusyTrain(train_reservations, station);
                         debug("MrBonesWildRide: Station at %d has %d passengers", station->sensor, station->passengers);
+                        continue;
                     }
                 }
                 break;

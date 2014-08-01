@@ -21,23 +21,31 @@ static volatile CircularBuffer_string msgQueue;
 static volatile CircularBuffer_string *messages = NULL;
 
 static string persona_one[] = {
-    "I have the strangest feeling someone is watching me.",
-    "I want to get off MR BONE'S WILD RIDE!"
+    "Boy: I wish I could ride this train forever!",
+    "Boy: This train smells weird.",
+    "Boy: I have the strangest feeling someone is watching me.",
+    "Boy: I want to get off MR BONE'S WILD RIDE!"
 };
 
 static string persona_two[] = {
+    "Son: Hey look that bird outside the window.",
+    "Son: This train is so big",
+    "Father: I like the interior lighting",
     "Son: D-dad, I want to get off the train.\nFather: I know son.  We all do."
 };
 
 static string persona_three[] = {
-    "This train is really clean.",
-    "When are we going to get to the station?",
-    "I want to ride a faster train."
+    "Girl: This train is really clean.",
+    "Girl: This train has really bright lights.",
+    "Girl: I want to ride a faster train.",
+    "Girl: When are we going to get to the station?"
 };
 
 static string persona_four[] = {
-    "*call* Johnson, you better get that report on my desk by 10 A.M.",
-    "I'm going to miss my meeting at this rate."
+    "Man: I hope we got the Bernstein account.",
+    "Man: *call* Johnson, you better get that report on my desk by 10 A.M.",
+    "Man: I'm going to miss my meeting at this rate.",
+    "Man: That's it, I'm taking this up with Mr Bone's Management!"
 };
 
 static string *personas[NUM_OF_PERSONALITIES] = {
@@ -122,12 +130,22 @@ static void IntercomCourier() {
                 for (i = 0; i < max_line_count - 1; ++i) {
                     history[i] = history[i + 1];
                     printMessage(max_line_count - i, num_of_messages - (index - i), history[i]);
+                    if (indexOf('\n', history[i]) >= 0) {
+                        ++i;
+                    }
                 }
                 history[i] = msg;
                 printMessage(1, num_of_messages, msg);
             } else {
                 printMessage(max_line_count - index, num_of_messages, msg);
                 history[index++] = msg;
+                if (indexOf('\n', msg) >= 0) {
+                    if (index == max_line_count - 1) {
+                        history[index - 2] = msg;
+                    } else {
+                        index++;
+                    }
+                }
             }
             num_of_messages++;
         }
