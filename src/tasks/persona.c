@@ -140,7 +140,11 @@ static void StationCourier() {
             buffer[i] = 0;
         }
         num_lines = GetTransitData(buffer);
-        printf(SAVE_CURSOR "%s" RESTORE_CURSOR, buffer, num_lines);
+        if (num_lines < 0) {
+            error("StationCourier: Error: Got %d in call", num_lines);
+        } else {
+            printf(SAVE_CURSOR "%s" RESTORE_CURSOR, buffer, num_lines);
+        }
         Delay(350);
     }
     Exit();
@@ -193,7 +197,7 @@ void Intercom() {
     if ((messagePrinter = Create(3, IntercomCourier)) >= 0) {
         /* generate the intercom courier if possible */
         Send(messagePrinter, &max_line_count, sizeof(max_line_count), NULL, 0);
-        notice("Created IntercomCourier with Tid %d", printer);
+        notice("Created IntercomCourier with Tid %d", messagePrinter);
         Continue();
         Destroy(messagePrinter);
     } else {

@@ -8,6 +8,7 @@
 #include <vargs.h>
 #include <bwio.h>
 #include <uart.h>
+#include <term.h>
 #define __INT             1
 #define __HEX             2
 #define __STR             3

@@ -69,12 +69,14 @@ struct Person_t {
 int SpawnStations(int num_stations) {
     /* spawns random stations */
     int status, attempts;
+    int sensor;
 
     status = 0;
     attempts = 0;
-    seed(random());
+    seed(Time());
     while (num_stations > 0 && attempts < 5) {
-        status = AddTrainStation(random() % SENSOR_COUNT, -1);
+        sensor = random_range(0, SENSOR_COUNT - 1);
+        status = AddTrainStation(sensor, -1);
         switch (status) {
             case TRANSACTION_INCOMPLETE:
             case TASK_DOES_NOT_EXIST:
@@ -297,7 +299,6 @@ void MrBonesWildRide() {
     for (i = 0; i < SENSOR_COUNT; ++i) {
         train_stations[i].active = false;
         train_stations[i].waiting = NULL;
-        train_stations[i].sensor = -1;
         train_stations[i].passengers = 0;
         train_stations[i].sensor = i;
     }
@@ -381,18 +382,18 @@ void MrBonesWildRide() {
                         }
                         train->passengers = stillWaiting;
                         Log("Train %d arrived at %d, %d passengers got off", train->tr, station->sensor, off);
-                        debug("MrBonesWildRide: Train %d arrived at %d, %d passengers got off", train->tr, station->sensor, off);
+                        printf("MrBonesWildRide: Train %d arrived at %d, %d passengers got off\r\n", train->tr, station->sensor, off);
                     }
                     /* find the next optimal station to go to */
                     nextStation = findOptimalNextStation(station, train, train_stations);
                     Log("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
-                    debug("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
+                    printf("Train %d next station is %d (%d on board)\r\n", train->tr, nextStation, train->onBoard);
                     if (nextStation >= 0) {
                         train->destination = nextStation;
                         response = 1;
                         Reply(callee, &response, sizeof(response));
                         DispatchRoute(train->tr, nextStation, 0);
-                        debug("MrBonesWildRide: Train %d heading to %d now", train->tr, nextStation);
+                        printf("MrBonesWildRide: Train %d heading to %d now\r\n", train->tr, nextStation);
                         continue;
                     } else {
                         /* no stations need servicing now */
@@ -452,7 +453,7 @@ void MrBonesWildRide() {
                                 checkNonBusyTrain(train_reservations, station);
                                 continue;
                             }
-                            debug("MrBonesWildRide: Created station at sensor %d with %d passengers",
+                            printf("MrBonesWildRide: Created station at sensor %d with %d passengers\r\n",
                                   station->sensor, station->passengers);
                         } else {
                             response = TRAIN_STATION_INVALID;
@@ -483,7 +484,7 @@ void MrBonesWildRide() {
                         }
                         num_of_stations--;
                         response = 1;
-                        debug("MrBonesWildRide: Removed station at %d", station->sensor);
+                        printf("MrBonesWildRide: Removed station at %d\r\n", station->sensor);
                         station->passengers = 0;
                         station->active = false;
                     }
@@ -527,7 +528,7 @@ void MrBonesWildRide() {
                         response = 1;
                         Reply(callee, &response, sizeof(response));
                         checkNonBusyTrain(train_reservations, station);
-                        debug("MrBonesWildRide: Station at %d has %d passengers", station->sensor, station->passengers);
+                        printf("MrBonesWildRide: Station at %d has %d passengers\r\n", station->sensor, station->passengers);
                         continue;
                     }
                 }
@@ -538,20 +539,16 @@ void MrBonesWildRide() {
                 } else {
                     string buffer;
                     unsigned int len;
-                    char format_buffer[128];
 
                     buffer = (string)request.arg0;
                     response = 0;
                     len = 0;
-                    for (i = 0; i < 127; ++i) {
-                        format_buffer[i] = 0;
-                    }
-
                     /* copy the station data to print */
                     for (i = 0; i < SENSOR_COUNT; ++i) {
+                        char format_buffer[256];
                         if (len >= PRINT_BUFFER_SIZE) {
                             break;
-                        } else  if (train_stations[i].active == true) {
+                        } else if (train_stations[i].active == true) {
                             formatas("\033[0K\033[32mSTATION %d\033[0m: %d passengers waiting\r\n", format_buffer,
                                      train_stations[i].sensor, train_stations[i].passengers);
                             strcat(buffer, format_buffer);
@@ -562,6 +559,7 @@ void MrBonesWildRide() {
 
                     /* copy the train data to print */
                     for (i = 0; i < TRAIN_MAX_NUM; ++i) {
+                        char format_buffer[256];
                         if (len >= PRINT_BUFFER_SIZE) {
                             break;
                         } else if (train_reservations[i].tr > 0) {
