@@ -90,13 +90,12 @@ void Conductor() {
     /* check if goto or just a short move */
     GotoResult_t result = GOTO_NONE;
     if (req.type == GOTO) {
-        dest = (track_node*)req.arg1;
-
         int attemptsLeft;
+        dest = (track_node*)req.arg1;
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
             source = TrGetEdge(train);
             if (source == NULL) {
-                Log("Train %d (Tid %d) reported NULL edge, readding...", tr_number, train);
+                error("Train %d (Tid %d) reported NULL edge", tr_number, train);
                 goto lost;
             }
 

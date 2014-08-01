@@ -130,9 +130,15 @@ void TrainUserTask() {
                 break;
             case TRAIN_CMD_ADD:
                 status = DispatchAddTrain(req.args[1]);
+                if (status >= 0) {
+                    status = DispatchStopRoute(req.args[1]);
+                }
                 break;
             case TRAIN_CMD_ADD_AT:
                 status = DispatchAddTrainAt(req.args[1], req.args[2], req.args[3]);
+                if (status >= 0) {
+                    status = DispatchStopRoute(req.args[1]);
+                }
                 break;
             case TRAIN_CMD_SPEED:
                 if ((trainTid = DispatchGetTrainTid(req.args[1])) >= 0) {
@@ -283,6 +289,9 @@ void TrainUserTask() {
                 printf("Error: No path found to specified destination.\r\n");
                 break;
             default:
+                if ((cmd == TRAIN_CMD_ADD || cmd == TRAIN_CMD_ADD_AT) && status >= 0) {
+                    break;
+                }
                 error("TrainController: Error: Unknown status received %d", status);
         }
         Reply(callee, &status, sizeof(status));

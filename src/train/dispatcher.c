@@ -199,7 +199,7 @@ static void TrainDeleteCourier() {
         error("TrainDeleteCourier: Error: Received request from %u, expected %u", callee, parent);
         Exit();
     }
-    Reply(callee, NULL, 0);
+    Reply(parent, NULL, 0);
     tid = req.arg0;
     TrDelete(tid);
     req.type = TRM_REMOVE_TRAIN;
@@ -365,6 +365,7 @@ void Dispatcher() {
             case TRM_READD:
                 if (node == NULL) {
                     error("Dispatcher: Called to re-add a train that was never added: Callee Tid %d", callee);
+                    status = INVALID_TRAIN_ID;
                     break;
                 }
                 nextTrain = request.tr;
@@ -375,13 +376,14 @@ void Dispatcher() {
                         CreateCourier = -1;
                     } else {
                         error("Dispatcher: Train %d is waiting but nothing is creating", nextTrain);
+                        status = INVALID_TRAIN_ID;
                         break;
                     }
                 } else if (nextTrain != waitingTrain) {
                     if (waitingTrain >= 0) {
                         if (node->train == -1) {
-                            error("Dispatcher: Callee %d re-adding a train %d that is currently being added or queued (queue length: %d)",
-                                  callee, request.tr, length_int(&addQueue));
+                            error("Dispatcher: Callee %d re-adding a train %d that is currently being"
+                                  " added or queued (queue length: %d)", callee, request.tr, length_int(&addQueue));
                             break;
                         }
                         /* queue the train to be added */

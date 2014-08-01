@@ -1176,6 +1176,7 @@ static void initTrain(Train_t *train, TrainMessage_t *request) {
         ASSERT(numSuccessResv, "Train initial sensor reservation failed");
         push_back_resv(&(train->resv), train->currentEdge->dest);
     }
+    notice("Train %u: Tid %d sucessfully initialized", train->id, MyTid());
 }
 
 
@@ -1355,11 +1356,12 @@ static void TrainTask() {
             if (train.speed == 0 && gotoBlocked != -1 && train.transition.state == STOP && shortMvDone == -1) {
                 Log("===Train done pathing===");
                 if (trainMissSensor(&train)) {
-                    debug("Lost after pathing?!?!?!?!!!?!!?!1111111one");
+                    Log("Lost after pathing?!?!?!?!!!?!!?!1111111one");
                     train.gotoResult = GOTO_LOST;
                 }
 
-                Log("Train %u: Finished pathing, replying to conductor (%d) with result %d", train.id, gotoBlocked, train.gotoResult);
+                Log("Train %u: Finished pathing, replying to conductor (%d) with result %d",
+                      train.id, gotoBlocked, train.gotoResult);
                 Reply(gotoBlocked, &(train.gotoResult), sizeof(train.gotoResult));
                 gotoBlocked = -1;
             }
@@ -1401,7 +1403,6 @@ static void TrainTask() {
 
                 Destroy(locationTimer);
                 status++;
-                Reply(callee, &status, sizeof(status));
                 notice("Train %u: Deleted (Tid %u)", train.id, MyTid());
                 PTL(&train);
                 clearTrainSnapshot(train.id);
@@ -1558,7 +1559,7 @@ static void TrainTask() {
                 updateLocation(&train);
                 request.arg0 = (int)train.currentEdge;
                 Reply(callee, &request, sizeof(request));
-
+                break;
             case TRM_GET_SPEED:
                 status = train.speed;
                 Reply(callee, &status, sizeof(status));

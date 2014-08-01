@@ -18,6 +18,7 @@
 #include <persona.h>
 #include <logger.h>
 
+#define TRAIN_MAX_NUM         60
 #define MAX_NUM_STATIONS      20
 #define MAX_NUM_PEDESTRIANS   30
 #define SENSOR_COUNT          TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT
@@ -187,7 +188,7 @@ static int boardTrain(TrainPassengers *train, TrainStation_t *station) {
 
 static void checkNonBusyTrain(TrainPassengers *trains, TrainStation_t *station) {
     int i;
-    for (i = 0; i < TRAIN_COUNT * 2; ++i) {
+    for (i = 0; i < TRAIN_MAX_NUM; ++i) {
         if (trains[i].tr > 0 && trains[i].destination < 0) {
             boardTrain(&trains[i], station);
             trains[i].destination = station->sensor;
@@ -246,7 +247,7 @@ void MrBonesWildRide() {
     int callee, bytes, response, num_of_pedestrians;
     TrainStation_t train_stations[SENSOR_COUNT] = {{0}};
     struct Person_t pedestrians[MAX_NUM_PEDESTRIANS] = {{0}};
-    TrainPassengers train_reservations[TRAIN_COUNT * 2] = {{0}};
+    TrainPassengers train_reservations[TRAIN_MAX_NUM] = {{0}};
     Person tmp, passengers = NULL;
 
     initTransitIntercom();
@@ -272,7 +273,7 @@ void MrBonesWildRide() {
         train_stations[i].passengers = 0;
     }
 
-    for (i = 0; i < TRAIN_COUNT * 2; ++i) {
+    for (i = 0; i < TRAIN_MAX_NUM; ++i) {
         train_reservations[i].tr = -1;
         train_reservations[i].passengers = NULL;
         train_reservations[i].destination = -1;
@@ -308,7 +309,7 @@ void MrBonesWildRide() {
                     int hash, trainId;
                     int nextStation;
                     trainId = request.arg0;
-                    hash = hash_shift(trainId) % (TRAIN_COUNT * 2);
+                    hash = trainId % TRAIN_MAX_NUM;
                     train = &train_reservations[hash];
                     station = &train_stations[request.arg1];
                     Log("Called with sensor = %d, train = %d (hash %d)", station->sensor, trainId, hash);

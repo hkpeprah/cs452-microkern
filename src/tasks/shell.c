@@ -166,8 +166,11 @@ void Shell() {
             }
 
             newline();
-            if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0 || sscanf(buf, "q %d", &exit_status) != -1) {
+            if (strcmp(buf, "q") == 0 || strcmp(buf, "quit") == 0) {
                 /* quit the terminal and stop the kernel */
+                newline();
+                break;
+            } else if (sscanf(buf, "exit %d", &exit_status) != -1) {
                 newline();
                 break;
             } else if (strcmp(buf, "?") == 0 || strcmp(buf, "help") == 0) {
