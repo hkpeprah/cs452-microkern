@@ -44,23 +44,21 @@ unsigned int getReverseOffset() {
 }
 
 
-static bool isTrainAtDest(int train, track_node *dest, int expectOffset) {
+static bool isTrainAtDest(int train, track_node *dest, int expectOffset, int tr_number) {
     uint32_t offset = 0;
     track_node *node;
     track_edge *edge;
     ASSERT((node = TrGetLocation(train, &offset)), "Null node?!");
     ASSERT((edge = getNextEdge(node)), "Null edge?!");
 
-    debug("Conductor for train %d: Train at %d past %s, expected %d past %s", train, offset, d(node).name, expectOffset, d(dest).name);
+    debug("Conductor: Train %d (Tid %d) at %d past %s, expected %d past %s", tr_number, train,
+          offset, d(node).name, expectOffset, d(dest).name);
 
     if (expectOffset != 0) {
         return (edge->src == dest && ABS(expectOffset - offset) < MAX_NODE_OFFSET);
-               // || (edge->dest == dest && ABS(edge->dist - offset - expectOffset) < MAX_NODE_OFFSET);
-               // advanced case, maybe support later?
     }
-
-    return ( ((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET) ||
-             ((edge->dest == dest || edge->dest->reverse == dest) && (edge->dist - offset) < MAX_NODE_OFFSET) );
+    return (((edge->src == dest || edge->src->reverse == dest) && offset < MAX_NODE_OFFSET) ||
+             ((edge->dest == dest || edge->dest->reverse == dest) && (edge->dist - offset) < MAX_NODE_OFFSET));
 }
 
 
@@ -100,7 +98,7 @@ void Conductor() {
         for (attemptsLeft = random_range(3, 5); attemptsLeft > 0; --attemptsLeft) {
             source = TrGetEdge(train);
             if (source == NULL) {
-                debug("Train %d (Tid %d) reported NULL edge, readding...", tr_number, train);
+                Log("Train %d (Tid %d) reported NULL edge, readding...", tr_number, train);
                 goto lost;
             }
 
@@ -122,17 +120,16 @@ void Conductor() {
             }
 
             if (node_count >= 2 && path[node_count - 2]->reverse == path[node_count - 1]) {
-                --node_count;
                 // TODO: this doesn't correctly handle the "GOTO-AFTER" case. should reduce the
                 // final node 1 before and use a dist offset of edgeDist - requested offset
+                --node_count;
             }
 
             int i, base = 0;
             for (i = 0; i < node_count - 1; ++i) {
                 if (path[i] && path[i]->reverse == path[i + 1]) {
-                    notice("%d Exec PARTIAL route %s -> %s", tr_number, path[base]->name, path[i]->name);
+                    Log("Conductor for Train %d: Exec PARTIAL route %s -> %s", tr_number, path[base]->name, path[i]->name);
                     result = TrGotoAfter(train, &(path[base]), (i - base + 1), reverse_offset);
-
                     switch (result) {
                         case GOTO_COMPLETE:
                             break;
@@ -162,13 +159,12 @@ void Conductor() {
             }
 
             if (base != node_count) {
-                notice("Exec FINAL route %s -> %s", d(path[base]).name, d(path[node_count - 1]).name);
-
+                Log("Exec FINAL route %s -> %s", d(path[base]).name, d(path[node_count - 1]).name);
                 result = TrGotoAfter(train, &(path[base]), node_count - base, 0);
                 switch (result) {
                     case GOTO_COMPLETE:
                         // check that the train is within 5 cm of dest
-                        if (isTrainAtDest(train, dest, destDist)) {
+                        if (isTrainAtDest(train, dest, destDist, tr_number)) {
                             // success!
                             goto done;
                         }
@@ -211,10 +207,9 @@ lost:
 done:
     /* remove self from parent, so that train can be used again */
     if (dest != NULL) {
-        notice("Conductor (Tid %d): Broadcasting arrival of train %d at sensor %s (%d)", myTid, tr_number,
-               dest->name, dest->num);
+        notice("Conductor (Tid %d): Broadcasting arrival of train %d at sensor %s (%d)", myTid, tr_number, dest->name, dest->num);
+        Broadcast(tr_number, dest->num);
     }
-    Broadcast(tr_number, dest->num);
     status = DispatchStopRoute(tr_number);
     if (status < 0) {
         error("Conductor (Tid %d): Error: Got %d in send to parent %u", myTid, status, MyParentTid());

@@ -58,11 +58,7 @@ static int writeMessage(char *msg) {
         messages = &msgQueue;
     }
 
-    if (length_string(messages) > 0) {
-        write_string(messages, &msg, 1);
-        return 1;
-    }
-    return 0;
+    return write_string(messages, &msg, 1);
 }
 
 
@@ -117,9 +113,10 @@ void Intercom() {
         printf("\r\n");
     }
 
-    printer = Create(3, IntercomCourier);
+    printer = Create(4, IntercomCourier);
     printf("Press any key to exit: ");
     getchar();
+    printf("\r\n");
     Destroy(printer);
     Exit();
 }

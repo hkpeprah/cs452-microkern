@@ -23,8 +23,8 @@ void cpu_idle(bool isIdle) {
     if ((*timerLow / CYCLES_PER_TICK) - count >= 1) {
         count = (*timerLow / CYCLES_PER_TICK);
         if ((count - lastCount) / TIMER4INTERVAL > 0) {
-            lastCount = count - lastCount;
-            lastIdle = totalIdle - lastIdle;
+            lastCount = ABS(count - lastCount);
+            lastIdle = ABS(totalIdle - lastIdle);
         }
     }
 

@@ -42,6 +42,15 @@ profile: upload
 debugtest: CFLAGS += -DDEBUG -DTEST
 debugtest: all
 
+both:
+	@-if [ "$(DEBUG)" != "false" ]; then \
+		$(MAKE) debug TRACK=a TARGET=kernel-a.elf; \
+		$(MAKE) debug TRACK=b TARGET=kernel-b.elf; \
+	else \
+		$(MAKE) upload TRACK=a TARGET=kernel-a.elf; \
+		$(MAKE) upload TRACK=b TARGET=kernel-b.elf; \
+	fi
+
 test: CFLAGS += -DTEST -DDEBUG -D$(DEBUG)
 test:
 	@$(eval DEPENDENCIES := $(subst $(srcdir)/,$(builddir)/,$(addsuffix .o, $(SOURCEFILES))))

@@ -53,7 +53,7 @@ typedef struct {
 
 static uint32_t train_dispatcher_tid = -1;
 static uint32_t num_of_trains = 0;
-static void removeDispatcherNode(DispatcherNode_t*, DispatcherNode_t*, bool);
+static void removeDispatcherNode(DispatcherNode_t*, DispatcherNode_t*);
 static DispatcherNode_t *addDispatcherNode(DispatcherNode_t*, unsigned int, unsigned int);
 static DispatcherNode_t *getDispatcherNode(DispatcherNode_t*, uint32_t);
 
@@ -226,7 +226,7 @@ static DispatcherNode_t *addDispatcherNode(DispatcherNode_t *nodes, unsigned int
 }
 
 
-static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *node, bool keepConductor) {
+static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *node) {
     DispatcherMessage_t req;
     unsigned int i, tid;
     for (i = 0; i < MAX_NUM_OF_TRAINS; ++i) {
@@ -236,7 +236,6 @@ static void removeDispatcherNode(DispatcherNode_t *trains, DispatcherNode_t *nod
             req.type = TRM_REMOVE_TRAIN;
             req.tr = trains[i].tr_number;
             req.arg0 = trains[i].train;
-            req.arg1 = (int)keepConductor;
             /* send off the message */
             Send(tid, &req, sizeof(req), NULL, 0);
             break;
@@ -311,7 +310,7 @@ void Dispatcher() {
         switch (request.type) {
             case TRM_ADD:
                 if (node != NULL) {
-                    removeDispatcherNode(trains, node, false);
+                    removeDispatcherNode(trains, node);
                 }
                 sensor = -1;
                 nextTrain = request.tr;
@@ -319,7 +318,7 @@ void Dispatcher() {
                 break;
             case TRM_ADD_AT:
                 if (node != NULL) {
-                    removeDispatcherNode(trains, node, false);
+                    removeDispatcherNode(trains, node);
                 }
                 sensor = sensorToInt(request.arg0, request.arg1);
                 if (sensor < 0 || sensor >= 80) {
@@ -328,15 +327,22 @@ void Dispatcher() {
                 }
                 nextTrain = request.tr;
         addnode:
-                if (CreateCourier != -1 && nextTrain == waitingTrain) {
-                    Destroy(CreateCourier);
-                    CreateCourier = -1;
-                } else if (nextTrain != waitingTrain && waitingTrain >= 0) {
-                    status = -1;
-                    write_int(&addQueue, &nextTrain, 1);
-                    write_int(&addQueue, &status, 1);
-                    status = 0;
-                    break;
+                if (nextTrain == waitingTrain) {
+                    if (CreateCourier != -1) {
+                        Destroy(CreateCourier);
+                        CreateCourier = -1;
+                    } else {
+                        error("Dispatcher: Train %d is waiting but nothing is creating", nextTrain);
+                        break;
+                    }
+                } else if (nextTrain != waitingTrain) {
+                    if (waitingTrain >= 0) {
+                        status = -1;
+                        write_int(&addQueue, &nextTrain, 1);
+                        write_int(&addQueue, &status, 1);
+                        status = 0;
+                        break;
+                    }
                 }
                 waitingTrain = nextTrain;
                 if ((CreateCourier = addDispatcherTrain(nextTrain, sensor, -1)) == -1) {
@@ -352,17 +358,29 @@ void Dispatcher() {
                 }
                 nextTrain = request.tr;
         readd:
-                node->train = -1;
-                node->tr_number = -1;
-                num_of_trains--;
-                if (CreateCourier != -1 && nextTrain == waitingTrain) {
-                    Destroy(CreateCourier);
-                    CreateCourier = -1;
-                } else if (nextTrain != waitingTrain && waitingTrain >= 0) {
-                    write_int(&addQueue, &nextTrain, 1);
-                    write_int(&addQueue, &callee, 1);
-                    continue;
+                if (nextTrain == waitingTrain) {
+                    if (CreateCourier != -1) {
+                        Destroy(CreateCourier);
+                        CreateCourier = -1;
+                    } else {
+                        error("Dispatcher: Train %d is waiting but nothing is creating", nextTrain);
+                        break;
+                    }
+                } else if (nextTrain != waitingTrain) {
+                    if (waitingTrain >= 0) {
+                        if (node->train == -1) {
+                            error("Dispatcher: Callee %d re-adding a train %d that is currently being added or queued (queue length: %d)",
+                                  callee, request.tr, length_int(&addQueue));
+                            break;
+                        }
+                        /* queue the train to be added */
+                        write_int(&addQueue, &nextTrain, 1);
+                        write_int(&addQueue, &callee, 1);
+                        continue;
+                    }
                 }
+                node->train = -1;
+                num_of_trains--;
                 waitingTrain = nextTrain;
                 sensor = -1;
                 if ((CreateCourier = addDispatcherTrain(nextTrain, sensor, callee)) == -1) {
@@ -375,7 +393,7 @@ void Dispatcher() {
             case TRM_REMOVE_TRAIN:
                 status = 0;
                 notice("Dispatcher: Removing train %d with Tid %d", node->tr_number, node->train);
-                if (request.arg1 == false && node->conductor != -1) {
+                if (node->conductor != -1) {
                     /* specifies whether or not to remove the conductor */
                     Destroy(node->conductor);
                 }
@@ -395,6 +413,7 @@ void Dispatcher() {
                 }
                 CreateCourier = -1;
                 waitingTrain = -1;
+                nextTrain = -1;
                 status = node->train;
                 if (request.arg1 >= 0) {
                     /* add this as a conductor */
@@ -420,7 +439,7 @@ void Dispatcher() {
                         status = TRAIN_HAS_NO_CONDUCTOR;
                         error("Dispatcher: Error: Train %u does not have a conductor", node->tr_number);
                     } else {
-                        notice("Dispathcer: Removing conductor by responding to conductor with Tid %d", node->train);
+                        notice("Dispatcher: Removing conductor with tid %d (by reply)", node->train);
                         status = 0;
                         Reply(node->conductor, &status, sizeof(status));
                         node->conductor = -1;
@@ -445,8 +464,7 @@ void Dispatcher() {
             case TRM_GOTO_AFTER:
                 if (node != NULL) {
                     if (node->conductor != -1) {
-                        notice("Dispatcher; Removing conductor tid %d for train %d", node->conductor,
-                               node->tr_number);
+                        notice("Dispatcher; Removing conductor tid %d for train %d", node->conductor, node->tr_number);
                         Destroy(node->conductor);
                     }
                     node->conductor = Create(7, Conductor);

@@ -11,7 +11,7 @@
 #define FIFO_SIZE       8
 #define UART_PRIORITY   14
 
-DECLARE_CIRCULAR_BUFFER(char);
+DECLARE_CIRCULAR_BUFFER_L(char, 13);
 
 static int is_tid = -1;
 static int os_tid = -1;

@@ -19,7 +19,7 @@
 #include <persona.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      28
+#define HELP_MESSAGES      30
 #define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
 
 static void print_help() {
@@ -43,13 +43,15 @@ static void print_help() {
         "rls TRAIN SNSR1 SNSR2       -   Release sensors from SNSR1 to SNSR2 if they are assigned to TRAIN",
         "raw BYTE1 BYTE2             -   Sends two raw bytes to the train controller",
         "intercom                    -   Listen to the intercom on the various trains",
-        "station %d %d               -   Create a train station with specified number of passengers",
+        "station SENSOR PASSENGERS   -   Create a train station with specified number of passengers",
         "passengers STATION          -   Add passengers the specified train station",
+        "broadcast TRAIN STATION     -   Broadcast arrival of train at station",
+        "setrv OFFSET                -   Assigns a new value to the reverse offset",
+        "spawn N                     -   Spawns n train stations with a random number of passengers",
         "whoami                      -   Prints the current user",
         "sl                          -   Display animations",
         "clear                       -   Clears the screen",
         "sudo                        -   Run with elevated privileges",
-        "setrv OFFSET                -   Assigns a new value to the reverse offset",
         "help                        -   Display this help dialog",
         "?                           -   Display this help dialog"
     };
@@ -132,6 +134,8 @@ void Shell() {
     insert_ht(&commands, "raw", TRAIN_CMD_RAW);
     insert_ht(&commands, "station", TRAIN_CMD_STATION_PASSENGERS);
     insert_ht(&commands, "passengers", TRAIN_CMD_STATION_ADD_PASSENGERS);
+    insert_ht(&commands, "broadcast", TRAIN_CMD_BROADCAST);
+    insert_ht(&commands, "spawn", TRAIN_CMD_STATION_MULTIPLE);
 
     i = 0;
     totalCommands = 1;
@@ -174,8 +178,9 @@ void Shell() {
                 sudo();
             } else if (strcmp(buf, "whoami") == 0) {
                 whoami();
-            } else if (sscanf(buf, "setrv %u", &convert_n) == 0) {
+            } else if (sscanf(buf, "setrv %u", &convert_n) != -1) {
                 setReverseOffset(convert_n);
+                printf("Config: Changed reverse offset to %u\r\n", convert_n);
             } else {
                 /* add null terminating character to first available position */
                 tmp = &buf[i];
@@ -196,6 +201,7 @@ void Shell() {
                         case TRAIN_CMD_HORN:
                         case TRAIN_CMD_ADD:
                         case TRAIN_CMD_GOTO_STOP:
+                        case TRAIN_CMD_STATION_MULTIPLE:
                             cmd = 1;
                             break;
                         case TRAIN_CMD_SPEED:
@@ -209,6 +215,7 @@ void Shell() {
                             break;
                         case TRAIN_CMD_ADD_AT:
                         case TRAIN_CMD_GOTO:
+                        case TRAIN_CMD_BROADCAST:
                             cmd = 5;
                             break;
                         case TRAIN_CMD_GOTO_AFTER:
@@ -251,11 +258,13 @@ void Shell() {
             printf(PROMPT, totalCommands, getUsername());
         } else {
             /* print character to the screen */
-            if (i < 79) {
-                buf[i] = ch;
+            if (ch != 27) {
+                if (i < 79) {
+                    buf[i] = ch;
+                }
+                putchar(ch);
+                i++;
             }
-            putchar(ch);
-            i++;
         }
         save_cursor();
     }

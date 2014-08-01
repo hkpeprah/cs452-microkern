@@ -36,6 +36,7 @@ void firstTask() {
     id = Create(13, OutputServer);
     id = Create(13, TimerTask);
     id = Create(12, SensorServer);
+    id = Create(11, MrBonesWildRide);
     id = Create(10, Dispatcher);
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
@@ -208,6 +209,18 @@ void TrainUserTask() {
                 } else {
                     status = INVALID_SENSOR_ID;
                 }
+                break;
+            case TRAIN_CMD_BROADCAST:
+                if ((sensor1 = sensorToInt(req.args[2], req.args[3])) >= 0) {
+                    if ((status = DispatchGetTrainTid(req.args[1])) >= 0) {
+                        status = Broadcast(req.args[1], sensor1);
+                    }
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
+                break;
+            case TRAIN_CMD_STATION_MULTIPLE:
+                status = SpawnStations(req.args[1]);
                 break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);

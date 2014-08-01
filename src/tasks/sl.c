@@ -107,7 +107,7 @@ void SteamLocomotive() {
         buffer[bufIndex++] = 'F';
         buffer[bufIndex++] = '\0';
         puts(buffer);
-        Delay(12);
+        Delay(11);
         bufIndex = 0;
     }
 

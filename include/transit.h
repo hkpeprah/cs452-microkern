@@ -6,8 +6,10 @@
 #define TRAIN_STATION_INVALID      -45
 
 
-void Fuhrer();
+void MrBonesWildRide();
 int Broadcast(int train, int sensor);
 int AddTrainStation(int sensor, int passengers);
+int AddPassenger(int sensor, int passengers);
+int SpawnStations(int num_stations);
 
 #endif /* __STATION_H__ */
