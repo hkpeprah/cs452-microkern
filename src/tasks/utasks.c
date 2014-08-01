@@ -23,6 +23,7 @@
 #include <dispatcher.h>
 #include <path.h>
 #include <transit.h>
+#include <persona.h>
 
 #define RESERVE   0
 #define RELEASE   1
@@ -40,6 +41,7 @@ void firstTask() {
     id = Create(10, Dispatcher);
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
+    id = Create(1, Passenger);
 
     debug("FirstTask: Exiting.");
     Exit();

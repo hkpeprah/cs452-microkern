@@ -2,6 +2,7 @@
 #define __PERSONA_H__
 
 
+void initTransitIntercom();
 void Passenger();
 void Intercom();
 

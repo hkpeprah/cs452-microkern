@@ -177,7 +177,7 @@ static int boardTrain(TrainPassengers *train, TrainStation_t *station) {
         passengers = passengers->next;
         tmp->next = train->passengers;
         /* since the pedestrian is boarding the train, they are now a passenger */
-        // tmp->tid = Create(3, Passenger);
+        tmp->tid = Create(3, Passenger);
         train->passengers = tmp;
         boarded++;
     }
@@ -249,6 +249,7 @@ void MrBonesWildRide() {
     TrainPassengers train_reservations[TRAIN_COUNT * 2] = {{0}};
     Person tmp, passengers = NULL;
 
+    initTransitIntercom();
     is_shutdown = false;
     transit_system_tid = MyTid();
     num_of_stations = 0;

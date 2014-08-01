@@ -104,6 +104,8 @@ int indexOf(char ch, char *str) {
     while (*str++ != ch) {
         index--;
     }
-    index = len - index;
-    return (index == len ? -1 : index);
+    if (index <= 0) {
+        return -1;
+    }
+    return len - index;
 }

@@ -54,13 +54,6 @@ static char **getPersonality() {
 
 
 static int writeMessage(string msg) {
-    if (messages == NULL) {
-        Log("Creating string message queue for intercom.");
-        initcb_string((CircularBuffer_string*)&msgQueue);
-        messages = &msgQueue;
-        Log("Created string message queue for intercom.");
-    }
-
     if (d((CircularBuffer_string*)messages).remaining > 0) {
         ASSERT(msg != NULL, "Received NULL message to write to intercom");
         return write_string((CircularBuffer_string*)messages, &msg, 1);
@@ -69,15 +62,21 @@ static int writeMessage(string msg) {
 }
 
 
+void initTransitIntercom() {
+    initcb_string((CircularBuffer_string*)&msgQueue);
+    messages = &msgQueue;
+    notice("Created string message queue for intercom");
+}
+
+
 void Passenger() {
     char **personality;
     int len, index, agitationFactor;
 
     personality = getPersonality();
-    len = sizeof(personality) / sizeof(string);
+    len = sizeof(personality) - 1;
     index = 0;
     agitationFactor = 0;
-    Log("Passenger has %d message types", len);
     while (true) {
         if (agitationFactor > 0 && agitationFactor % len == 0) {
             index++;
@@ -101,10 +100,6 @@ static void IntercomCourier() {
 
     line = 5;
     Log("IntercomCourier created with Tid %d", MyTid());
-    if (messages == NULL) {
-        writeMessage((msg = "Listening to intercom:"));
-    }
-
     while (true) {
         /* prints out the messages in the queue every five seconds */
         if (length_string((CircularBuffer_string*)messages) > 0) {
@@ -118,7 +113,7 @@ static void IntercomCourier() {
                 line = (line - 2 <= 0 ? 5 : line - 2);
             } else {
                 printf(SAVE_CURSOR MOVE_CUR_UP "\033[0K" "%s" RESTORE_CURSOR, line, msg);
-                line = (line - 1 <= 0 ? 5 : line);
+                line = (line - 1 <= 0 ? 5 : line - 1);
             }
         }
         Delay(200);
