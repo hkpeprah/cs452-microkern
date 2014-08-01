@@ -187,10 +187,11 @@ reroute:
             debug("Train %d asked to be rerouted, sleeping...", tr_number);
             Delay(random_range(100, 500));
             continue;
-lost:
+lost:;
             /* we're lost, so let's re-add the train */
+            int newTrain = DispatchReAddTrain(tr_number);
             TrDelete(train);
-            train = DispatchReAddTrain(tr_number);
+            train = newTrain;
             if (train < 0) {
                 error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
                 break;

@@ -1299,6 +1299,7 @@ static void TrainTask() {
             updateLocation(&train);
 
             if (train.speed != 0
+                    && train.gotoResult != GOTO_LOST
                     && train.distSinceLastNode > train.currentEdge->dist + DEAD_SENSOR_BUFFER
                     && train.currentEdge->dest == train.nextSensor) {
 
@@ -1383,9 +1384,7 @@ static void TrainTask() {
                 notice("Train %u: Deleted (Tid %u)", train.id, MyTid());
                 PTL(&train);
                 clearTrainSnapshot(train.id);
-                Reply(callee, &status, sizeof(status));
-                Exit();
-                break;
+                return;
             case TRM_GOTO_AFTER:
                 /* blocks the calling task until we arrive at our destination */
                 gotoBlocked = callee;
