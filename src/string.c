@@ -100,12 +100,12 @@ int indexOf(char ch, char *str) {
     int len, index;
 
     len = strlen(str);
-    index = len;
+    index = len + 1;
     while (*str++ != ch) {
         index--;
     }
     if (index <= 0) {
         return -1;
     }
-    return len - index;
+    return len - (index - 1);
 }

@@ -108,13 +108,13 @@ static void IntercomCourier() {
             if (index == max_line_count - 1) {
                 int i;
                 for (i = 0; i < max_line_count - 1; ++i) {
-                    int index;
-                    index = i;
+                    int msgId;
+                    msgId = i;
                     if (indexOf('\n', history[i]) >= 0) {
                         ++i;
                     }
-                    history[index] = history[index + 1];
-                    printMessage(max_line_count - index, num_of_messages - (index - index), history[index]);
+                    history[msgId] = history[msgId + 1];
+                    printMessage(max_line_count - msgId, num_of_messages - (max_line_count - msgId), history[msgId]);
                 }
                 history[i] = msg;
                 printMessage(1, num_of_messages, msg);
