@@ -68,11 +68,112 @@ After the startup tasks have finished running, the user will reach a command pro
 \section{Task Structure}
 \\[2\baselineskip]
 \section{Train Control Demo 2}
-\subsection{Train Calibration}
-\subsubsection{Shortest Path Finding}
-\subsubsection{Collision Avoidance}
-\subsubsection{Reservation}
-\subsubsection{Recovery}
+For the purpose of routing our trains from its current location to any provided location, we use a layered architecture
+in which each feature is built and abstracted such that more advanced navigation systems can be created on top of them
+without worrying about how they work. We provide an extremely simple interface (include/train\_task.h) to an extremely
+complicated task (src/train/train\_task.c).
+
+\subsection{Basic Train Driving}
+The most basic functionality of the train is to just drive and know where it is (required for Demo 1). We accomplish
+this by having each \texttt{TrainTask} create a slave task that sends into it every 5 ticks telling it to update its
+location, as well as a hard resync with the track whenever our train hits a sensor. The train tracks a huge amount of
+information, see Appendix A for details.
+\\
+Internal to the \texttt{TrainTask}, these are provided by the functions \texttt{setTrainSpeed} (change speed) and
+\texttt{trainDir} (reverse). These are exposed as functions (wrappers for Send to the \texttt{TrainTask})
+\texttt{TrSpeed} and \texttt{TrDir} respectively.
+
+\subsection{Path Finding}
+Path finding is implemented over the provided track graph using the heap version of Dijkstra's, taking into account
+track reservation as well. If any node is reserved by another train, then the pathfinding algorithm will no longer use
+that node. For each node, the algorithm will add its reverse, its straight edge, and in the case of branches, its curved
+edge. The function \texttt{findPath} will fill the provided \texttt{track\_node*} array with nodes of the path, return
+the number of nodes and write the total length of the path in mm in an output parameter.
+
+\subsection{Reservation}
+The reservation system was built into the provided \texttt{track\_node} graph by simply adding a field in the
+\texttt{track\_node} struct called \texttt{reservedBy} that indicates the train number of the train that has the
+particular node reserved. This could have been done in a more encapsulated way that hides this reservation as the
+current method allows anyone with a \texttt{track\_node*} to modify the value. However, we decided to take the simpler
+approach as time was limited, and trust that our two programmers will not modify the value directly, and instead use the
+provided interfaces.
+\\
+At the heart of the reservation system is a compare-and-swap (CAS) function that isn't absolutely true to its name. The
+function does the simple operation of comparing the existing reservedBy field to a provided value, and if they match,
+sets it to the new value (more of a test-and-set). The operation is also idempotent, so when a train tries to reserve a
+node it already owns the operation will succeed even though the comparison failed. The train number -1 is defined / used as
+RESERVED\_BY\_NOBODY to indicate that a node is free. As such, a reserve and release simply call CAS for each provided
+\texttt{track\_node*} from nobody to the train or the train to nobody, respectively.
+\\
+When a train needs to reserve more track, it should not modify \texttt{reservedBy}. Instead, it calls into a server,
+the \texttt{Dispatcher}), so that modifications to the field are mutually exclusive. The functions (as always, wrappers
+for a Send into the task) provide a train number and an array of \texttt{track\_node*}, and optionally a distance. The 
+reservation system will then attempt to reserve track, following the array until it is exhausted. If a distance is
+provided, then the system will reserve at most the provided distance, no more and no less. That is, if the provided path
+array is longer than the distance, only the distance will be reserved. Conversely, if the provided path is not long
+enough for the distance, then the reservation system will look ahead in the track graph and reserve until the provided
+distance is met (one minor problem with this is that since we only have \texttt{track\_node} granularity, we are prone
+to over-reserving a large portion of the track when we reach an extremely long edge).
+\\
+The reservation code will return the number of \texttt{track\_node} successfully reserved, as well as modify the
+provided distance field (passed in as a pointer) such that it becomes the amount of distance that was not reserved.
+
+\subsection{Collision Avoidance}
+When a train asks for more track, it always provides a distance which is slightly greater than its stopping distance by
+some factor. This ensure that the train will be able to stop in the amount of track it has reserved. If the stopping
+distance field is ever positive (that is, the reservation system could not reserve all the provided distance) then the
+train knows that it is approaching track reserved by another train, and will stop itself. Otherwise, the train obtains a
+value that indicates how much extra distance it has before it must reserve more track. Once that extra distance runs
+out, it will attempt to reserve track again.
+
+\subsection{Basic Path Execution}
+Basic path execution is done solely within the train, and does not support paths that include reversals. The function
+\texttt{TrGotoAfter} is provided by the train that will drive the train, in a linear fashion, to some offset after the
+provided \texttt{track\_node}. This is accomplished by recomputing the path length on every train state update and then
+issuing the train speed command when the stopping distance is equal to the remaining path length.
+\\
+Path execution is done every time new nodes are reserved. When a node is reserved and the previous node is a switch,
+then the switch is flipped to the state such that moving over the switch will lead us to the correct next node.
+
+\subsection{Short Moves}
+Short moves are accomplished by setting the train to a speed, waiting for some number of ticks, and then stopping the
+train. They exist almost entirely outside of the normal train operations, and the instantaneous speed of the train is
+not accounted for during a short move. Instead, we empirically measured the amount of time required to wait to move
+certain distances, and built a function f(x) -> t which maps distance to travel (x) into time to wait before sending the
+stop command (t).
+\\
+When a train is sent a \texttt{TrGotoAfter} command, it evaluates the length of the path. If the path length is under
+the threshold for shortmoves, then it will initiate a short move by setting its speed to our calibrated short move
+speed, creating 2 time couriers with values f(x) and 2f(x), shortMvStop and shortMvDone. Stop is when the train
+stop command is issued, and done is when the train is finished moving. During the short move, sensors will still sync
+the train's position but nothing else will.
+
+\subsection{Advanced Path Execution}
+Advanced path execution is accomplished through a task external to the train, the \texttt{Conductor}. An instance of
+this task is created when the \texttt{Dispatcher} is asked to route a train to a particular location. The
+\texttt{Conductor} will find the total path, then break it down to path segments that do not require reversing. It will
+call \texttt{TrGotoAfter} with an offset (roughly 300 mm) for each partial path. \texttt{TrGotoAfter} is a blocking call
+that will return when the train has finished its path. After each partial path has completed, the conductor will reverse
+the train and execute the next partial path.
+\\
+Since partial paths are overshooting, the train corrects for this internally. This is done by doing another short
+\texttt{findPath} call inside the train when it is initially given a path. If the current train edge is not connected to
+the start of the path, then a path between the edge and the start of the path will be found internally and then reserved
+and executed.
+
+\subsection{Recovery}
+Recovery is done in the \texttt{Conductor}. Each \texttt{TrGotoAfter} returns a \texttt{GotoResult\_t} which indicates
+how the train has executed the path, which can be GOTO\_COMPLETE, GOTO\_REROUTE or GOTO\_LOST.In the first case, the
+conductor will execute the next partial path. REROUTE occurs when the train cannot finish its route but still knows
+where it is, so the conductor will call findPath again to generate a new path for the train. LOST occurs when the train
+no longer knows its location. In this case, the train will be moved slowly until it hits a sensor and finds its location
+again.
+\\
+There is an issue with the LOST system in that it is hacked together using the train initialization sequence by destroying 
+the train task and adding it again instead of internally to the train. Because of this, the train loses its reservations 
+during the LOST stage and is prone to collisions. We wanted to implement the LOST error recovery within the train but did 
+not have enough time.
+
 \\[2\baselineskip]
 \section{Final Demo - Transit System}
 \subsection{Overview}
