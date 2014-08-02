@@ -23,7 +23,7 @@
 #include <dispatcher.h>
 #include <path.h>
 #include <transit.h>
-#include <persona.h>
+#include <traincom.h>
 
 #define RESERVE   0
 #define RELEASE   1
@@ -37,8 +37,8 @@ void firstTask() {
     id = Create(13, OutputServer);
     id = Create(13, TimerTask);
     id = Create(12, SensorServer);
-    id = Create(11, MrBonesWildRide);
     id = Create(10, Dispatcher);
+    id = Create(11, MrBonesWildRide);
     id = Create(1, Shell);
     id = Create(5, TrainUserTask);
 

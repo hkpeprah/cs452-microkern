@@ -1,7 +1,7 @@
 /*
- * persona.c - personalities for the train passengers
+ * traincom.c - train communication via passengers/intercom/movement
  */
-#include <persona.h>
+#include <tracom.h>
 #include <random.h>
 #include <syscall.h>
 #include <stdlib.h>
@@ -19,49 +19,50 @@
 
 DECLARE_CIRCULAR_BUFFER(string);
 
+static volatile int lines_last_printed = 0;
 static volatile CircularBuffer_string msgQueue;
 static volatile CircularBuffer_string *messages = NULL;
 
-static string persona_one[] = {
+static string personality_one[] = {
     "Boy: I wish I could ride this train forever!",
     "Boy: This train smells weird.",
     "Boy: I have the strangest feeling someone is watching me.",
     "Boy: I want to get off MR BONE'S WILD RIDE!"
 };
 
-static string persona_two[] = {
+static string personality_two[] = {
     "Son: Hey look that bird outside the window.",
     "Son: This train is so big",
     "Father: I like the interior lighting",
-    "Son: D-dad, I want to get off the train.\nFather: I know son.  We all do."
+    "Son: D-dad, I want to get off the train.\r\n\033[0KFather: I know son.  We all do."
 };
 
-static string persona_three[] = {
+static string personality_three[] = {
     "Girl: This train is really clean.",
     "Girl: This train has really bright lights.",
     "Girl: I want to ride a faster train.",
     "Girl: When are we going to get to the station?"
 };
 
-static string persona_four[] = {
+static string personality_four[] = {
     "Man: I hope we got the Bernstein account.",
     "Man: *call* Johnson, you better get that report on my desk by 10 A.M.",
     "Man: I'm going to miss my meeting at this rate.",
     "Man: That's it, I'm taking this up with Mr Bone's Management!"
 };
 
-static string *personas[NUM_OF_PERSONALITIES] = {
-    persona_one,
-    persona_two,
-    persona_three,
-    persona_four
+static string *personalities[NUM_OF_PERSONALITIES] = {
+    personality_one,
+    personality_two,
+    personality_three,
+    personality_four
 };
 
 
 static char **getPersonality() {
     int n;
     n = random() % NUM_OF_PERSONALITIES;
-    return personas[n];
+    return personalities[n];
 }
 
 
@@ -131,20 +132,13 @@ static void IntercomCourier() {
 
 
 static void StationCourier() {
-    char buffer[PRINT_BUFFER_SIZE];
-    int num_lines, i;
+    int num_lines_printed;
 
+    lines_last_printed = 1;
+    num_lines_printed = 1;
     while (true) {
-        for (i = 0; i < PRINT_BUFFER_SIZE; ++i) {
-            /* clear the print buffer */
-            buffer[i] = 0;
-        }
-        num_lines = GetTransitData(buffer);
-        if (num_lines < 0) {
-            error("StationCourier: Error: Got %d in call", num_lines);
-        } else {
-            printf(SAVE_CURSOR "%s" RESTORE_CURSOR, buffer, num_lines);
-        }
+        num_lines_printed = PrintTransitData() + 1;
+        lines_last_printed = num_lines_printed;
         Delay(350);
     }
     Exit();
@@ -216,7 +210,7 @@ void Probe() {
         int i;
         printf("Enter any key to continue: \r\n");
         getchar();
-        for (i = 0; i < TERMINAL_HEIGHT / 2; ++i) {
+        for (i = 0; i < lines_last_printed; ++i) {
             printf("\r\n");
         }
         Destroy(messagePrinter);

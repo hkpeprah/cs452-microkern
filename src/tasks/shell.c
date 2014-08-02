@@ -16,7 +16,7 @@
 #include <demo.h>
 #include <sl.h>
 #include <conductor.h>
-#include <persona.h>
+#include <traincom.h>
 
 #define FOREVER            for (;;)
 #define HELP_MESSAGES      30
@@ -143,8 +143,6 @@ void Shell() {
     insert_ht(&commands, "passengers", TRAIN_CMD_STATION_ADD_PASSENGERS);
     insert_ht(&commands, "broadcast", TRAIN_CMD_BROADCAST);
     insert_ht(&commands, "spawn", TRAIN_CMD_STATION_MULTIPLE);
-    insert_ht(&commands, "setrv", SHELL_CMD_SETRV);
-    insert_ht(&commands, "exit", SHELL_CMD_EXIT);
 
     i = 0;
     totalCommands = 1;
@@ -252,15 +250,7 @@ void Shell() {
                         ++tmp;
                         if (sscanf(tmp, parser[cmd], &args[1], &args[2], &args[3], &args[4], &args[5]) != -1) {
                             args[0] = command;
-                            if (command == SHELL_CMD_SETRV) {
-                                setReverseOffset(args[1]);
-                                printf("Config: Changed reverse offset to %u\r\n", convert_n);
-                            } else if (command == SHELL_CMD_EXIT) {
-                                exit_status = args[1];
-                                break;
-                            } else {
-                                Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
-                            }
+                            Send(TrainController, &tr, sizeof(tr), &status, sizeof(status));
                         } else {
                             printf("%s: invalid arguments.\r\n", &buf[i]);
                         }
