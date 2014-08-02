@@ -187,10 +187,8 @@ reroute:
 lost:
             /* we're lost, so let's re-add the train */
             debug("Conductor (Tid %d): Train %u is lost", myTid, tr_number);
-            int nextTrain;
-            nextTrain = DispatchReAddTrain(tr_number);
             TrDelete(train);
-            train = nextTrain;
+            train = DispatchReAddTrain(tr_number);
             if (train < 0) {
                 error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
                 break;
@@ -199,10 +197,8 @@ lost:
         }
         /* when the conductor gives up, we have to clean up the mess we made */
         notice("Conductor (Tid %d): Giving up on routing train %d (Tid %d)", myTid, tr_number, train);
-        int nextTrain;
-        nextTrain = DispatchReAddTrain(tr_number);
         TrDelete(train);
-        train = nextTrain;
+        train = DispatchReAddTrain(tr_number);
         if (train < 0) {
             error("Conductor: Error: Tried to add back train %d, but got %d", tr_number, train);
         }
