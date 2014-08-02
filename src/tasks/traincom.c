@@ -1,7 +1,7 @@
 /*
  * traincom.c - train communication via passengers/intercom/movement
  */
-#include <tracom.h>
+#include <traincom.h>
 #include <random.h>
 #include <syscall.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@
 #include <transit.h>
 
 #define STATION_LINES          8
-#define MAX_AGITATION_FACTOR   5
+#define MAX_AGITATION_FACTOR   3
 #define NUM_OF_PERSONALITIES   4
 #define DEFAULT_LINE_COUNT     35
 
@@ -27,6 +27,7 @@ static string personality_one[] = {
     "Boy: I wish I could ride this train forever!",
     "Boy: This train smells weird.",
     "Boy: I have the strangest feeling someone is watching me.",
+    "Boy: Are we there yet?",
     "Boy: I want to get off MR BONE'S WILD RIDE!"
 };
 
@@ -34,21 +35,24 @@ static string personality_two[] = {
     "Son: Hey look that bird outside the window.",
     "Son: This train is so big",
     "Father: I like the interior lighting",
-    "Son: D-dad, I want to get off the train.\r\n\033[0KFather: I know son.  We all do."
+    "Son: D-dad, I want to get off the train.\r\n\033[0KFather: I know son.  We all do.",
+    "Son: I want to get off MR BONE'S WILD RIDE!"
 };
 
 static string personality_three[] = {
     "Girl: This train is really clean.",
     "Girl: This train has really bright lights.",
     "Girl: I want to ride a faster train.",
-    "Girl: When are we going to get to the station?"
+    "Girl: When are we going to get to the station?",
+    "Girl: I want to get off MR BONE'S WILD RIDE!"
 };
 
 static string personality_four[] = {
     "Man: I hope we got the Bernstein account.",
     "Man: *call* Johnson, you better get that report on my desk by 10 A.M.",
     "Man: I'm going to miss my meeting at this rate.",
-    "Man: That's it, I'm taking this up with Mr Bone's Management!"
+    "Man: That's it, I'm taking this up with Mr Bone's Management!",
+    "Man: I want to get off MR BONE'S WILD RIDE!"
 };
 
 static string *personalities[NUM_OF_PERSONALITIES] = {
@@ -104,11 +108,13 @@ static void IntercomCourier() {
             if (index == max_line_count - 1) {
                 int i;
                 for (i = 0; i < max_line_count - 1; ++i) {
-                    history[i] = history[i + 1];
-                    printMessage(max_line_count - i, num_of_messages - (index - i), history[i]);
+                    int index;
+                    index = i;
                     if (indexOf('\n', history[i]) >= 0) {
                         ++i;
                     }
+                    history[index] = history[index + 1];
+                    printMessage(max_line_count - index, num_of_messages - (index - index), history[index]);
                 }
                 history[i] = msg;
                 printMessage(1, num_of_messages, msg);
@@ -118,6 +124,7 @@ static void IntercomCourier() {
                 if (indexOf('\n', msg) >= 0) {
                     if (index == max_line_count - 1) {
                         history[index - 2] = msg;
+                        index = max_line_count - 1;
                     } else {
                         index++;
                     }

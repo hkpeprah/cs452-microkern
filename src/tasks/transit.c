@@ -23,7 +23,7 @@
 #define MAX_NUM_STATIONS      20
 #define MAX_NUM_PEDESTRIANS   30
 #define SENSOR_COUNT          TRAIN_MODULE_COUNT * TRAIN_SENSOR_COUNT
-#define STATION_PRINT_MSG     "Station %d: %d passengers waiting at platform"
+#define STATION_PRINT_MSG     "Station %s: %d passengers waiting at platform"
 #define TRAIN_PRINT_MSG       "Train %d: heading to station at sensor %s (%d passengers on board)"
 
 static volatile int transit_system_tid = -1;
@@ -94,11 +94,11 @@ int SpawnStations(int num_stations) {
             default:
                 attempts = 0;
                 num_stations--;
-                printf("Created station at sensor %s with %d passengers",
+                printf("Created station at sensor %s with %d passengers\r\n",
                        (DispatchGetTrackNode(sensor))->name, status);
         }
     }
-    return status;
+    return 1;
 }
 
 
@@ -182,7 +182,7 @@ int Broadcast(int train, int sensor) {
 
 
 int RemoveStation(int sensor) {
-    TrasitMessage_t msg = {.type = TRAIN_STATION_REMOVE, .arg0 = sensor};
+    TransitMessage_t msg = {.type = TRAIN_STATION_REMOVE, .arg0 = sensor};
     int errno, status;
 
     ASSERT(transit_system_tid != -1, "Transit system does not eixst");
@@ -215,13 +215,16 @@ static void SpawningPool() {
     int status, sensor, attempts, passengers, delayTime;
 
     delayTime = 350;
+    attempts = 0;
     while (true) {
         sensor = random_range(0, SENSOR_COUNT - 1);
         if (attempts > 5) {
-            status = AddTrainStation(sensor);
+            debug("SpawningPool: Adding train station at %d", sensor);
+            status = AddTrainStation(sensor, -1);
             attempts = 0;
         } else {
             passengers = random_range(1, 3);
+            debug("SpawningPool: Adding %d passengers to station at %d", passengers, sensor);
             status = AddPassengers(sensor, passengers);
         }
         switch (status) {
@@ -252,10 +255,11 @@ int AddPassengerPool() {
         /* when called with an existing spawning pool, remove it */
         Destroy(spawning_pool_tid);
         spawning_pool_tid = -1;
-    } else {
-        /* when called with a non-existing spawning pool, add it */
-        spawning_pool_tid = Create(4, SpawningPool);
+        return 0;
     }
+    /* when called with a non-existing spawning pool, add it */
+    spawning_pool_tid = Create(4, SpawningPool);
+    return 1;
 }
 
 
@@ -372,9 +376,9 @@ void MrBonesWildRide() {
     TransitMessage_t request;
     int num_of_stations, i;
     int callee, bytes, response, num_of_pedestrians;
-    TrainStation_t train_stations[SENSOR_COUNT] = {{0}};
-    struct Person_t pedestrians[MAX_NUM_PEDESTRIANS] = {{0}};
-    TrainPassengers train_reservations[TRAIN_MAX_NUM] = {{0}};
+    TrainStation_t train_stations[SENSOR_COUNT];
+    struct Person_t pedestrians[MAX_NUM_PEDESTRIANS];
+    TrainPassengers train_reservations[TRAIN_MAX_NUM];
     Person tmp, passengers = NULL;
 
     initTransitIntercom();
@@ -400,7 +404,7 @@ void MrBonesWildRide() {
         train_stations[i].passengers = 0;
         train_stations[i].sensor = i;
         train_stations[i].serviced = -1;
-        strcpy(train_stations[i].name, node);
+        strcpy(train_stations[i].name, node->name);
     }
 
     for (i = 0; i < TRAIN_MAX_NUM; ++i) {
@@ -445,7 +449,7 @@ void MrBonesWildRide() {
                     train_reservations[i].destination = -1;
                     train_reservations[i].onBoard = 0;
                 }
-                num_of_trains = 0;
+                num_of_stations = 0;
                 break;
             case TRAIN_STATION_ARRIVAL:
                 /* need to check for next optimal station by looking
@@ -662,13 +666,9 @@ void MrBonesWildRide() {
                 }
                 break;
             case TRAIN_STATION_DATA:
-                if (request.arg0 == 0) {
-                    response = BUFFER_SPACE_INSUFF;
-                } else {
-                    /* prints the formatted messages of where the stations/trains are to the screen */
+                /* prints the formatted messages of where the stations/trains are to the screen */
+                if (true) {
                     int num_lines_printed;
-                    int i;
-
                     num_lines_printed = 0;
                     for (i = 0; i < SENSOR_COUNT; ++i) {
                         /* go through the stations and print their data */
@@ -681,13 +681,14 @@ void MrBonesWildRide() {
                     for (i = 0; i < TRAIN_MAX_NUM; ++i) {
                         /* go through the trains and print their data */
                         if (train_reservations[i].tr >= 0) {
+                            int destination = train_reservations[i].destination;
                             printf(TRAIN_PRINT_MSG "\r\n", train_reservations[i].tr,
-                                   train_stations[train_reservations[i].destination].name, train_reservations[i].onBoard);
+                                   (destination == -1 ? "NONE" : train_stations[destination].name), train_reservations[i].onBoard);
                             num_lines_printed++;
                         }
                     }
 
-                    move_cursor(0, num_lines_printed);
+                    move_cur_up(num_lines_printed);
                     response = num_lines_printed;
                 }
                 break;

@@ -103,14 +103,14 @@ First, you must get a copy of the code.  To to this, log into one of the aforeme
 \subsection{Running the Program}
 To run the application, you need to load it into the RedBoot terminal.  Ensure you've followed the steps listed above in the ``Getting the Program'' settings to ensure you have the correct directories and account set up.  Navigate to the directory in which you cloned the source code and run \texttt{make upload}.  The uploaded code should now be located at (depending on the track you made for, defaults to 'a'):
 \begin{center}
-  \texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME/kernel-a.elf} \\
+  \texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME/kernel-a.elf} or \\
   \texttt{/u/cs452/tftp/ARM/YOUR\_USERNAME/kernel-b.elf}
 \end{center}
 To run the application, go to the RedBoot terminal and run the command
 \begin{center}
-  \texttt{load -b 0x00218000 -h 10.15.167.4 ``ARM/YOUR\_USERNAME/kernel.elf''; go}
+  \texttt{load -b 0x00218000 -h 10.15.167.4 ``ARM/YOUR\_USERNAME/kernel-a.elf''; go}
 \end{center}
-The application should now begin by running through the game tasks before reaching a prompt.  The generated files will be located in \texttt{DIR/build} where \texttt{DIR} is the directory you created in the earlier steps.  To access and download an existing version of the code, those can be found at \texttt{/u/cs452/tftp/ARM/mqchen/kernel.elf} and \texttt{/u/cs452/tftp/ARM/hkpeprah/kernel.elf}.
+The application should now begin by running through the game tasks before reaching a prompt.  The generated files will be located in \texttt{DIR/build} where \texttt{DIR} is the directory you created in the earlier steps.  To access and download an existing version of the code, those can be found at \texttt{/u/cs452/tftp/ARM/mqchen/kernel-a.elf} (\texttt{kernel-b.elf} for track B), and \texttt{/u/cs452/tftp/ARM/hkpeprah/kernel-a.elf} (\texttt{kernel-b.elf} for track B).
 \\
 \subsubsection{Command Prompt}
 After the startup tasks have finished running, the user will reach a command prompt where they will be able to enter commands.  A list of available commands and the syntax can be found at run-time by entering either ``?'' or ``help'' followed by the ``RETURN'' key.  All commands must be followed by the ``RETURN'' key for the {\tt Shell} to interpret them.
@@ -227,7 +227,17 @@ not have enough time.
 \\[2\baselineskip]
 \section{Final Demo - Transit System}
 \subsection{Overview}
-The final demo consists of modeling a transit system through the use of the kernel and code completed from Train Demo 1 and 2.  By using path finding, the trains are able to be routed to different stations (represented by sensors) to pick up passengers and bring them to their destination.  Each passenger has their own destination of one of the available stations; multiple passengers waiting at one station may each have a different destination.  Passengers and stations can be added at will or randomly as the user seems fit.  The transit system used in our project has been named ``Mr. Bone's Wild Ride''.
+The final demo consists of modeling a transit system through the use of the kernel and code completed from Train Demo 1 and 2.  By using path finding, the trains are able to be routed to different stations (represented by sensors) to pick up passengers and bring them to their destination.  Each passenger has their own destination of one of the available stations; multiple passengers waiting at one station may each have a different destination.  Passengers and stations can be added at will or randomly as the user seems fit.  The transit system used in our project has been named ``Mr. Bone's Wild Ride''.  The transit system has two modes; free-standing and monitored.  In monitored mode, the user adds the stations by entering the command ``spawn'', then can add passengers at will.  In free-standing, the transit system adds passengers on demand, this is done by the user entering ``spawn'' followed by ``pool''.  Regardless of the system chosen, to indicate a train is available to the system, the user must enter the command ``broadcast TRAIN_NUMBER SENSOR'' to alert the system to a new train.  A sample session is shown below:
+\begin{center}
+  \begin{verbatim}
+    mqchen@rtfolks $ spawn
+    mqchen@rtfolks $ pool
+    mqchen@rtfolks $ add 56
+    mqchen@rtfolks $ add 45
+    mqchen@rtfolks $ broadcast 56 A5
+    mqchen@rtfolks $ broadcast 45 A15
+  \end{verbatim}
+\end{center}
 \\[1\baselineskip]
 \subsection{Structure}
 The following diagram outlines the structure of communication and routing works in the transit system.
@@ -244,11 +254,16 @@ The following diagram outlines the structure of communication and routing works 
   \\[1\baselineskip]
 \end{center}
 \subsection{Station Allocation}
+Stations are allocated passengers by either the user or the spawning task.  To determine the next station to go to, the system computes the weight of each station as the sum of the weights of the passengers at that station.  Any available trains are sent to the station with the heaviest weights (passengers initially have a weight of 1).  When a train is in route to a station, that station is marked as serviced, and any other trains currently in the system will not go to that station until it is no longer being serviced.  Sensors that have stations at them are marked as active, while sensors without stations at them are marked as inactive; this is used by the system to determine which sensors to stop at our not.  Once no more stations have passengers at them and all trains have unloaded all their passengers, the system waits until new passengers are added before sending a train off.  Routing between stations uses our shortest path algorithm.
 \\[1\baselineskip]
 \subsection{Passenger System}
 Each passenger in the system has their own destination.  Destinations are assigned ranedomly when a passenger is created at a station; a passenger may already be at the station of their choice, in which case they are simply done.  Each passenger has an associated weight which begins at $1$.  When determining which station a train should go to next, the system computes weights for each station as the sum of the weights of the passengers who want to go to that destination; the largest weighted station is the next station that train is routed to.  When a passenger is on a train and arrives at a station but does not get off (it is not their station), their weight increases by $1$.  This allows the system to account for situations where there would be only one passenger wanting to go to a particular station, and as a result, they would never get off because the other stations would be valued higher.  In addition, as a part of the passenger system, passengers also communicate to voice their opinions on the service to a channel that can be viewed by running the command ``intercom'' from within the \texttt{Shell}.  These get progressively billigerant the longer the passengers are on the train without reaching their destination.
 \\[2\baselineskip]
 \section{Known Errors}
+\begin{itemize}
+  \item When trains are lost, they are re-added to the system be first destroying themselves then calling attribution, as a result, the reservations held by this train are lost, which would allow a nearby train to collide with it.
+  \item Trains do not stop at intermediate station when in route to the heaviest weighted station.
+\end{itemize}
 \\[2\baselineskip]
 \section{MD5}
 \lstinputlisting{md5}
