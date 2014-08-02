@@ -229,6 +229,19 @@ void TrainUserTask() {
             case TRAIN_CMD_STATION_MULTIPLE:
                 status = SpawnStations(req.args[1]);
                 break;
+            case TRAIN_CMD_STATION_SHUTDOWN:
+                status = TransitShutdown();
+                break;
+            case TRAIN_CMD_STATION_REMOVE:
+                if ((sensor1 = sensorToInt(req.args[1], req.args[2])) >= 0) {
+                    status = RemoveStation(sensor1);
+                } else {
+                    status = INVALID_SENSOR_ID;
+                }
+                break;
+            case TRAIN_CMD_STATION_POOL:
+                status = AddPassengerPool();
+                break;
             default:
                 error("TrainController: Error: Received %d from %u", cmd, callee);
                 status = -1;
@@ -245,6 +258,9 @@ void TrainUserTask() {
                 break;
             case TOO_MANY_STATIONS:
                 printf("Error: Too many train stations.\r\n");
+                break;
+            case OUT_OF_PEDESTRIANS:
+                printf("Error: No more pedestrian slots.\r\n");
                 break;
             case NO_TRAIN_STATIONS:
                 printf("Error: No train stations exist.\r\n");

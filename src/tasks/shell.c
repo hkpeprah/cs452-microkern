@@ -19,7 +19,7 @@
 #include <traincom.h>
 
 #define FOREVER            for (;;)
-#define HELP_MESSAGES      30
+#define HELP_MESSAGES      33
 #define PROMPT             "\033[34;1m[%d]\033[0m\033[32;1m%s@rtfolks $ \033[0m"
 
 typedef enum {
@@ -54,6 +54,9 @@ static void print_help() {
         "setrv OFFSET                -   Assigns a new value to the reverse offset",
         "spawn N                     -   Spawns n train stations with a random number of passengers",
         "probe                       -   Probe the train and station data",
+        "remove STATION              -   Remove the station specified by the sensor",
+        "pool                        -   Add a spawning pool for passengers",
+        "halt                        -   Stop the transit system",
         "whoami                      -   Prints the current user",
         "sl                          -   Display animations",
         "clear                       -   Clears the screen",
@@ -143,6 +146,9 @@ void Shell() {
     insert_ht(&commands, "passengers", TRAIN_CMD_STATION_ADD_PASSENGERS);
     insert_ht(&commands, "broadcast", TRAIN_CMD_BROADCAST);
     insert_ht(&commands, "spawn", TRAIN_CMD_STATION_MULTIPLE);
+    insert_ht(&commands, "remove", TRAIN_CMD_STATION_REMOVE);
+    insert_ht(&commands, "halt", TRAIN_CMD_STATION_SHUTDOWN);
+    insert_ht(&commands, "pool", TRAIN_CMD_STATION_POOL);
 
     i = 0;
     totalCommands = 1;
@@ -204,6 +210,8 @@ void Shell() {
                     switch (command) {
                         case TRAIN_CMD_GO:
                         case TRAIN_CMD_STOP:
+                        case TRAIN_CMD_STATION_SHUTDOWN:
+                        case TRAIN_CMD_STATION_POOL:
                             cmd = 0;
                             break;
                         case TRAIN_CMD_RV:
@@ -224,6 +232,9 @@ void Shell() {
                             break;
                         case TRAIN_CMD_SWITCH:
                             cmd = 3;
+                            break;
+                        case TRAIN_CMD_STATION_REMOVE:
+                            cmd = 4;
                             break;
                         case TRAIN_CMD_ADD_AT:
                         case TRAIN_CMD_GOTO:

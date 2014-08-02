@@ -27,6 +27,7 @@
 #define TRAIN_PRINT_MSG       "Train %d: heading to station at sensor %s (%d passengers on board)"
 
 static volatile int transit_system_tid = -1;
+static volatile int spawning_pool_tid = -1;
 struct Person_t;
 typedef struct Person_t *Person;
 
@@ -133,6 +134,10 @@ int AddPassengers(int sensor, int passengers) {
         return TASK_DOES_NOT_EXIST;
     }
 
+    if (passengers < 0) {
+        return INVALID_PASSENGER_COUNT;
+    }
+
     errno = Send(transit_system_tid, &msg, sizeof(msg), &status, sizeof(status));
     if (errno < 0) {
         error("AddPassengers: Error in Send: %d got %d sending to %d", MyTid(), errno, transit_system_tid);
@@ -165,7 +170,7 @@ int Broadcast(int train, int sensor) {
     TransitMessage_t msg = {.type = TRAIN_STATION_ARRIVAL, .arg0 = train, .arg1 = sensor};
     int errno, nextStation;
 
-    ASSERT(transit_system_tid != -1, "Transit System does not exist");
+    ASSERT(transit_system_tid != -1, "Transit system does not exist");
     errno = Send(transit_system_tid, &msg, sizeof(msg), &nextStation, sizeof(nextStation));
     if (errno < 0) {
         error("Broadcast: Error in Send: %d got %d sending to %d", MyTid(), errno, transit_system_tid);
@@ -173,6 +178,84 @@ int Broadcast(int train, int sensor) {
     }
 
     return nextStation;
+}
+
+
+int RemoveStation(int sensor) {
+    TrasitMessage_t msg = {.type = TRAIN_STATION_REMOVE, .arg0 = sensor};
+    int errno, status;
+
+    ASSERT(transit_system_tid != -1, "Transit system does not eixst");
+    errno = Send(transit_system_tid, &msg, sizeof(msg), &status, sizeof(status));
+    if (errno < 0) {
+        error("RemoveStation: Error in Send: %d got %d sending to %d", MyTid(), errno, transit_system_tid);
+        return TRANSACTION_INCOMPLETE;
+    }
+
+    return status;
+}
+
+
+int TransitShutdown() {
+    TransitMessage_t msg = {.type = TRAIN_STATION_SHUTDOWN};
+    int errno, status;
+
+    ASSERT(transit_system_tid != -1, "Transit system does not exist");
+    errno = Send(transit_system_tid, &msg, sizeof(msg), &status, sizeof(status));
+    if (errno < 0) {
+        error("TransitShutdown: Error in Send: %d got %d sending to %d", MyTid(), errno, transit_system_tid);
+        return TRANSACTION_INCOMPLETE;
+    }
+
+    return status;
+}
+
+
+static void SpawningPool() {
+    int status, sensor, attempts, passengers, delayTime;
+
+    delayTime = 350;
+    while (true) {
+        sensor = random_range(0, SENSOR_COUNT - 1);
+        if (attempts > 5) {
+            status = AddTrainStation(sensor);
+            attempts = 0;
+        } else {
+            passengers = random_range(1, 3);
+            status = AddPassengers(sensor, passengers);
+        }
+        switch (status) {
+            case TRANSACTION_INCOMPLETE:
+                delayTime += 50;
+                break;
+            case TOO_MANY_STATIONS:
+            case OUT_OF_PEDESTRIANS:
+                delayTime *= 2;
+                break;
+            case TRAIN_STATION_INVALID:
+            case INVALID_PASSENGER_COUNT:
+                attempts++;
+                delayTime = MAX(300, delayTime - 50);
+                break;
+            default:
+                break;
+        }
+        Delay(delayTime);
+    }
+}
+
+
+int AddPassengerPool() {
+    /* Adds a spawning pool that adds passengers and stations
+       continously over time. */
+    if (spawning_pool_tid != -1) {
+        /* when called with an existing spawning pool, remove it */
+        Destroy(spawning_pool_tid);
+        spawning_pool_tid = -1;
+    } else {
+        /* when called with a non-existing spawning pool, add it */
+        spawning_pool_tid = Create(4, SpawningPool);
+    }
 }
 
 
@@ -286,7 +369,6 @@ static int findOptimalNextStation(TrainStation_t *currentStation, TrainPassenger
 
 
 void MrBonesWildRide() {
-    bool is_shutdown;
     TransitMessage_t request;
     int num_of_stations, i;
     int callee, bytes, response, num_of_pedestrians;
@@ -296,7 +378,6 @@ void MrBonesWildRide() {
     Person tmp, passengers = NULL;
 
     initTransitIntercom();
-    is_shutdown = false;
     transit_system_tid = MyTid();
     num_of_stations = 0;
     num_of_pedestrians = MAX_NUM_PEDESTRIANS;
@@ -329,7 +410,7 @@ void MrBonesWildRide() {
         train_reservations[i].onBoard = 0;
     }
 
-    while (is_shutdown == false) {
+    while (true) {
         bytes = Receive(&callee, &request, sizeof(request));
         if (bytes < 0) {
             error("MrBonesWildRide: Error: Received %d from %d", bytes, callee);
@@ -338,12 +419,33 @@ void MrBonesWildRide() {
 
         switch (request.type) {
             case TRAIN_STATION_SHUTDOWN:
+                /* wipes all the data used for the system */
+                passengers = NULL;
                 for (i = 0; i < MAX_NUM_PEDESTRIANS; ++i) {
+                    /* clear all the pedestrians by getting rid of them */
+                    pedestrians[i].next = passengers;
                     if (pedestrians[i].tid != -1) {
                         Destroy(pedestrians[i].tid);
+                        pedestrians[i].tid = -1;
                     }
+                    passengers = &pedestrians[i];
                 }
-                is_shutdown = true;
+                for (i = 0; i < SENSOR_COUNT; ++i) {
+                    /* clear all stations and their passengers */
+                    train_stations[i].active = false;
+                    train_stations[i].waiting = NULL;
+                    train_stations[i].passengers = 0;
+                    train_stations[i].serviced = -1;
+                }
+                for (i = 0; i < TRAIN_MAX_NUM; ++i) {
+                    /* clear the passengers in all the trains and wipe
+                       the train data */
+                    train_reservations[i].tr = -1;
+                    train_reservations[i].passengers = NULL;
+                    train_reservations[i].destination = -1;
+                    train_reservations[i].onBoard = 0;
+                }
+                num_of_trains = 0;
                 break;
             case TRAIN_STATION_ARRIVAL:
                 /* need to check for next optimal station by looking
@@ -401,13 +503,15 @@ void MrBonesWildRide() {
                         }
                         train->passengers = stillWaiting;
                         Log("Train %d arrived at station %s, %d passengers got off", train->tr, station->name, off);
-                        debug("MrBonesWildRide: Train %d arrived at station %s, %d passengers got off", train->tr, station->name, off);
+                        debug("MrBonesWildRide: Train %d arrived at station %s, %d passengers got off",
+                              train->tr, station->name, off);
                     }
                     /* find the next optimal station to go to */
                     station->serviced = -1;
                     nextStation = findOptimalNextStation(station, train, train_stations);
                     Log("Train %d next station is %d (%d on board)", train->tr, nextStation, train->onBoard);
-                    debug("Train %d next station is at %s (%d on board)", train->tr, train_stations[nextStation].name, train->onBoard);
+                    debug("Train %d next station is at %s (%d on board)", train->tr,
+                          train_stations[nextStation].name, train->onBoard);
                     if (nextStation >= 0) {
                         train->destination = nextStation;
                         response = 1;
@@ -522,6 +626,8 @@ void MrBonesWildRide() {
                     station = &train_stations[request.arg0];
                     if (num_of_stations == 0 || station->active == false) {
                         response = TRAIN_STATION_INVALID;
+                    } else if (num_of_pedestrians == 0) {
+                        response = OUT_OF_PEDESTRIANS;
                     } else {
                         int p_waiting;
                         /* create the waiting passengers, each pedestrian is their own
