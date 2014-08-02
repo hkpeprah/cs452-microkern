@@ -13,30 +13,30 @@
    basicstyle=\scriptsize\rmfamily}
 \tikzset{
 >=stealth',
-  chain/.style={
-    rectangle, 
-    rounded corners, 
+  block/.style={
+    rectangle,
+    rounded corners,
     % fill=black!10,
     draw=black, very thick,
-    text width=10em, 
-    minimum height=3em, 
-    text centered, 
+    text width=15em,
+    minimum height=3em,
+    text centered,
     on chain},
   line/.style={draw, thick, <-},
   element/.style={
     tape,
     top color=white,
     bottom color=blue!50!black!60!,
-    minimum width=8em,
+    minimum width=15em,
     draw=blue!40!black!90, very thick,
-    text width=10em, 
-    minimum height=3.5em, 
-    text centered, 
+    text width=15em,
+    minimum height=3.5em,
+    text centered,
     on chain},
   every join/.style={->, thick,shorten >=1pt},
   decoration={brace},
-  tuborg/.style={decorate},
-  tubnode/.style={midway, right=2pt},
+  nodebranch/.style={decorate},
+  branchnode/.style={midway, right=2pt},
 }
 \begin{document}
 \thispagestyle{empty}
@@ -44,11 +44,12 @@
   {\bf\Large Train Control Demo 2 / Final Train Demo}\\
   {\bf\large CS452 - Spring 2014}\\
   Real-Time Programming\vspace{5cm}\\
-  {\bf Team }\\
+  {\bf Team (Prepared By) }\\
   Max Chen - mqchen\\
   mqchen@uwaterloo.ca\\[1\baselineskip]
   Ford Peprah - hkpeprah\\
   ford.peprah@uwaterloo.ca\vspace{5cm}\\
+  {\bf Prepared For} \\
   Bill Cowan\\
   University of Waterloo\\
 \end{center}
@@ -98,8 +99,8 @@ First, you must get a copy of the code.  To to this, log into one of the aforeme
     \texttt{TEST=filename.c} & Make a test file using the specified file as the main. \\\hline
     \texttt{TARGET=filename} & Make the code and store it in the specified elf file. \\\hline
   \end{tabular}
+  \\[1\baselineskip]
 \end{center}
-\\[1\baselineskip]
 \subsection{Running the Program}
 To run the application, you need to load it into the RedBoot terminal.  Ensure you've followed the steps listed above in the ``Getting the Program'' settings to ensure you have the correct directories and account set up.  Navigate to the directory in which you cloned the source code and run \texttt{make upload}.  The uploaded code should now be located at (depending on the track you made for, defaults to 'a'):
 \begin{center}
@@ -115,14 +116,86 @@ The application should now begin by running through the game tasks before reachi
 \subsubsection{Command Prompt}
 After the startup tasks have finished running, the user will reach a command prompt where they will be able to enter commands.  A list of available commands and the syntax can be found at run-time by entering either ``?'' or ``help'' followed by the ``RETURN'' key.  All commands must be followed by the ``RETURN'' key for the {\tt Shell} to interpret them.
 \\[2\baselineskip]
-\section{Task Structure}
+\section{Task Structure of Trains}
+There are three main tasks used to control the trains: the \texttt{Dispatcher}, the \texttt{Conductor}, and the \texttt{TrainTask}.  Aside from them,
+there are several auxiliary couriers to perform tasks such as waiting on a sensor, waiting for a timeout, sensor attribution,
+and train deletion.  The following diagram outlines the structure of those tasks:
+\begin{center}
+  \begin{tikzpicture}[node distance=.8cm, start chain=going below, ]
+    \begin{scope}[
+        block/.style={
+          rectangle,
+          rounded corners,
+          draw=black, very thick,
+          text width=10em,
+          minimum height=3em,
+          text centered,
+          on chain},
+        line/.style={draw, thick, <-},
+        element/.style={
+          tape,
+          top color=white,
+          bottom color=blue!50!black!60!,
+          minimum width=8em,
+          draw=blue!40!black!90, very thick,
+          text width=10em,
+          minimum height=3.5em,
+          text centered, 
+          on chain},]
+      \node[block, join, ] (dispatcher) {Dispatcher};
+        \node[block] (conductor) {Conductor};
+          \begin{scope}[start branch=createbranch]
+            \node[block, on chain=going right] (create) {TrainCreateCourier};
+          \end{scope}
+          \begin{scope}[start branch=delbranch]
+            \node[block, on chain=going left] (delete) {TrainDeleteCourier};
+          \end{scope}
+      \node[block, join, ] (traintask) {TrainTask};
+        \node[block] (sensor) {SensorCourier};
+          \begin{scope}[start branch=locbranch]
+            \node[block, on chain=going right] (location) {LocationTimer};
+          \end{scope}
+          \begin{scope}[start branch=clockbranch]
+            \node[block, on chain=going left] (clock) {ClockCourier};
+          \end{scope}
+      % Main figure finished by above, need to add in the one-to-many and one-to-one
+      % relationships
+      \draw[nodebranch] let
+        \p1=(delete.west), \p2=(create.east) in
+        ($(\x1,\y1+2em)$) -- ($(\x2,\y2+2em)$) node[above, midway] {Has Many of Each};
+      \draw[nodebranch] let
+        \p1=(clock.west), \p2=(location.east) in
+        ($(\x1,\y1+2em)$) -- ($(\x2,\y2+2em)$) node[above, midway] {Has One of Each};
+    \end{scope}
+  \end{tikzpicture}
+\end{center}
+\subsection{Couriers}
+With a robust create/destroy system, all of our couriers are single use, created and destroyed when needed. This keeps them very simple and allows them to exist with almost no internal state. Furthermore, most communication done with couriers are done with no message copies since the context of which courier sent the message is sufficient to determine what event has occurred.  In particular, the couriers that follow this methodolgy are the \texttt{shortmvDone} and \texttt{shortmvTimeout} couriers which are used to signal to issue the sotp command in the short move and that the short move should be completed by now, respectively.  As well, the \texttt{TrainCreateCourier} and \texttt{TrainDeleteCourier} which create and delete trains respectively; these operations are done in couriers to ensure the \texttt{Dispatcher} does not block waiting on another task.  Lastly, various timeout couriers that simply call \texttt{Delay} then respond to their parent task.
+\\[1\baselineskip]
+\subsection{SensorCourier}
+A courier created by the \texttt{TrainTask} to wait on behalf of sensor trips with the \texttt{SensorServer}. When the awaiting sensor is tripped, it sends a message back to its parent to notify that the sensor has been tripped.
+\\[1\baselineskip]
+\subsection{LocationTimer}
+This child task calls into the \texttt{TrainTask} once every five ticks to tell the \texttt{TrainTask} to update its state and determine if it needs to take any additional actions such as stop, flip switches, reserve more track, and report routing status.
+\\[1\baselineskip]
+\subsection{ClockCouriers}
+The \texttt{ClockServer} has a function that provides a generic courier-based Delay call. This allows for the TrainTask to call Delay without blocking itself and get the response through its Receive. The TrainTask uses the \texttt{ClockCouriers} to time its short moves.
+\\[1\baselineskip]
+\subsection{TrainTask}
+The purpose of the \texttt{TrainTask} is
+\\[1\baselineskip]
+\subsection{Dispatcher}
+The purpose of the \texttt{Dispatcher} is to act as a server that mediates interaction to trains between the Transit System (\texttt{MrBonesWildRide}), the \texttt{Conductor} task(s), and the \texttt{TrainTask}(s).  In addition, the \texttt{Dispatcher} is responsible for the track, which it handles as a resource which tasks may request a segment of to use or release a segment they currently own.  To prevent the user from interfering with a routing in process, the \texttt{Dispatcher} marks trains that are being routed as \texttt{TRAIN\_BUSY}; if the user wishes to use this trian, they must then stop the train's routing by executing the terminal command ``st TRAIN\_NUMBER''.  All requests made by the user to trains are processed through the \texttt{Dispatcher} which then passes them on to the \texttt{TrainTask} if is not busy.  When a train is added to the system, the \texttt{Dispatcher} creates a \texttt{TrainCreateCourier} which goes and blocks in creating the train and doing sensor attribution, then calls back into the \texttt{Dispatcher} when done; creation is serialized, so multiple trains may be added at once.  Sensor attribution works by looking for a sensor that is being triggered (non-faulty trigger), which no other train currently known by the \texttt{Dispatcher} is waiting on.  When a ``goto'' command is issued, the \texttt{Dispatcher} creates a \texttt{Conductor} to find and then execute the path.  When a \texttt{TrainTask} wants to move the train over a particular segment of track, it must first request that peice of track.  This is done through two fo the \texttt{Dispatcher}'s calls: \texttt{DispatchReserveTrack} and \texttt{DispatchReserveTrackDist}, which reserve nodes and nodes by distance respectively.  When done with that segment of track, a \texttt{TrainTask} must call \texttt{DispatchReleaseTrack}.  This allows reservation and releasing to be atomic to avoid race conditions where two trains attempt to reserve the same peice of track.  The \texttt{Dispatcher} also acts as a lookup servers to find the task identifier of \texttt{TrainTask} by the train number.
+\\[1\baselineskip]
+\subsection{Conductor}
+The purpose of the \texttt{Conductor} task is to drive the train from an arbitrary starting point to some distance past a destination sensor.  Because some paths involve reversing, short moves, and other intricate maneuvers, the \texttt{Conductor} allows from some burden to be relieved from the \texttt{TrainTask} by having the \texttt{TrainTask} be a stand-alone task responsible only for being aware of its location, reversing the physical train, speeding up the physical train, stopping the physical train, and reserving the nodes nears its location based on where it is moving.  A \texttt{Conductor} is created when a request is made for a train to travel to a location.  The \texttt{Conductor} works by first finding a path from the train's current location to the destination node.  It then breaks up this path into segments where the transition from one segment to another requires the train to stop and then reverse.  It then calls into the train to tell it to move.  If the train reports itself as being lost, it calls into the \texttt{Conductor} to perform \texttt{SensorAttribution} to find out where the train now is.  If the train fails to make a reservation, it also calls into the \texttt{Conductor} which sleeps then attempts to re-route the train.  Once the conductor has successfully routed the train to the specified destination, it broadcasts its arrival, which may be picked up by the Transit System if it exists.
 \\[2\baselineskip]
 \section{Train Control Demo 2}
 For the purpose of routing our trains from its current location to any provided location, we use a layered architecture
 in which each feature is built and abstracted such that more advanced navigation systems can be created on top of them
 without worrying about how they work. We provide an extremely simple interface (include/train\_task.h) to an extremely
 complicated task (src/train/train\_task.c).
-
+\\[1\baselineskip]
 \subsection{Basic Train Driving}
 The most basic functionality of the train is to just drive and know where it is (required for Demo 1). We accomplish
 this by having each \texttt{TrainTask} create a slave task that sends into it every 5 ticks telling it to update its
@@ -132,14 +205,14 @@ information, see Appendix A for details.
 Internal to the \texttt{TrainTask}, these are provided by the functions \texttt{setTrainSpeed} (change speed) and
 \texttt{trainDir} (reverse). These are exposed as functions (wrappers for Send to the \texttt{TrainTask})
 \texttt{TrSpeed} and \texttt{TrDir} respectively.
-
+\\[1\baselineskip]
 \subsection{Path Finding}
 Path finding is implemented over the provided track graph using the heap version of Dijkstra's, taking into account
 track reservation as well. If any node is reserved by another train, then the pathfinding algorithm will no longer use
 that node. For each node, the algorithm will add its reverse, its straight edge, and in the case of branches, its curved
 edge. The function \texttt{findPath} will fill the provided \texttt{track\_node*} array with nodes of the path, return
 the number of nodes and write the total length of the path in mm in an output parameter.
-
+\\[1\baselineskip]
 \subsection{Reservation}
 The reservation system was built into the provided \texttt{track\_node} graph by simply adding a field in the
 \texttt{track\_node} struct called \texttt{reservedBy} that indicates the train number of the train that has the
@@ -167,7 +240,7 @@ to over-reserving a large portion of the track when we reach an extremely long e
 \\
 The reservation code will return the number of \texttt{track\_node} successfully reserved, as well as modify the
 provided distance field (passed in as a pointer) such that it becomes the amount of distance that was not reserved.
-
+\\[1\baselineskip]
 \subsection{Collision Avoidance}
 When a train asks for more track, it always provides a distance which is slightly greater than its stopping distance by
 some factor. This ensure that the train will be able to stop in the amount of track it has reserved. If the stopping
@@ -175,7 +248,7 @@ distance field is ever positive (that is, the reservation system could not reser
 train knows that it is approaching track reserved by another train, and will stop itself. Otherwise, the train obtains a
 value that indicates how much extra distance it has before it must reserve more track. Once that extra distance runs
 out, it will attempt to reserve track again.
-
+\\[1\baselineskip]
 \subsection{Basic Path Execution}
 Basic path execution is done solely within the train, and does not support paths that include reversals. The function
 \texttt{TrGotoAfter} is provided by the train that will drive the train, in a linear fashion, to some offset after the
@@ -184,20 +257,20 @@ issuing the train speed command when the stopping distance is equal to the remai
 \\
 Path execution is done every time new nodes are reserved. When a node is reserved and the previous node is a switch,
 then the switch is flipped to the state such that moving over the switch will lead us to the correct next node.
-
+\\[1\baselineskip]
 \subsection{Short Moves}
 Short moves are accomplished by setting the train to a speed, waiting for some number of ticks, and then stopping the
 train. They exist almost entirely outside of the normal train operations, and the instantaneous speed of the train is
 not accounted for during a short move. Instead, we empirically measured the amount of time required to wait to move
-certain distances, and built a function f(x) -> t which maps distance to travel (x) into time to wait before sending the
-stop command (t).
+certain distances, and built a function $f(x) -> t$ which maps distance to travel $(x)$ into time to wait before sending the
+stop command $(t)$.
 \\
 When a train is sent a \texttt{TrGotoAfter} command, it evaluates the length of the path. If the path length is under
 the threshold for shortmoves, then it will initiate a short move by setting its speed to our calibrated short move
-speed, creating 2 time couriers with values f(x) and 2f(x), shortMvStop and shortMvDone. Stop is when the train
+speed, creating 2 time couriers with values $f(x)$ and $2f(x)$, shortMvStop and shortMvDone. Stop is when the train
 stop command is issued, and done is when the train is finished moving. During the short move, sensors will still sync
 the train's position but nothing else will.
-
+\\[1\baselineskip]
 \subsection{Advanced Path Execution}
 Advanced path execution is accomplished through a task external to the train, the \texttt{Conductor}. An instance of
 this task is created when the \texttt{Dispatcher} is asked to route a train to a particular location. The
@@ -210,7 +283,7 @@ Since partial paths are overshooting, the train corrects for this internally. Th
 \texttt{findPath} call inside the train when it is initially given a path. If the current train edge is not connected to
 the start of the path, then a path between the edge and the start of the path will be found internally and then reserved
 and executed.
-
+\\[1\baselineskip]
 \subsection{Recovery}
 Recovery is done in the \texttt{Conductor}. Each \texttt{TrGotoAfter} returns a \texttt{GotoResult\_t} which indicates
 how the train has executed the path, which can be GOTO\_COMPLETE, GOTO\_REROUTE or GOTO\_LOST.In the first case, the
@@ -223,14 +296,13 @@ There is an issue with the LOST system in that it is hacked together using the t
 the train task and adding it again instead of internally to the train. Because of this, the train loses its reservations 
 during the LOST stage and is prone to collisions. We wanted to implement the LOST error recovery within the train but did 
 not have enough time.
-
 \\[2\baselineskip]
 \section{Final Demo - Transit System}
 \subsection{Overview}
-The final demo consists of modeling a transit system through the use of the kernel and code completed from Train Demo 1 and 2.  By using path finding, the trains are able to be routed to different stations (represented by sensors) to pick up passengers and bring them to their destination.  Each passenger has their own destination of one of the available stations; multiple passengers waiting at one station may each have a different destination.  Passengers and stations can be added at will or randomly as the user seems fit.  The transit system used in our project has been named ``Mr. Bone's Wild Ride''.  The transit system has two modes; free-standing and monitored.  In monitored mode, the user adds the stations by entering the command ``spawn'', then can add passengers at will.  In free-standing, the transit system adds passengers on demand, this is done by the user entering ``spawn'' followed by ``pool''.  Regardless of the system chosen, to indicate a train is available to the system, the user must enter the command ``broadcast TRAIN_NUMBER SENSOR'' to alert the system to a new train.  A sample session is shown below:
+The final demo consists of modeling a transit system through the use of the kernel and code completed from Train Demo 1 and 2.  By using path finding, the trains are able to be routed to different stations (represented by sensors) to pick up passengers and bring them to their destination.  Each passenger has their own destination of one of the available stations; multiple passengers waiting at one station may each have a different destination.  Passengers and stations can be added at will or randomly as the user seems fit.  The transit system used in our project has been named ``Mr. Bone's Wild Ride''.  The transit system has two modes; free-standing and monitored.  In monitored mode, the user adds the stations by entering the command ``spawn'', then can add passengers at will.  In free-standing, the transit system adds passengers on demand, this is done by the user entering ``spawn'' followed by ``pool''.  Regardless of the system chosen, to indicate a train is available to the system, the user must enter the command ``broadcast TRAIN\_NUMBER SENSOR'' to alert the system to a new train.  A sample session is shown below:
 \begin{center}
   \begin{verbatim}
-    mqchen@rtfolks $ spawn
+    mqchen@rtfolks $ spawn 8
     mqchen@rtfolks $ pool
     mqchen@rtfolks $ add 56
     mqchen@rtfolks $ add 45
@@ -238,18 +310,19 @@ The final demo consists of modeling a transit system through the use of the kern
     mqchen@rtfolks $ broadcast 45 A15
   \end{verbatim}
 \end{center}
+\vspace{-0.5cm}This would generate add eight stations to the transit system, then trains $56$ and $45$, and then alert the transit system that train $56$ is at sensor $A5$, and train $45$ at sensor $A15$.  The \texttt{pool} command would cause trains and passengers to be added randomly after a variable amount of time has passed.
 \\[1\baselineskip]
 \subsection{Structure}
 The following diagram outlines the structure of communication and routing works in the transit system.
 \begin{center}
   \begin{tikzpicture}[node distance=.8cm, start chain=going below,]
-    \node[chain, join] (arrival) {Train Arrives at Sensor};
-    \node[chain, join] (broadcast) {Train Broadcasts Arrival};
-    \node[chain, join] (receive) {Transit System Receives Braodcast};
-    \node[chain, join] (process) {Passengers on-loading off train (if this is their stop)};
-    \node[chain, join] (process2) {All passengers at station board the train};
-    \node[chain, join] (process3) {Compute next station};
-    \node[chain, join] (send) {Send GoTo command to Dispatcher};
+    \node[block, join] (arrival) {Train Arrives at Sensor};
+    \node[block, join] (broadcast) {Train Broadcasts Arrival};
+    \node[block, join] (receive) {Transit System Receives Braodcast};
+    \node[block, join] (process) {Passengers on-loading off train (if this is their stop)};
+    \node[block, join] (process2) {All passengers at station board the train};
+    \node[block, join] (process3) {Compute next station};
+    \node[block, join] (send) {Send GoTo command to Dispatcher};
   \end{tikzpicture}
   \\[1\baselineskip]
 \end{center}
@@ -258,13 +331,24 @@ Stations are allocated passengers by either the user or the spawning task.  To d
 \\[1\baselineskip]
 \subsection{Passenger System}
 Each passenger in the system has their own destination.  Destinations are assigned ranedomly when a passenger is created at a station; a passenger may already be at the station of their choice, in which case they are simply done.  Each passenger has an associated weight which begins at $1$.  When determining which station a train should go to next, the system computes weights for each station as the sum of the weights of the passengers who want to go to that destination; the largest weighted station is the next station that train is routed to.  When a passenger is on a train and arrives at a station but does not get off (it is not their station), their weight increases by $1$.  This allows the system to account for situations where there would be only one passenger wanting to go to a particular station, and as a result, they would never get off because the other stations would be valued higher.  In addition, as a part of the passenger system, passengers also communicate to voice their opinions on the service to a channel that can be viewed by running the command ``intercom'' from within the \texttt{Shell}.  These get progressively billigerant the longer the passengers are on the train without reaching their destination.
-\\[2\baselineskip]
+\\[1\baselineskip]
+\subsection{Viewing State}
+To tools are provided to the user to view the state of the transit system via the command-line:
+\begin{center}
+  \begin{tabular}{|l|l|p{0.5\textwidth}|}
+    \hline
+    {\bf Command} & {\bf Usage} & {\bf Description} \\\hline
+    \texttt{probe} & \texttt{mqchen\@rtfolks \$ probe} & View the stations and trains, and their passengers. \\\hline
+    \texttt{intercom} & \texttt{mqchen\@rtfolks \$ intercom} & View what passengers are saying on the trains. \\\hline
+  \end{tabular}
+  \\[2\baselineskip]
+\end{center}
 \section{Known Errors}
 \begin{itemize}
   \item When trains are lost, they are re-added to the system be first destroying themselves then calling attribution, as a result, the reservations held by this train are lost, which would allow a nearby train to collide with it.
   \item Trains do not stop at intermediate station when in route to the heaviest weighted station.
+    \\[1\baselineskip]
 \end{itemize}
-\\[2\baselineskip]
 \section{MD5}
 \lstinputlisting{md5}
 \end{document}
